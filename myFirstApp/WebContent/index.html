@@ -1,0 +1,95 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta http-equiv='Content-Type' content='text/html;charset=UTF-8' />
+<link rel="StyleSheet" type="text/css" href="NewFile.css"/>
+<script src="resources/sap-ui-core.js" id="sap-ui-bootstrap"
+	data-sap-ui-libs="sap.m,sap.ui.commons,sap.ui.layout,sap.ui.table,sap.ui.ux3"
+	data-sap-ui-theme="sap_bluecrystal">
+	
+</script>
+<!-- only load the mobile lib "sap.m" and the "sap_bluecrystal" theme -->
+
+<script>
+    $.sap.includeScript("http://code.jquery.com/jquery-1.9.1.min.js");
+    $.sap.includeScript("http://code.jquery.com/ui/1.11.4/jquery-ui.js");
+	sap.ui.localResources("myfirstapp");
+	var app = new sap.m.App({
+		initialPage : "idHelloWorld1"
+	});
+	var page1 = sap.ui.view({
+		id : "idHelloWorld1",
+		viewName : "myfirstapp.HelloWorld",
+		type : sap.ui.core.mvc.ViewType.JS
+	});
+	var page2 = sap.ui.view({
+		id : "idSecondPage1",
+		viewName : "myfirstapp.secondPage",
+		type : sap.ui.core.mvc.ViewType.JS
+	});
+	var page3 = sap.ui.view({
+		id : "idThirdPage1",
+		viewName : "myfirstapp.ThirdPage",
+		type : sap.ui.core.mvc.ViewType.JS
+	});
+	var page4 = sap.ui.view({
+		id : "idListPage1",
+		viewName : "myfirstapp.ListPage",
+		type : sap.ui.core.mvc.ViewType.JS
+	});	
+	var page5 = sap.ui.view({
+		id : "idDynList1",
+		viewName : "myfirstapp.dynView",
+		type : sap.ui.core.mvc.ViewType.JS
+	});	
+	var page6 = sap.ui.view({
+		id : "idTable1",
+		viewName : "myfirstapp.Table",
+		type : sap.ui.core.mvc.ViewType.JS
+	});	
+	var page7 = sap.ui.view({
+		id : "idTable11",
+		viewName : "myfirstapp.Table1",
+		type : sap.ui.core.mvc.ViewType.JS
+	});	
+	var page8 = sap.ui.view({
+		id : "idTiles1",
+		viewName : "myfirstapp.Tiles",
+		type : sap.ui.core.mvc.ViewType.JS
+	});		
+	var page9 = sap.ui.view({
+		id : "idTiles_data1",
+		viewName : "myfirstapp.Tiles_data",
+		type : sap.ui.core.mvc.ViewType.JS
+	});	
+	var page10 = sap.ui.view({
+		id : "idConList1",
+		viewName : "myfirstapp.ConList",
+		type : sap.ui.core.mvc.ViewType.JS
+	});	
+	var page11 = sap.ui.view({
+		id : "idlistdet1",
+		viewName : "myfirstapp.listdet",
+		type : sap.ui.core.mvc.ViewType.JS
+	});	
+	
+	app.addPage(page1);
+	app.addPage(page2);
+	app.addPage(page3);
+	app.addPage(page4);
+	app.addPage(page5);
+	app.addPage(page6);
+	app.addPage(page7);
+	app.addPage(page8);
+	app.addPage(page9);
+	app.addPage(page10);
+    app.addPage(page11);
+  app.placeAt("content");
+</script>
+
+</head>
+<body class="sapUiBody" role="application">
+	<div id="content"></div>
+</body>
+</html>
