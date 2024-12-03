@@ -4,79 +4,80 @@
 
 /**
  * @fileOverview Application component to display information on entities from the
- *   V4_GW_SAMPLE_BASIC OData service.
+ *  zui5_epm_sample OData service.
  * @version @version@
  */
 sap.ui.define([
 	"sap/m/HBox",
+	"sap/ui/core/library",
+	"sap/ui/core/UIComponent",
 	"sap/ui/core/mvc/View",
-	"sap/ui/core/sample/common/Component",
 	"sap/ui/model/json/JSONModel",
-	"sap/ui/model/odata/v4/ODataModel",
-	"sap/ui/test/TestUtils",
-	"sap/ui/thirdparty/sinon"
-], function (HBox, View, BaseComponent, JSONModel, ODataModel, TestUtils, sinon) {
+	"sap/ui/test/TestUtils"
+], function (HBox, library, UIComponent, View, JSONModel, TestUtils) {
 	"use strict";
 
-	return BaseComponent.extend("sap.ui.core.sample.odata.v4.SalesOrdersTemplate.Component", {
+	// shortcut for sap.ui.core.mvc.ViewType
+	var ViewType = library.mvc.ViewType;
+
+	return UIComponent.extend("sap.ui.core.sample.odata.v4.SalesOrdersTemplate.Component", {
 		metadata : {
+			interfaces : ["sap.ui.core.IAsyncContentCreation"],
 			manifest : "json"
 		},
 
 		createContent : function () {
-			var bHasOwnProxy = this.proxy !== sap.ui.core.sample.common.Component.prototype.proxy,
-				oLayout = new HBox(),
-				oMetaModel,
+			var oLayout = new HBox({
+					renderType : "Bare"
+				}),
 				oModel = this.getModel(),
-				fnProxy = bHasOwnProxy
-					? this.proxy
-					: TestUtils.proxy,
-				bRealOData = TestUtils.isRealOData(),
-				sServiceUrl = fnProxy(oModel.sServiceUrl);
+				oMetaModel = oModel.getMetaModel(),
+				bRealOData = TestUtils.isRealOData();
 
-			if (oModel.sServiceUrl !== sServiceUrl) {
-				//replace model from manifest in case of proxy
-				oModel = new ODataModel(sServiceUrl);
-				this.setModel(oModel);
-			}
-			oMetaModel = oModel.getMetaModel();
+			oMetaModel.setDefaultBindingMode("OneWay");
 
-			if (!bHasOwnProxy) {
-				TestUtils.setupODataV4Server(this.oSandbox, {
-					"$metadata" : {source : "metadata.xml"},
-					"$batch" : {
-						"BusinessPartnerList" : {
-							source : "BusinessPartnerList.txt"
+			this.oUiModel = new JSONModel({
+				sCode : "",
+				bCodeVisible : false,
+				bRealOData : bRealOData,
+				icon : bRealOData ? "sap-icon://building" : "sap-icon://record",
+				iconTooltip : bRealOData ? "real OData service" : "mock OData service"
+			});
+
+			View.create({
+				async : true,
+				bindingContexts : {
+					undefined : oModel.createBindingContext("/BusinessPartnerList")
+				},
+				models : {
+					// Note: XML Templating creates bindings to default model only!
+					undefined : oModel,
+					metaModel : oMetaModel,
+					ui : this.oUiModel
+				},
+				preprocessors : {
+					xml : {
+						bindingContexts : {
+							data : oModel.createBindingContext("/BusinessPartnerList")
+						},
+						models : {
+							data : oModel,
+							meta : oMetaModel
 						}
 					}
-				}, "sap/ui/core/demokit/sample/odata/v4/SalesOrdersTemplate/data",
-				"/sap/opu/odata4/IWBEP/V4_SAMPLE/default/IWBEP/V4_GW_SAMPLE_BASIC/0001/");
-			}
-
-			oMetaModel.requestObject("/$EntityContainer/SalesOrderList/$Type").then(function () {
-				oLayout.addItem(sap.ui.view({
-					async : true,
-					models : {
-						undefined : oModel,
-						ui : new JSONModel({
-							bRealOData : bRealOData,
-							icon : bRealOData ? "sap-icon://building" : "sap-icon://record",
-							iconTooltip : bRealOData ? "real OData service" : "mock OData service"
-						})
-					},
-					preprocessors : {
-						xml : {
-							models : {
-								meta : oMetaModel
-							}
-						}
-					},
-					type : sap.ui.core.mvc.ViewType.XML,
-					viewName : "sap.ui.core.sample.odata.v4.SalesOrdersTemplate.Main"
-				}));
+				},
+				type : ViewType.XML,
+				viewName : "sap.ui.core.sample.odata.v4.SalesOrdersTemplate.Main"
+			}).then(function (oView) {
+				oLayout.addItem(oView);
 			});
 
 			return oLayout;
+		},
+
+		exit : function () {
+			this.oUiModel.destroy();
+			this.getModel().restoreSandbox();
 		}
 	});
 });

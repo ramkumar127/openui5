@@ -1,7 +1,7 @@
 /*!
  * ${copyright}
  */
-
+/*eslint-disable max-len */
 // Provides an abstraction for list bindings
 sap.ui.define(['./Binding'],
 	function(Binding) {
@@ -15,10 +15,10 @@ sap.ui.define(['./Binding'],
 	 * The ContextBinding is a specific binding for a setting context for the model
 	 *
 	 * @param {sap.ui.model.Model} oModel
-	 * @param {String} sPath
-	 * @param {Object} oContext
-	 * @param {Object} [mParameters]
-	 * @param {Object} [oEvents] object defining event handlers
+	 * @param {string} sPath
+	 * @param {sap.ui.model.Context} oContext
+	 * @param {object} [mParameters]
+	 * @param {object} [oEvents] object defining event handlers
 	 * @abstract
 	 * @public
 	 * @alias sap.ui.model.ContextBinding
@@ -33,39 +33,33 @@ sap.ui.define(['./Binding'],
 		},
 
 		metadata : {
-			 publicMethods : [
-			 // methods
-				"getElementContext"
-			 ]
+			publicMethods : [
+				// methods
+				"getBoundContext"
+			]
 		}
 	});
 
 	/**
-	 * Check whether this Binding would provide new values and in case it changed,
-	 * inform interested parties about this.
+	 * Check whether this Binding would provide new values and in case it changed, inform interested
+	 * parties about this.
 	 *
-	 * @param {boolean} bForceupdate
+	 * @param {boolean} [bForceupdate] Ignored in this method
 	 */
 	ContextBinding.prototype.checkUpdate = function(bForceupdate) {
 		// nothing to do here, data changes can not change the context
 	};
 
 	/**
-	 * Refreshes the binding, check whether the model data has been changed and fire change event
-	 * if this is the case. For server side models this should refetch the data from the server.
+	 * Return the bound context.
 	 *
-	 * @param {boolean} bForceUpdate Does not have any effect on this binding
-	 *
+	 * @returns {sap.ui.model.Context|null}
+	 *   Context object used by this context binding or <code>null</code>
 	 * @public
 	 */
-
-	/**
-	 * Return the bound context
-	 */
-	ContextBinding.prototype.getBoundContext = function(oContext) {
+	ContextBinding.prototype.getBoundContext = function() {
 		return this.oElementContext;
 	};
-
 
 	return ContextBinding;
 

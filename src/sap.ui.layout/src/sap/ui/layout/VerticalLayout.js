@@ -3,8 +3,13 @@
  */
 
 // Provides control sap.ui.layout.VerticalLayout.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/EnabledPropagator', './library'],
-	function(jQuery, Control, EnabledPropagator, library) {
+sap.ui.define([
+ 'sap/ui/core/Control',
+ 'sap/ui/core/EnabledPropagator',
+ './library',
+ "./VerticalLayoutRenderer"
+],
+	function(Control, EnabledPropagator, library, VerticalLayoutRenderer) {
 	"use strict";
 
 	/**
@@ -15,6 +20,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/EnabledP
 	 *
 	 * @class
 	 * In this layout the content controls are rendered one below the other.
+	 *
+	 * <b>Note:</b> <code>VerticalLayout</code> is not a focusable element and therefore the inheritance of the <code>tooltip</code> property isn't supported.
 	 * @extends sap.ui.core.Control
 	 *
 	 * @author SAP SE
@@ -24,52 +31,52 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/EnabledP
 	 * @public
 	 * @since 1.16.0
 	 * @alias sap.ui.layout.VerticalLayout
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	var VerticalLayout = Control.extend("sap.ui.layout.VerticalLayout", /** @lends sap.ui.layout.VerticalLayout.prototype */ { metadata : {
+	var VerticalLayout = Control.extend("sap.ui.layout.VerticalLayout", /** @lends sap.ui.layout.VerticalLayout.prototype */ {
+		metadata : {
 
-		library : "sap.ui.layout",
-		properties : {
+			library : "sap.ui.layout",
+			properties : {
 
-			/**
-			 * Width of the <code>VerticalLayout</code>. If no width is set, the width of the content is used.
-			 * If the content of the layout has a larger width than the layout, it is cut off.
-			 * There is no scrolling inside the layout.
-			 */
-			width : {type : "sap.ui.core.CSSSize", group : "Dimension", defaultValue : null},
+				/**
+				 * Width of the <code>VerticalLayout</code>. If no width is set, the width of the content is used.
+				 * If the content of the layout has a larger width than the layout, it is cut off.
+				 * There is no scrolling inside the layout.
+				 */
+				width : {type : "sap.ui.core.CSSSize", group : "Dimension", defaultValue : null},
 
-			/**
-			 *
-			 * If not enabled, all controls inside are not enabled automatically.
-			 */
-			enabled : {type : "boolean", group : "Behavior", defaultValue : true}
+				/**
+				 *
+				 * If not enabled, all controls inside are not enabled automatically.
+				 */
+				enabled : {type : "boolean", group : "Behavior", defaultValue : true}
+			},
+			defaultAggregation : "content",
+			aggregations : {
+
+				/**
+				 * Content controls within the layout.
+				 */
+				content : {type : "sap.ui.core.Control", multiple : true, singularName : "content"}
+			},
+			dnd: { draggable: false, droppable: true },
+			designtime: "sap/ui/layout/designtime/VerticalLayout.designtime"
 		},
-		defaultAggregation : "content",
-		aggregations : {
 
-			/**
-			 * Content controls within the layout.
-			 */
-			content : {type : "sap.ui.core.Control", multiple : true, singularName : "content"}
-		},
-		designTime : true
-	}});
+		renderer: VerticalLayoutRenderer
+	});
 
 	/**
-	 * Sets the width of the Vertical Layout without rerendering of the whole control, and everything inside it.
-	 * @param {sap.ui.core.CSSSize} width
-	 * @returns {VerticalLayout}
+	 * @see sap.ui.core.Control#getAccessibilityInfo
+	 * @protected
+	 * @returns {sap.ui.core.AccessibilityInfo} An object with the accessibilty infos for this control
 	 */
-	VerticalLayout.prototype.setWidth = function (width) {
-		this.setProperty("width", width, true);
-		if (this.getDomRef()) {
-			this.getDomRef().style.width = this.getWidth();
-		}
-		return this;
+	VerticalLayout.prototype.getAccessibilityInfo = function() {
+		return {children: this.getContent()};
 	};
 
 	EnabledPropagator.call(VerticalLayout.prototype);
 
 	return VerticalLayout;
 
-}, /* bExport= */ true);
+});

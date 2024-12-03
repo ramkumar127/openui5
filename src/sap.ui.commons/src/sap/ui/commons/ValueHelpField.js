@@ -3,8 +3,11 @@
  */
 
 // Provides control sap.ui.commons.ValueHelpField.
-sap.ui.define(['jquery.sap.global', './TextField', './library', 'sap/ui/core/IconPool', 'sap/ui/core/theming/Parameters'],
-	function(jQuery, TextField, library, IconPool, Parameters) {
+sap.ui.define([
+    './TextField',
+    './ValueHelpFieldRenderer'
+],
+	function(TextField, ValueHelpFieldRenderer) {
 	"use strict";
 
 
@@ -24,17 +27,18 @@ sap.ui.define(['jquery.sap.global', './TextField', './library', 'sap/ui/core/Ico
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38. Instead, use the <code>sap.m.Input</code> control.
 	 * @alias sap.ui.commons.ValueHelpField
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var ValueHelpField = TextField.extend("sap.ui.commons.ValueHelpField", /** @lends sap.ui.commons.ValueHelpField.prototype */ { metadata : {
 
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
 			 * URL of the standard icon for the value help. If no parameter is supplied the default icon image will be shown.
-			 * This can be an URI to an image or an icon font URI.
+			 * This can be a URI to an image or an icon font URI.
 			 */
 			iconURL : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : null},
 
@@ -60,17 +64,10 @@ sap.ui.define(['jquery.sap.global', './TextField', './library', 'sap/ui/core/Ico
 	}});
 
 
-	ValueHelpField.prototype.onBeforeRendering = function(){
-		var sThemeModuleName = "sap.ui.commons.themes." + sap.ui.getCore().getConfiguration().getTheme();
-		var sIcon = Parameters.get('sap.ui.commons.ValueHelpField:sapUiValueHelpIconDsblUrl');
-
-		this.sIconDsblUrl = jQuery.sap.getModulePath(sThemeModuleName, sIcon);
-
-		sIcon = Parameters.get('sap.ui.commons.ValueHelpField:sapUiValueHelpIconRegularUrl');
-		this.sIconRegularUrl = jQuery.sap.getModulePath(sThemeModuleName, sIcon);
-
-		sIcon = Parameters.get('sap.ui.commons.ValueHelpField:sapUiValueHelpIconHoverUrl');
-		this.sIconHoverUrl = jQuery.sap.getModulePath(sThemeModuleName, sIcon);
+	ValueHelpField.prototype.onBeforeRendering = function() {
+		this.sIconDsblUrl = "sap-icon://value-help";
+		this.sIconRegularUrl = "sap-icon://value-help";
+		this.sIconHoverUrl = "sap-icon://value-help";
 	};
 
 	ValueHelpField.prototype.onmouseover = function (oEvent) {
@@ -81,18 +78,15 @@ sap.ui.define(['jquery.sap.global', './TextField', './library', 'sap/ui/core/Ico
 			} else if (this.getIconURL()) {
 				this.sIconHoverUrl = this.sIconRegularUrl;
 			} else {
-				var sIcon = Parameters.get('sap.ui.commons.ValueHelpField:sapUiValueHelpIconHoverUrl');
-				this.sIconHoverUrl = jQuery.sap.getModulePath("sap.ui.commons.themes." + sap.ui.getCore().getConfiguration().getTheme(), sIcon);
+				this.sIconHoverUrl = "sap-icon://value-help";
 			}
-			var oIcon = jQuery.sap.byId(oEvent.target.id);
-			oIcon.attr( 'src', this.sIconHoverUrl );
+			oEvent.target.setAttribute( 'src', this.sIconHoverUrl );
 		}
 	};
 
 	ValueHelpField.prototype.onmouseout = function (oEvent) {
 		if (oEvent.target.id == this.getId() + '-icon' && this.getEnabled() && this.getEditable() && !this.bIsIconURI) {
-			var oIcon = jQuery.sap.byId(oEvent.target.id);
-			oIcon.attr( 'src', this.sIconRegularUrl );
+			oEvent.target.setAttribute( 'src', this.sIconRegularUrl );
 		}
 	};
 
@@ -118,6 +112,7 @@ sap.ui.define(['jquery.sap.global', './TextField', './library', 'sap/ui/core/Ico
 				oIcon.addClass('sapUiTfValueHelpDsblIcon');
 			}
 		}
+		return this;
 	};
 
 	ValueHelpField.prototype.setEditable = function(bEditable) {
@@ -134,6 +129,7 @@ sap.ui.define(['jquery.sap.global', './TextField', './library', 'sap/ui/core/Ico
 				oIcon.addClass('sapUiTfValueHelpDsblIcon');
 			}
 		}
+		return this;
 	};
 
 	/**
@@ -184,4 +180,4 @@ sap.ui.define(['jquery.sap.global', './TextField', './library', 'sap/ui/core/Ico
 
 	return ValueHelpField;
 
-}, /* bExport= */ true);
+});

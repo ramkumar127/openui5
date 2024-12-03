@@ -1,28 +1,30 @@
-sap.ui.require(
-	["sap/ui/test/opaQunit"],
-	function (opaTest) {
-		"use strict";
+/*global QUnit*/
 
-		QUnit.module("Posts");
+sap.ui.define([
+	"sap/ui/test/opaQunit",
+	"./pages/Worklist"
+], function (opaTest) {
+	"use strict";
 
-		opaTest("Should see the table with all Posts", function (Given, When, Then) {
-			// Arrangements
-			Given.iStartMyApp();
+	QUnit.module("Posts");
 
-			//Actions
-			When.onTheWorklistPage.iLookAtTheScreen();
+	opaTest("Should see the table with all posts", function (Given, When, Then) {
+		// Arrangements
+		Given.iStartMyApp();
 
-			// Assertions
-			Then.onTheWorklistPage.theTitleShouldDisplayTheTotalAmountOfItems();
-		});
+		// Assertions
+		Then.onTheWorklistPage.theTableShouldHavePagination().
+			and.theTitleShouldDisplayTheTotalAmountOfItems();
+	});
 
-		opaTest("Should be able to load more items", function (Given, When, Then) {
-			//Actions
-			When.onTheWorklistPage.iPressOnMoreData();
+	opaTest("Should be able to load more items", function (Given, When, Then) {
+		//Actions
+		When.onTheWorklistPage.iPressOnMoreData();
 
-			// Assertions
-			Then.onTheWorklistPage.theTableShouldHaveAllEntries().
-				and.iTeardownMyAppFrame();
-		});
-	}
-);
+		// Assertions
+		Then.onTheWorklistPage.theTableShouldHaveAllEntries();
+
+		// Cleanup
+		Then.iTeardownMyApp();
+	});
+});

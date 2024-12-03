@@ -3,63 +3,84 @@
 /* Belize theme                                   */
 /* ============================================== */
 
+@_sap_m_WizardProgressNavigator_NavStepCircleHoverColor: lighten(@sapUiObjectHeaderBackground, 5);
+@_sap_m_WizardProgressNavigator_NavStepTitleSelectedTextColor: darken(@sapUiGroupTitleTextColor, 20);
+@_sap_m_WizardProgressNavigator_NavStepTitleHoverTextColor: darken(@sapUiGroupTitleTextColor, 10);
+
 .sapMWizardProgressNav {
-	background: @sapUiGroupContentBackground;
-	font-size: @sapMFontMediumSize;
-	border-color: @sapUiGroupContentBorderColor;
+	position: absolute;
+	z-index: 1;
 }
 
-.sapMWizardProgressNavStep:hover .sapMWizardProgressNavAnchorCircle {
-	background: @sapUiButtonHoverBackground;
+.sapMWizardProgressNavStep:hover .sapMWizardProgressNavStepCircle {
+	background-color: @sapUiObjectHeaderBackground;
+	color: @sapUiHighlight;
 }
 
-.sapMWizardProgressNavAnchor:focus {
-	outline: 1px dotted @sapUiContentFocusColor;
-	outline-offset: 1px;
+.sapMWizardProgressNavStep[data-sap-ui-wpn-step-current="true"]:hover .sapMWizardProgressNavStepCircle {
+	background-color: @sapUiHighlight;
+	color: @sapUiContentContrastIconColor;
 }
 
-.sapMWizardProgressNavAnchorCircle {
-	color: @sapUiButtonTextColor;
-	background: @sapUiSegmentedButtonBackground;
-	border-color: @sapUiSegmentedButtonSelectedBackground;
+.sapMWizardProgressNavStep[data-sap-ui-wpn-step-current="true"]:hover .sapMWizardProgressNavStepTitle,
+.sapMWizardProgressNavStep:hover .sapMWizardProgressNavStepTitle {
+	color: @_sap_m_WizardProgressNavigator_NavStepTitleHoverTextColor;
 }
 
-.sapMWizardProgressNavAnchorIcon {
-	font-size: @sapMFontLargeSize;
+.sapMWizardProgressNavStep[data-sap-ui-wpn-step-current="true"] .sapMWizardProgressNavStepContainer::after {
+	height: 0.125rem;
 }
 
-.sapMWizardProgressNavAnchorTitle {
-	background: @sapUiGroupContentBackground;
+.sapMWizardProgressNavStepCircle {
+	border-color: @sapUiHighlight;
+}
+
+.sapMWizardProgressNavStepTitle:hover {
+	color: @_sap_m_WizardProgressNavigator_NavStepTitleHoverTextColor;
 }
 
 .sapMWizardProgressNavStep::after {
-	border-bottom-color: @sapUiSelected;
+	border-bottom-color: @sapUiHighlight;
 }
 
-.sapMWizardProgressNavStep[data-sap-ui-wpn-step-current="true"] {
-	& .sapMWizardProgressNavAnchor::after {
-		background: @sapUiSelected;
-	}
+.sapMWizard .sapMWizardStepContainer {
+  background: @sapUiGroupContentBackground;
+}
 
-	& .sapMWizardProgressNavAnchorCircle {
-		color: @sapUiSegmentedButtonSelectedTextColor;
-		background: @sapUiSegmentedButtonSelectedBackground;
-		border: none;
-	}
+.sapMWizardProgressNavStep:hover .sapMWizardProgressNavStepCircle {
+	color:  @sapUiGroupTitleTextColor;
 }
 
 .sapMWizardProgressNavStep[data-sap-ui-wpn-step-active="true"] {
 
-	/* anchors in all steps after the active one have inactive style */
-	& ~ .sapMWizardProgressNavStep .sapMWizardProgressNavAnchorCircle {
-		color: @sapUiSegmentedButtonIconColor;
-		background: @sapUiButtonBackground;
-		border-color: @sapUiSegmentedButtonBorderColor;
+	.sapMWizardProgressNavStepTitle {
+		color: @_sap_m_WizardProgressNavigator_NavStepTitleSelectedTextColor;
+	}
+
+  & ~ .sapMWizardProgressNavStep {
+		color: fade(@sapUiGroupTitleTextColor, 50);
+	}
+	/* all steps after the active one have inactive style */
+	& ~ .sapMWizardProgressNavStep .sapMWizardProgressNavStepCircle {
+		border-color: fade(@sapUiHighlight, 50);
+		color: fade(@sapUiHighlight, 50);
+	}
+
+	& ~ .sapMWizardProgressNavStep .sapMWizardProgressNavStepTitle {
+		color: fade(@sapUiGroupTitleTextColor, 50);
+	}
+
+	& ~ .sapMWizardProgressNavStep .sapMWizardProgressNavStepLabelOptional {
+		color: fade(@sapUiGroupTitleTextColor, 50);
+	}
+
+	& ~ .sapMWizardProgressNavStep:hover .sapMWizardProgressNavStepCircle {
+		background-color: @sapUiObjectHeaderBackground;
 	}
 
 	/* all separators after (and including) the active step have inactive style */
 	&::after,
 	& ~ .sapMWizardProgressNavStep::after {
-		border-bottom-color: @sapUiSegmentedButtonBorderColor;
+		border-bottom-color: fade(@sapUiHighlight, 50);
 	}
 }

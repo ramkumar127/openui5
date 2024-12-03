@@ -1,66 +1,35 @@
-/* ================================================================= */
-/* CSS for control sap.m/TabStrip BlueCrystal theme */
-/* ================================================================= */
+/* =============================== */
+/* CSS for control sap.m/TabStrip  */
+/* BlueCrystal theme               */
+/* =============================== */
+
 .sapMTabStrip {
-	background: @sapUiExtraLightBG;
-	border-top: 1px solid @sapUiLightBorder;
-	border-bottom: 1px solid @sapUiLightBorder;
+	border-top: 1px solid @sapUiPageHeaderBorderColor;
+	border-bottom: 1px solid @sapUiPageHeaderBorderColor;
 	/* This class can override the default border-top style */
 	&.sapMTabStripTopBorderVisible {
-		border-top: 1px solid @sapUiLightBorder;
-	}
-	.sapMTSLeftOverflowButtons {
-		background: linear-gradient(90deg, @sapUiExtraLightBG 0%, @sapUiExtraLightBG 75%, fade(@sapUiExtraLightBG, 0) 100%);
+		border-top: 1px solid @sapUiPageHeaderBorderColor;
 	}
 	.sapMTSTabsContainer {
 		.sapMTSTabs {
 			.sapMTabStripItem {
-				font-size: @sapMFontMediumSize;
-				background: @sapUiHeaderBG;
-				border-right: 1px solid @sapUiLightBorder;
-				color: @sapUiDarkText;
+				border-right: 1px solid @sapUiPageHeaderBorderColor;
 				&.sapMTabStripItemSelected {
-					background: @sapUiLightestBG;
-					border-right: 1px solid @sapUiLightBorder;
-					color: @sapUiStandardText;
+					background: @sapUiSegmentedButtonBackground;
+					border-right: 1px solid @sapUiPageHeaderBorderColor;
 				}
 				&:hover {
-					background: darken(@sapUiHeaderBG, 5);
-					border-right: 1px solid @sapUiLightBorder;
-					color: @sapUiDarkText;
+					background: @sapUiSegmentedButtonHoverBackground;
+					border-right: 1px solid @sapUiPageHeaderBorderColor;
 				}
 				&:active {
-					background: @sapUiHighlight;
-					border-right: 1px solid @sapUiLightBorder;
-					color: @sapUiExtraLightBG;
-					.sapMTSItemCloseBtnCnt {
-						.sapMBtn {
-							.sapMBtnIcon {
-								color: @sapUiExtraLightBG;
-							}
-						}
-					}
+					background: @sapUiSegmentedButtonActiveBackground;
+					border-right: 1px solid @sapUiPageHeaderBorderColor;
 				}
 				&:first-child {
-					border-left: 1px solid @sapUiLightBorder;
-				}
-				&:focus {
-					outline: none;
-				}
-				&:focus::before {
-					pointer-events: none;
-					content: "";
-					position: absolute;
-					top: 0.0625rem;
-					left: 0.0625rem;
-					right: 0.0625rem;
-					bottom: 0.0625rem;
-					border: 1px dotted @sapUiFocus;
+					border-left: 1px solid @sapUiPageHeaderBorderColor;
 				}
 			}
 		}
-	}
-	.sapMTSRightOverflowButtons {
-		background: linear-gradient(90deg, fade(@sapUiExtraLightBG, 0) 0%, @sapUiExtraLightBG 25%, @sapUiExtraLightBG 100%);
 	}
 }

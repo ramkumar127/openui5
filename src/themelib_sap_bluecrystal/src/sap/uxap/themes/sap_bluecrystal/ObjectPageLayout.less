@@ -1,5 +1,10 @@
+/* ========================================== */
+/* CSS for control sap.uxap/ObjectPageLayout  */
+/* BlueCrystal theme                          */
+/* ========================================== */
+
 .sapUxAPObjectPageAnchorBar .sapMBtnInner {
-	color: @sapUiTextInverted;
+	color: @sapUiContentContrastTextColor;
 }
 
 .sapUxAPObjectPageNavigation {
@@ -7,27 +12,18 @@
 }
 
 .sapUxAPObjectPageLayout {
-	background: @sapUiLightestBG;
+	background: @sapUiGroupContentBackground;
 }
 
 .sapUxAPObjectPageHeaderDetails {
-	.sapMObjectNumberEmph.sapMObjectNumber {
-		color: @sapUiHeaderText;
-		> .sapMObjectNumberText {
-			font-family: @sapUiFontHeaderFamily;
-			font-size: 1.375rem;
-			font-weight: @sapUiFontHeaderWeight;
-		}
-		> .sapMObjectNumberUnit {
-			font-family: @sapUiFontFamily;
-			font-size: @sapMFontSmallSize;
-		}
+	.sapMObjectNumberEmph.sapMObjectNumber:not(.sapMObjectNumberStatusError):not(.sapMObjectNumberStatusWarning):not(.sapMObjectNumberStatusSuccess) {
+		color: @sapUiGroupTitleTextColor;
 	}
 	.sapMOHTitle .sapMText {
-		color: @sapUiLightText;
+		color: @sapUiContentLabelColor;
 	}
 	.sapMLabel {
-		color: @sapUiLightText;
+		color: @sapUiContentLabelColor;
 	}
 	&.sapUxAPObjectPageHeaderDetailsDesign-Dark {
 		background-color: @sapUiGlobalBackgroundGradientEndColor;
@@ -35,15 +31,15 @@
 		background-position: bottom left;
 		background-repeat: no-repeat;
 		background-size: 100% 100%;
-		color: @sapUiTextInverted;
+		color: @sapUiContentContrastTextColor;
 		.sapMLabel, .sapMPI, .sapMObjectNumber, .sapMObjStatus > .sapMObjStatusTitle, .sapMObjStatus > .sapMObjStatusText, .sapMBtnTransparent, .sapMOHTitle .sapMText {
-			color: @sapUiTextInverted;
+			color: @sapUiContentContrastTextColor;
 		}
 		.sapMLnk, .sapMLnk:visited {
 			color: lighten(@sapUiLink, 45);
 		}
 		.sapMOHTitleArrow {
-			color: @sapUiInvertedElement;
+			color: @sapUiContentContrastIconColor;
 		}
 		/* Semantic colors */
 		.sapMObjStatusError {
@@ -82,4 +78,10 @@
 
 .sapUiSizeCompact .sapUxAPObjectPageNavigation .sapUxAPITBar.sapUxAPObjectChildPage {
 	height: 1.9375rem;
+}
+
+.sapUxAPObjectPageFooter .sapUxAPObjectPageFloatingFooter {
+	background: @sapUiPageFooterBackground;
+	border-color: @sapUiPageFooterBorderColor;
+	box-shadow: @sapUiShadowLevel1;
 }

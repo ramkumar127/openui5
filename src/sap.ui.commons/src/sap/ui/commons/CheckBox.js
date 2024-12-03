@@ -3,9 +3,23 @@
  */
 
 // Provides control sap.ui.commons.CheckBox.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
-	function(jQuery, library, Control) {
+sap.ui.define([
+ './library',
+ 'sap/ui/core/Control',
+ './CheckBoxRenderer',
+ 'sap/ui/core/library',
+ 'sap/ui/Device'
+],
+	function(library, Control, CheckBoxRenderer, coreLibrary, Device) {
 	"use strict";
+
+
+
+	 // shortcut for sap.ui.core.TextDirection
+	 var TextDirection = coreLibrary.TextDirection;
+
+	 // shortcut for sap.ui.core.ValueState
+	 var ValueState = coreLibrary.ValueState;
 
 
 
@@ -19,18 +33,20 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 *
 	 * Provides a box which can be flagged, the box has a label. A check box can either stand alone, or in a group with other check boxes. As an option, the boxes can initially be set to status 'Not Editable'.
 	 * @extends sap.ui.core.Control
+	 * @implements sap.ui.core.IFormContent
 	 *
 	 * @author SAP SE
 	 * @version ${version}
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38. Instead, use the <code>sap.m.CheckBox</code> control.
 	 * @alias sap.ui.commons.CheckBox
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var CheckBox = Control.extend("sap.ui.commons.CheckBox", /** @lends sap.ui.commons.CheckBox.prototype */ { metadata : {
 
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -56,7 +72,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 			/**
 			 * Accepts the core enumeration ValueState.type that supports 'None', 'Error', 'Warning' and 'Success'.
 			 */
-			valueState : {type : "sap.ui.core.ValueState", group : "Data", defaultValue : sap.ui.core.ValueState.None},
+			valueState : {type : "sap.ui.core.ValueState", group : "Data", defaultValue : ValueState.None},
 
 			/**
 			 * The width can be set to an absolute value. If no value is set, the control width results from the text length.
@@ -66,7 +82,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 			/**
 			 * The value can be set to LTR or RTL. Otherwise, the control inherits the text direction from its parent control.
 			 */
-			textDirection : {type : "sap.ui.core.TextDirection", group : "Appearance", defaultValue : sap.ui.core.TextDirection.Inherit},
+			textDirection : {type : "sap.ui.core.TextDirection", group : "Appearance", defaultValue : TextDirection.Inherit},
 
 			/**
 			 * The 'name' property to be used in the HTML code, for example for HTML forms that send data to the server via submit.
@@ -118,7 +134,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 		// End of 2013 is have to be again in the tabchain.
 		// But not in the Form. But this is handled in the FromLayout control
 		// Let's see what happens 2014... ;-)
-		if (!!sap.ui.Device.browser.internet_explorer && !this.getEnabled()) {
+		if (Device.browser.msie && !this.getEnabled()) {
 			// in IE tabindex = -1 hides focus, so in readOnly/disabled case tabindex must be temporarily set to 0
 			// as long as CheckBox is focused
 			this.$().attr("tabindex", 0).addClass("sapUiCbFoc"); // the CSS class itself is not used, but IE only draws the standard focus outline when it is added
@@ -138,7 +154,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 		// End of 2013 is have to be again in the tabchain.
 		// But not in the Form. But this is handled in the FromLayout control
 		// Let's see what happens 2014... ;-)
-		if (!!sap.ui.Device.browser.internet_explorer && !this.getEnabled()) {
+		if (Device.browser.msie && !this.getEnabled()) {
 			// in IE tabindex = -1 hides focus, so in readOnly/disabled case tabindex must be temporarily set to 0
 			// as long as CheckBox is focused - now unset this again
 			this.$().attr("tabindex", -1).removeClass("sapUiCbFoc");
@@ -179,16 +195,33 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 *
 	 * Inverts the current value of the control.
 	 *
-	 * @type sap.ui.commons.CheckBox
+	 * @type this
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	CheckBox.prototype.toggle = function() {
 		this.setChecked(!this.getChecked());
 		return this;
 	};
 
+	/**
+	 * @see sap.ui.core.Control#getAccessibilityInfo
+	 * @returns {sap.ui.core.AccessibilityInfo}
+	 * The object contains the accessibility information of <code>sap.ui.commons.CheckBox</code>
+	 * @protected
+	 */
+	CheckBox.prototype.getAccessibilityInfo = function() {
+		var oBundle = sap.ui.getCore().getLibraryResourceBundle("sap.ui.commons");
+		return {
+			role: "checkbox",
+			type: oBundle.getText("ACC_CTR_TYPE_CHECKBOX"),
+			description: (this.getText() || "") + (this.getChecked() ? (" " + oBundle.getText("ACC_CTR_STATE_CHECKED")) : ""),
+			focusable: this.getEnabled(),
+			enabled: this.getEnabled(),
+			editable: this.getEditable()
+		};
+	};
+
 
 	return CheckBox;
 
-}, /* bExport= */ true);
+});

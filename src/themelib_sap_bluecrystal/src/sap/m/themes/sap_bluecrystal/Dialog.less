@@ -1,58 +1,57 @@
+/* ============================= */
+/* CSS for control sap.m/Dialog  */
+/* BlueCrystal theme             */
+/* ============================= */
+
 .sapMDialog {
 	background: darken(@sapUiGroupContentBackground, 2);
 	border: solid 1px @sapUiContentForegroundBorderColor;
 	border-radius: 2px;
-	box-shadow: 0 0 30px 2px fade(@sapUiDarkShadowTint, 15);
+	box-shadow: 0 0 30px 2px fade(@sapUiContentShadowColor, 15);
 }
 
-.sapMMessageDialog.sapMPopup-CTX > header.sapMDialogTitle {
+.sapMMessageDialog.sapMPopup-CTX > header .sapMDialogTitleGroup {
 	background-color: lighten(@sapUiPageHeaderBackground, 5);
 }
 
-.sapMDialog > header.sapMDialogTitle .sapUiIcon {
-	color: @sapUiElement;
+.sapMDialog > header .sapMDialogTitleGroup .sapUiIcon {
+	color: @sapUiContentIconColor;
 }
 
-.sap-desktop .sapMDialog > footer.sapMDialogActions {
+html.sap-desktop .sapMDialog > footer.sapMDialogActions {
 	background-color: @sapUiPageFooterBackground;
 }
 
 .sapMDialogWarning > header {
-	&.sapMDialogTitle .sapUiIcon {
+	& .sapMDialogTitleGroup .sapUiIcon {
 		color: @sapUiCriticalText;
 	}
 
-	&.sapMBar {
+	& .sapMIBar {
 		box-shadow: inset 0 -0.0625rem @sapUiCriticalText;
 	}
 }
 
 .sapMDialogError > header {
-	&.sapMDialogTitle .sapUiIcon {
+	& .sapMDialogTitleGroup .sapUiIcon {
 		color: @sapUiNegativeText;
 	}
 
-	&.sapMBar {
+	& .sapMIBar {
 		box-shadow: inset 0 -0.0625rem @sapUiNegativeText;
 	}
 }
 
 .sapMDialogSuccess > header {
-	&.sapMDialogTitle .sapUiIcon {
+	& .sapMDialogTitleGroup .sapUiIcon {
 		color: @sapUiPositiveText;
 	}
 
-	&.sapMBar {
+	& .sapMIBar {
 		box-shadow: inset 0 -0.0625rem @sapUiPositiveText;
 	}
 }
 
-.sapMDialogResizeHandler {
-	&:before {
-		border-color: transparent transparent darken(@sapUiContentForegroundBorderColor, 15) transparent;
-	}
-
-	&:hover:before {
-		border-color: transparent transparent @sapUiContentForegroundBorderColor transparent;
-	}
+.sapMDialogResizeHandler::before {
+	color: darken(@sapUiContentForegroundBorderColor, 15);
 }

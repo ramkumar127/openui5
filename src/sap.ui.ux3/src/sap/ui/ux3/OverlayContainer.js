@@ -3,8 +3,14 @@
  */
 
 // Provides control sap.ui.ux3.OverlayContainer.
-sap.ui.define(['jquery.sap.global', './Overlay', './library'],
-	function(jQuery, Overlay, library) {
+sap.ui.define([
+    './Overlay',
+    './library',
+    './OverlayContainerRenderer',
+    // jQuery Plugin "lastFocusableDomRef"
+	'sap/ui/dom/jquery/Focusable'
+],
+	function(Overlay, library, OverlayContainerRenderer) {
 	"use strict";
 
 
@@ -24,11 +30,12 @@ sap.ui.define(['jquery.sap.global', './Overlay', './library'],
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated As of version 1.38, the concept has been discarded.
 	 * @alias sap.ui.ux3.OverlayContainer
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var OverlayContainer = Overlay.extend("sap.ui.ux3.OverlayContainer", /** @lends sap.ui.ux3.OverlayContainer.prototype */ { metadata : {
 
+		deprecated: true,
 		library : "sap.ui.ux3",
 		defaultAggregation : "content",
 		aggregations : {
@@ -46,13 +53,17 @@ sap.ui.define(['jquery.sap.global', './Overlay', './library'],
 	 * @private
 	 */
 	OverlayContainer.prototype._setFocusLast = function() {
+	    // jQuery Plugin "lastFocusableDomRef"
 		var oFocus = this.$("content").lastFocusableDomRef();
 		if (!oFocus && this.getCloseButtonVisible()) {
 			oFocus = this.getDomRef("close");
 		} else if (!oFocus && this.getOpenButtonVisible()) {
 			oFocus = this.getDomRef("openNew");
 		}
-		jQuery.sap.focus(oFocus);
+
+		if (oFocus) {
+		    oFocus.focus();
+		}
 	};
 
 	/**
@@ -62,14 +73,20 @@ sap.ui.define(['jquery.sap.global', './Overlay', './library'],
 	 */
 	OverlayContainer.prototype._setFocusFirst = function() {
 		if (this.getOpenButtonVisible()) {
-			jQuery.sap.focus(this.getDomRef("openNew"));
+			if (this.getDomRef("openNew")) {
+				this.getDomRef("openNew").focus();
+			}
 		} else if (this.getCloseButtonVisible()) {
-			jQuery.sap.focus(this.getDomRef("close"));
+			if (this.getDomRef("close")) {
+				this.getDomRef("close").focus();
+			}
 		} else {
-			jQuery.sap.focus(this.$("content").firstFocusableDomRef());
+			if (this.$("content").firstFocusableDomRef()) {
+				this.$("content").firstFocusableDomRef().focus();
+			}
 		}
 	};
 
 	return OverlayContainer;
 
-}, /* bExport= */ true);
+});

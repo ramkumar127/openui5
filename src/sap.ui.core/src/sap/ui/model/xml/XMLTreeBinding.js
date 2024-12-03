@@ -3,8 +3,8 @@
  */
 
 // Provides the XML model implementation of a list binding
-sap.ui.define(['jquery.sap.global', 'sap/ui/model/ClientTreeBinding'],
-	function(jQuery, ClientTreeBinding) {
+sap.ui.define(['sap/ui/model/ClientTreeBinding', "sap/base/util/each"],
+	function(ClientTreeBinding, each) {
 	"use strict";
 
 
@@ -14,10 +14,18 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ClientTreeBinding'],
 	 * Tree binding implementation for XML format
 	 *
 	 * @param {sap.ui.model.xml.XMLModel} [oModel]
-	 * @param {string} sPath the path pointing to the tree / array that should be bound
-	 * @param {object} [oContext=null] the context object for this binding (optional)
-	 * @param {array} [aFilters=null] predefined filter/s contained in an array (optional)
-	 * @param {object} [mParameters=null] additional model specific parameters (optional)
+	 * @param {string} Path pointing to the tree or array that should be bound
+	 * @param {object} [oContext] Context object for this binding
+	 * @param {sap.ui.model.Filter[]|sap.ui.model.Filter} [aFilters=[]]
+	 *   The filters to be used initially with type {@link sap.ui.model.FilterType.Application}; call {@link #filter} to
+	 *   replace them
+	 * @param {object} [mParameters] Additional model-specific parameters
+	 * @param {sap.ui.model.Sorter[]|sap.ui.model.Sorter} [aSorters=[]]
+	 *   The sorters used initially; call {@link #sort} to replace them
+	 * @throws {Error} If one of the filters uses an operator that is not supported by the underlying model
+	 *   implementation or if the {@link sap.ui.model.Filter.NONE} filter instance is contained in
+	 *   <code>aFilters</code> together with other filters
+	 * @protected
 	 * @alias sap.ui.model.xml.XMLTreeBinding
 	 * @extends sap.ui.model.ClientTreeBinding
 	 */
@@ -25,10 +33,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ClientTreeBinding'],
 
 	/**
 	 * Return node contexts for the tree
-	 * @param {object} oContext to use for retrieving the node contexts
-	 * @param {integer} iStartIndex the startIndex where to start the retrieval of contexts
-	 * @param {integer} iLength determines how many contexts to retrieve beginning from the start index.
-	 * @return {Array} the contexts array
+	 * @param {sap.ui.model.Context} oContext to use for retrieving the node contexts
+	 * @param {int} iStartIndex the startIndex where to start the retrieval of contexts
+	 * @param {int} iLength determines how many contexts to retrieve beginning from the start index.
+	 * @return {sap.ui.model.Context[]} the contexts array
 	 * @protected
 	 */
 	XMLTreeBinding.prototype.getNodeContexts = function(oContext, iStartIndex, iLength) {
@@ -41,10 +49,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ClientTreeBinding'],
 
 		var sContextPath = oContext.getPath();
 
-		if (!jQuery.sap.endsWith(sContextPath,"/")) {
+		if (!sContextPath.endsWith("/")) {
 			sContextPath = sContextPath + "/";
 		}
-		if (!jQuery.sap.startsWith(sContextPath,"/")) {
+		if (!sContextPath.startsWith("/")) {
 			sContextPath = "/" + sContextPath;
 		}
 
@@ -54,7 +62,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ClientTreeBinding'],
 			oNode = this.oModel._getObject(oContext.getPath()),
 			sChildPath, oChildContext;
 
-		jQuery.each(oNode[0].childNodes, function(sName, oChild) {
+		each(oNode[0].childNodes, function(sName, oChild) {
 			if (oChild.nodeType == 1) { // check if node is an element
 				if (mNodeIndices[oChild.nodeName] == undefined) {
 					mNodeIndices[oChild.nodeName] = 0;
@@ -64,8 +72,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ClientTreeBinding'],
 				sChildPath = sContextPath + oChild.nodeName + "/" + mNodeIndices[oChild.nodeName];
 				oChildContext = that.oModel.getContext(sChildPath);
 				// check if there is a filter on this level applied
-				if (that.aAllFilters && !that.bIsFiltering) {
-					if (jQuery.inArray(oChildContext, that.filterInfo.aFilteredContexts) != -1) {
+				if (that.oCombinedFilter && !that.bIsFiltering) {
+					if (that.filterInfo.aFilteredContexts
+							&& that.filterInfo.aFilteredContexts.indexOf(oChildContext) != -1) {
 						aContexts.push(oChildContext);
 					}
 				} else {

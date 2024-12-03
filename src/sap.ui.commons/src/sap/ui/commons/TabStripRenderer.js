@@ -3,8 +3,8 @@
  */
 
 // Provides default renderer for control sap.ui.commons.TabStrip
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define(["sap/base/Log"],
+	function(Log) {
 	"use strict";
 
 
@@ -19,13 +19,13 @@ sap.ui.define(['jquery.sap.global'],
 	/**
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
-	 * @param {sap.ui.core.RenderManager} oRenderManager the RenderManager that can be used for writing to the Render-Output-Buffer
+	 * @param {sap.ui.core.RenderManager} rm the RenderManager that can be used for writing to the Render-Output-Buffer
 	 * @param {sap.ui.core.Control} oControl an object representation of the control that should be rendered
 	 */
-	TabStripRenderer.render = function(oRenderManager, oControl){
+	TabStripRenderer.render = function(rm, oControl){
 		// convenience variable
-		var rm = oRenderManager;
 		var rb = sap.ui.getCore().getLibraryResourceBundle("sap.ui.commons");
+		var sControlId = oControl.getId();
 
 		//outer DIV
 		rm.write("<div role='presentation'");
@@ -36,12 +36,20 @@ sap.ui.define(['jquery.sap.global'],
 		rm.writeStyles();
 		rm.writeControlData(oControl);
 		//header area
-		rm.write("><div class=\"sapUiTabBar\" tabIndex=\"0\"");
+		rm.write('><div class="sapUiTabBar"');
 		if (oControl.getTooltip_AsString()) {
 			rm.writeAttributeEscaped('title', oControl.getTooltip_AsString());
 		}
-		// menu and list header
-		rm.write("><div class=\"sapUiTabMenu\"></div><ul class=\"sapUiTabBarCnt\" role=\"tablist\">");
+		// menu
+		rm.write("><div class=\"sapUiTabMenu\"></div>");
+
+		rm.renderControl(oControl._getLeftArrowControl());
+
+		// scroll container
+		rm.write('<div id="' + sControlId + '-scrollCont" class="sapUiTabStripScrollContainer">');
+
+		// list header
+		rm.write('<ul id="' + sControlId + '-tablist" class="sapUiTabBarCnt" role="tablist">');
 
 		var aTabs = oControl.getTabs();
 		// check if selected tab exists and is visible -> otherwise select first active one
@@ -143,7 +151,7 @@ sap.ui.define(['jquery.sap.global'],
 				}
 				rm.writeEscaped(oTitle.getText());
 			} else {
-				jQuery.sap.log.warning("No title configured for " + oTab + ". Either set a string as 'text' property or a sap.ui.core.Title as 'title' aggregation.");
+				Log.warning("No title configured for " + oTab + ". Either set a string as 'text' property or an sap.ui.core.Title as 'title' aggregation.");
 			}
 			if (oTab.getClosable()) {
 				// close button
@@ -153,11 +161,15 @@ sap.ui.define(['jquery.sap.global'],
 		}
 		rm.write("</ul></div>");
 
+		rm.renderControl(oControl._getRightArrowControl());
+
+		rm.write("</div>");
+
 		if (bWrongIndex) {
 			// still wrong index - no tab is selected -> render empty panel area
 			oControl.setProperty( 'selectedIndex', -1, true );
 			iSelectedIndex = -1;
-			rm.write("<div id=\"" + oControl.getId() + "-panel" + "\" role=\"tabpanel\"");
+			rm.write("<div id=\"" + sControlId + "-panel" + "\" role=\"tabpanel\"");
 			rm.addClass("sapUiTabPanel");
 			if (oControl.getHeight()) {
 				rm.addClass("sapUiTabPanelHeight");

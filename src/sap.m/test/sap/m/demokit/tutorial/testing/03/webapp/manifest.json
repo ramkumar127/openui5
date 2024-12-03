@@ -1,16 +1,21 @@
 {
-	"_version": "1.1.0",
+	"_version": "1.38.0",
 	"sap.app": {
-		"_version": "1.1.0",
 		"id": "sap.ui.demo.bulletinboard",
 		"type": "application",
-		"i18n": "webapp/i18n/i18n.properties",
+		"i18n": {
+			"bundleUrl": "i18n/i18n.properties",
+			"supportedLocales": [
+				""
+			],
+			"fallbackLocale": ""
+		},
 		"title": "",
 		"description": "",
 		"applicationVersion": {
 			"version": "1.0.0"
 		},
-		"ach": "CA-UI5-DOC",
+		"resources": "resources.json",
 		"dataSources": {
 			"mainService": {
 				"uri": "/here/goes/your/serviceUrl/",
@@ -23,7 +28,6 @@
 		}
 	},
 	"sap.ui": {
-		"_version": "1.1.0",
 		"technology": "UI5",
 		"icons": {
 			"icon": "sap-icon://task"
@@ -32,20 +36,20 @@
 			"desktop": true,
 			"tablet": true,
 			"phone": true
-		},
-		"supportedThemes": [
-			"sap_hcb",
-			"sap_bluecrystal"
-		]
+		}
 	},
 	"sap.ui5": {
-		"_version": "1.1.0",
-		"rootView": "sap.ui.demo.bulletinboard.view.App",
+		"rootView": {
+			"viewName": "sap.ui.demo.bulletinboard.view.App",
+			"type": "XML",
+			"async": true,
+			"id": "app"
+		},
 		"dependencies": {
-			"minUI5Version": "1.30.0",
+			"minUI5Version": "1.98.0",
 			"libs": {
-				"sap.ui.core": {},
 				"sap.m": {},
+				"sap.ui.core": {},
 				"sap.ui.layout": {}
 			}
 		},
@@ -53,7 +57,11 @@
 			"i18n": {
 				"type": "sap.ui.model.resource.ResourceModel",
 				"settings": {
-					"bundleName": "sap.ui.demo.bulletinboard.i18n.i18n"
+					"bundleName": "sap.ui.demo.bulletinboard.i18n.i18n",
+					"supportedLocales": [
+						""
+					],
+					"fallbackLocale": ""
 				}
 			},
 			"": {
@@ -68,10 +76,12 @@
 		"routing": {
 			"config": {
 				"routerClass": "sap.m.routing.Router",
+				"type": "View",
 				"viewType": "XML",
-				"viewPath": "sap.ui.demo.bulletinboard.view",
+				"path": "sap.ui.demo.bulletinboard.view",
 				"controlId": "app",
-				"controlAggregation": "pages"
+				"controlAggregation": "pages",
+				"async": true
 			},
 			"routes": [
 				{
@@ -82,9 +92,9 @@
 			],
 			"targets": {
 				"worklist": {
-					"viewName": "Worklist",
-					"viewId": "worklist",
-					"viewLevel": 1
+					"name": "Worklist",
+					"id": "worklist",
+					"level": 1
 				}
 			}
 		}

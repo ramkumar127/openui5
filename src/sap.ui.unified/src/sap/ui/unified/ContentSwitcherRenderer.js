@@ -1,14 +1,24 @@
 /*!
  * ${copyright}
  */
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define([
+	"sap/ui/core/ControlBehavior",
+	'sap/ui/unified/library',
+	"sap/base/security/encodeXML",
+	"sap/ui/core/Configuration"
+],
+	function(ControlBehavior, library, encodeXML, Configuration) {
 	"use strict";
+
+
+	// shortcut for sap.ui.unified.ContentSwitcherAnimation
+	var ContentSwitcherAnimation = library.ContentSwitcherAnimation;
 
 
 	/**
 	 * AnimatedContentSwitcher renderer.
 	 * @namespace
+	 * @deprecated As of version 1.44.0, the concept has been discarded.
 	 */
 	var ContentSwitcherRenderer = {
 	};
@@ -18,13 +28,13 @@ sap.ui.define(['jquery.sap.global'],
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
 	 * @param {sap.ui.core.RenderManager} oRm the RenderManager that can be used for writing to the render output buffer
-	 * @param {sap.ui.core.Control} oControl an object representation of the control that should be rendered
+	 * @param {sap.ui.unified.ContentSwitcher} oControl an object representation of the control that should be rendered
 	 */
 	ContentSwitcherRenderer.render = function(oRm, oControl){
 		var sId            = oControl.getId();
 		var sAnimation     = oControl.getAnimation();
-		if (!sap.ui.getCore().getConfiguration().getAnimation()) {
-			sAnimation = sap.ui.unified.ContentSwitcherAnimation.None;
+		if (ControlBehavior.getAnimationMode() === Configuration.AnimationMode.none) {
+			sAnimation = ContentSwitcherAnimation.None;
 		}
 
 		var iActiveContent = oControl.getActiveContent();
@@ -32,7 +42,7 @@ sap.ui.define(['jquery.sap.global'],
 		oRm.write("<div");
 		oRm.writeControlData(oControl);
 		oRm.addClass("sapUiUfdCSwitcher");
-		oRm.addClass("sapUiUfdCSwitcherAnimation" + jQuery.sap.encodeHTML(sAnimation));
+		oRm.addClass("sapUiUfdCSwitcherAnimation" + encodeXML(sAnimation));
 		oRm.writeClasses();
 		oRm.write(">");
 

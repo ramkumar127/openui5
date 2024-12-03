@@ -2,9 +2,13 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', './ListItemBaseRenderer', 'sap/ui/core/Renderer'],
-	function(jQuery, ListItemBaseRenderer, Renderer) {
+sap.ui.define(["sap/ui/core/Lib", "sap/ui/core/library", "sap/ui/core/Renderer", "sap/ui/core/IconPool", "./library", "./ListItemBaseRenderer"],
+	function(Library, coreLibrary, Renderer, IconPool, library, ListItemBaseRenderer ) {
 	"use strict";
+
+
+	// shortcut for sap.ui.core.TextDirection
+	var TextDirection = coreLibrary.TextDirection;
 
 
 	/**
@@ -12,190 +16,279 @@ sap.ui.define(['jquery.sap.global', './ListItemBaseRenderer', 'sap/ui/core/Rende
 	 * @namespace
 	 */
 	var StandardListItemRenderer = Renderer.extend(ListItemBaseRenderer);
+	StandardListItemRenderer.apiVersion = 2;
 
 	/**
 	 * Renders the HTML for the given control, using the provided
 	 * {@link sap.ui.core.RenderManager}.
 	 *
-	 * @param {sap.ui.core.RenderManager}
-	 *          oRenderManager the RenderManager that can be used for writing to the
-	 *          Render-Output-Buffer
-	 * @param {sap.ui.core.Control}
-	 *          oControl an object representation of the control that should be
-	 *          rendered
+	 * @param {sap.ui.core.RenderManager} rm The <code>RenderManager</code> that can be used for writing to the render output buffer
+	 * @param {sap.m.StandardListItem} oLI An object representation of the control that is rendered
 	 */
 	StandardListItemRenderer.renderLIAttributes = function(rm, oLI) {
-		rm.addClass("sapMSLI");
-		if (oLI._showSeparators  == sap.m.ListSeparators.None && !oLI.getIconInset()) {
-			rm.addClass("sapMSLIShowSeparatorNone");
+		var sIconURI = oLI.getIcon(),
+			sTitle = oLI.getTitle();
+
+		rm.class("sapMSLI");
+
+		if (sIconURI && !IconPool.isIconURI(sIconURI)) {
+			rm.class("sapMSLIThumbnail");
 		}
-		if (oLI.getIcon()) {
-			rm.addClass("sapMSLIIcon");
-		}
+
 		if (!oLI.getIconInset()) {
-			rm.addClass("sapMSLIIconThumb");
-		}
-		if ((oLI.getDescription() || !oLI.getAdaptTitleSize()) && oLI.getIcon() &&  oLI.getIconInset()) {
-			rm.addClass("sapMSLIDescIcon");
-		}
-		if ((oLI.getDescription() || !oLI.getAdaptTitleSize()) && !oLI.getIcon()) {
-			rm.addClass("sapMSLIDescNoIcon");
-		}
-		if (!oLI.getDescription() && oLI.getIcon()) {
-			rm.addClass("sapMSLINoDescIcon");
-		}
-		if (oLI.getType() == sap.m.ListType.Detail || oLI.getType() == sap.m.ListType.DetailAndActive) {
-			rm.addClass("sapMSLIDetail");
+			rm.class("sapMSLINoIconInset");
 		}
 
+		if (sTitle && oLI.getDescription()) {
+			rm.class("sapMSLIWithDescription");
+		}
+
+		if (sTitle && !oLI.getAdaptTitleSize()) {
+			rm.class("sapMSLINoTitleAdapt");
+		}
+
+		if (sTitle && oLI.getWrapping()) {
+			rm.class("sapMSLIWrapping");
+		}
 	};
 
+	/**
+	 * Renders the list item content element.
+	 * @param {sap.ui.core.RenderManager} rm The <code>RenderManager</code> that can be used for writing to the render output buffer
+	 * @param {sap.m.StandardListItem} oLI An object representation of the control that is rendered
+	 * @protected
+	 */
 	StandardListItemRenderer.renderLIContent = function(rm, oLI) {
+		var sInfo = oLI.getInfo(),
+			sTitle = oLI.getTitle(),
+			sDescription = oLI.getDescription(),
+			bAdaptTitleSize = oLI.getAdaptTitleSize(),
+			bShouldRenderInfoWithoutTitle = !sTitle && sInfo;
 
+		// render image or avatar control
+		if (oLI.getAvatar()) {
+			rm.renderControl(oLI._getAvatar());
+		} else if (oLI.getIcon()) {
+			rm.renderControl(oLI._getImage());
+		}
+
+		rm.openStart("div").class("sapMSLIDiv");
+
+		// if bShouldRenderInfoWithoutTitle=ture then adapt the style class according to have flex-direction: row
+		if ((!sDescription && bAdaptTitleSize && sInfo) || bShouldRenderInfoWithoutTitle) {
+			rm.class("sapMSLIInfoMiddle");
+		}
+
+		rm.openEnd();
+
+		this.renderTitleWrapper(rm, oLI);
+
+		if (sTitle && sDescription) {
+			this.renderDescription(rm, oLI);
+		}
+
+		if (bShouldRenderInfoWithoutTitle && !oLI.getWrapping()) {
+			this.renderInfo(rm, oLI);
+		}
+
+		rm.close("div");
+	};
+
+	/**
+	 * Renders the title wrapper.
+	 * @param {sap.ui.core.RenderManager} rm The <code>RenderManager</code> that can be used for writing to the render output buffer
+	 * @param {sap.m.StandardListItem} oLI An object representation of the control that is rendered
+	 * @protected
+	 */
+	StandardListItemRenderer.renderTitleWrapper = function(rm, oLI) {
 		var sTextDir = oLI.getTitleTextDirection(),
-			sInfoDir = oLI.getInfoTextDirection();
+			sTitle = oLI.getTitle(),
+			sDescription = oLI.getDescription(),
+			sInfo = oLI.getInfo(),
+			bWrapping = oLI.getWrapping(),
+			bShouldRenderInfoWithoutTitle = !sTitle && sInfo;
 
-		// image
-		if (oLI.getIcon()) {
-			if (oLI.getIconInset()) {
-				var oList = sap.ui.getCore().byId(oLI._listId);
-				if (oList && oList.getMode() == sap.m.ListMode.None & !oList.getShowUnread()) {
-					rm.renderControl(oLI._getImage((oLI.getId() + "-img"), "sapMSLIImgFirst", oLI.getIcon(), oLI.getIconDensityAware()));
-				} else {
-					rm.renderControl(oLI._getImage((oLI.getId() + "-img"), "sapMSLIImg", oLI.getIcon(), oLI.getIconDensityAware()));
-				}
-			} else {
-				rm.renderControl(oLI._getImage((oLI.getId() + "-img"), "sapMSLIImgThumb", oLI.getIcon(), oLI.getIconDensityAware()));
-			}
-		}
+		rm.openStart("div");
 
-		var isDescription = oLI.getTitle() && (oLI.getDescription() || !oLI.getAdaptTitleSize())  || (oLI._showSeparators  == sap.m.ListSeparators.None && !oLI.getIconInset());
-		var isInfo = oLI.getInfo();
-
-		if (isDescription) {
-			rm.write("<div");
-			rm.addClass("sapMSLIDiv");
-			rm.writeClasses();
-			rm.write(">");
-		}
-
-		rm.write("<div");
-		if (!isDescription) {
-			rm.addClass("sapMSLIDiv");
-		}
-		rm.addClass("sapMSLITitleDiv");
-		rm.writeClasses();
-		rm.write(">");
-
-		//noFlex: make an additional div for the contents table
-		if (!isDescription && oLI._bNoFlex) {
-			rm.write('<div class="sapMLIBNoFlex">');
-		}
-		// List item text (also written when no title for keeping the space)
-		rm.write("<div");
-		if (isDescription) {
-			rm.addClass("sapMSLITitle");
+		if (!bShouldRenderInfoWithoutTitle && sDescription) {
+			rm.class("sapMSLITitle");
 		} else {
-			rm.addClass("sapMSLITitleOnly");
-		}
-		rm.writeClasses();
-
-		if (sTextDir !== sap.ui.core.TextDirection.Inherit) {
-			rm.writeAttribute("dir", sTextDir.toLowerCase());
+			rm.class("sapMSLITitleOnly");
 		}
 
-		rm.write(">");
-		rm.writeEscaped(oLI.getTitle());
-		rm.write("</div>");
+		if (sTextDir !== TextDirection.Inherit) {
+			rm.attr("dir", sTextDir.toLowerCase());
+		}
 
-		//info div top when @sapUiInfoTop: true;
-		if (isInfo && (sap.ui.core.theming.Parameters.get("sapUiInfoTop") == "true" || !isDescription)) {
-			rm.write("<div");
-			rm.writeAttribute("id", oLI.getId() + "-info");
-			rm.addClass("sapMSLIInfo");
-			rm.addClass("sapMSLIInfo" + oLI.getInfoState());
-			rm.writeClasses();
-			if (sInfoDir !== sap.ui.core.TextDirection.Inherit) {
-				rm.writeAttribute("dir", sInfoDir.toLowerCase());
+		rm.openEnd();
+
+		if (bWrapping) {
+			this.renderWrapping(rm, oLI, "title");
+			if (sInfo && !sDescription) {
+				this.renderInfo(rm, oLI);
 			}
-			rm.write(">");
-			rm.writeEscaped(isInfo);
-			rm.write("</div>");
+		} else {
+			this.renderTitle(rm, oLI);
 		}
 
-		//noFlex: make an additional div for the contents table
-		if (!isDescription && oLI._bNoFlex) {
-			rm.write('</div>');
+		rm.close("div");
+
+		if (sInfo && !sDescription && !bWrapping && !bShouldRenderInfoWithoutTitle) {
+			this.renderInfo(rm, oLI);
 		}
-		rm.write("</div>");
+	};
 
-		rm.write("<div");
-		rm.addClass("sapMSLIDescriptionDiv");
-		rm.writeClasses();
-		rm.write(">");
+	/**
+	 * Renders the title text.
+	 * @param {sap.ui.core.RenderManager} rm The <code>RenderManager</code> that can be used for writing to the render output buffer
+	 * @param {sap.m.StandardListItem} oLI An object representation of the control that is rendered
+	 * @protected
+	 */
+	StandardListItemRenderer.renderTitle = function(rm, oLI) {
+		rm.text(oLI.getTitle());
+	};
 
-		// List item text
-		if (isDescription) {
-			rm.write("<div");
-			rm.addClass("sapMSLIDescription");
-			rm.writeClasses();
-			rm.write(">");
-			if (oLI.getDescription()) {
-				rm.writeEscaped(oLI.getDescription());
+	/**
+	 * Renders the description text.
+	 * @param {sap.ui.core.RenderManager} rm The <code>RenderManager</code> that can be used for writing to the render output buffer
+	 * @param {sap.m.StandardListItem} oLI An object representation of the control that is rendered
+	 * @protected
+	 */
+	StandardListItemRenderer.renderDescription = function (rm, oLI) {
+		var bWrapping = oLI.getWrapping(),
+			sDescription = oLI.getDescription(),
+			sInfo = oLI.getInfo();
+
+		rm.openStart("div").class("sapMSLIDescription");
+
+		if (sInfo) {
+			rm.class("sapMSLIDescriptionAndInfo");
+		}
+
+		rm.openEnd();
+
+		// render info text within the description div to apply the relevant flex layout
+		if (sInfo) {
+			rm.openStart("div").class("sapMSLIDescriptionText").openEnd();
+
+			if (bWrapping) {
+				this.renderWrapping(rm, oLI, "description");
+				this.renderInfo(rm, oLI);
 			} else {
-				rm.write("&nbsp;");
+				rm.text(sDescription);
 			}
-			rm.write("</div>");
+
+			rm.close("div");
+
+			if (!bWrapping) {
+				this.renderInfo(rm, oLI);
+			}
+		} else if (bWrapping) {
+			this.renderWrapping(rm, oLI, "description");
+		} else {
+			rm.text(sDescription);
 		}
 
-		if (isInfo && sap.ui.core.theming.Parameters.get("sapUiInfoTop") == "false" && isDescription) {
-			rm.write("<div");
-			rm.writeAttribute("id", oLI.getId() + "-info");
-			rm.addClass("sapMSLIInfo");
-			if (oLI._showSeparators == sap.m.ListSeparators.None && oLI.getInfoState() == sap.ui.core.ValueState.None) {
-				rm.addClass("sapMSLIInfo" + oLI.getInfoState() + "ShowSeparatorNone");
-			} else {
-				rm.addClass("sapMSLIInfo" + oLI.getInfoState());
-			}
-			rm.writeClasses();
-			if (sInfoDir !== sap.ui.core.TextDirection.Inherit) {
-				rm.writeAttribute("dir", sInfoDir.toLowerCase());
-			}
-			rm.write(">");
-			rm.writeEscaped(isInfo);
-			rm.write("</div>");
-		}
-		rm.write("</div>");
-
-		if (isDescription) {
-			rm.write("</div>");
-		}
-
+		rm.close("div");
 	};
 
-	// Returns the inner aria describedby ids for the accessibility
-	StandardListItemRenderer.getAriaDescribedBy = function(oLI) {
-		var sBaseDescribedBy = ListItemBaseRenderer.getAriaDescribedBy.call(this, oLI) || "",
-			sInfoState = oLI.getInfoState();
+	/**
+	 * Renders the info text.
+	 * @param {sap.ui.core.RenderManager} rm The <code>RenderManager</code> that can be used for writing to the render output buffer
+	 * @param {sap.m.StandardListItem} oLI An object representation of the control that is rendered
+	 * @protected
+	 */
+	StandardListItemRenderer.renderInfo = function (rm, oLI) {
+		var sInfoDir = oLI.getInfoTextDirection(),
+			bInfoStateInverted = oLI.getInfoStateInverted();
 
-		if (sInfoState == sap.ui.core.ValueState.None || !oLI.getInfo()) {
-			return sBaseDescribedBy;
+		rm.openStart("div", oLI.getId() + "-info");
+		if (sInfoDir !== TextDirection.Inherit) {
+			rm.attr("dir", sInfoDir.toLowerCase());
+		}
+		rm.class("sapMSLIInfo");
+		rm.class("sapMSLIInfo" + oLI.getInfoState());
+
+		if (bInfoStateInverted) {
+			rm.class("sapMSLIInfoStateInverted");
 		}
 
-		var sDescribedBy = this.getAriaAnnouncement("STATE_" + sInfoState.toUpperCase());
-		return sDescribedBy + " " + sBaseDescribedBy;
+		var fWidth = oLI._measureInfoTextWidth();
+
+		rm.style("min-width", oLI._getInfoTextMinWidth(fWidth));
+
+		rm.openEnd();
+		if (oLI.getWrapping() && !bInfoStateInverted) {
+			this.renderWrapping(rm, oLI, "info");
+		} else {
+			rm.text(oLI.getInfo());
+		}
+		rm.close("div");
 	};
 
-	// Returns the accessibility state of the control
-	StandardListItemRenderer.getAccessibilityState = function(oLI) {
-		var mAccessibilityState = ListItemBaseRenderer.getAccessibilityState.call(this, oLI);
-		if (oLI.getInfoState() == sap.ui.core.ValueState.Error && oLI.getInfo()) {
-			mAccessibilityState.invalid = true;
+	/**
+	 * Renders the expand/collapse text.
+	 * @param {sap.ui.core.RenderManager} rm The <code>RenderManager</code> that can be used for writing to the render output buffer
+	 * @param {sap.m.StandardListItem} oLI An object representation of the control that is rendered
+	 * @param {string} sWrapArea Defines the wrapping text area
+	 * @protected
+	 */
+	StandardListItemRenderer.renderExpandCollapse = function (rm, oLI, sWrapArea) {
+		var sId = oLI.getId(),
+			bTitle = sWrapArea == "title" ? true : false,
+			bTextExpanded = bTitle ? oLI._bTitleTextExpanded : oLI._bDescriptionTextExpanded,
+			oRb = Library.getResourceBundleFor("sap.m");
+
+		rm.openStart("span", sId + "-" + sWrapArea + "ThreeDots").openEnd();
+		rm.text(bTextExpanded ? " " : " ... ");
+		rm.close("span");
+
+		rm.openStart("span", bTitle ? sId + "-titleButton" : sId + "-descriptionButton").class("sapMSLIExpandCollapse");
+		rm.attr("tabindex", "0").attr("role", "button").attr("aria-live", "polite");
+		rm.openEnd();
+		rm.text(oRb.getText(bTextExpanded ? "EXPANDABLE_TEXT_SHOW_LESS" : "EXPANDABLE_TEXT_SHOW_MORE"));
+		rm.close("span");
+	};
+
+	/**
+	 * Renders the wrapping behavior of the text.
+	 * @param {sap.ui.core.RenderManager} rm The <code>RenderManager</code> that can be used for writing to the render output buffer
+	 * @param {sap.m.StandardListItem} oLI An object representation of the control that is rendered
+	 * @param {string} sWrapArea Defines the wrapping text area
+	 * @protected
+	 */
+	StandardListItemRenderer.renderWrapping = function(rm, oLI, sWrapArea) {
+		var sId = oLI.getId(),
+			iMaxCharacters = oLI._getWrapCharLimit(),
+			sText, bTextExpanded;
+
+		if (sWrapArea === "title") {
+			sText = oLI.getTitle();
+			bTextExpanded = oLI._bTitleTextExpanded;
+		} else if (sWrapArea === "description") {
+			sText = oLI.getDescription();
+			bTextExpanded = oLI._bDescriptionTextExpanded;
+		} else {
+			sText = oLI.getInfo();
 		}
 
-		return mAccessibilityState;
-	};
+		rm.openStart("span", sId + "-" + sWrapArea + "Text").attr("aria-live", "polite").openEnd();
 
+		if (!bTextExpanded && sWrapArea !== "info") {
+			var sCollapsedText = oLI._getCollapsedText(sText);
+			rm.text(sCollapsedText);
+		} else if (sWrapArea == "title") {
+			this.renderTitle(rm, oLI);
+		} else {
+			rm.text(sText);
+		}
+
+		rm.close("span");
+
+		if (sText.length > iMaxCharacters && sWrapArea !== "info") {
+			this.renderExpandCollapse(rm, oLI, sWrapArea);
+		}
+	};
 
 	return StandardListItemRenderer;
 

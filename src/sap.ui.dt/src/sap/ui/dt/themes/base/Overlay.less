@@ -1,7 +1,21 @@
-@sapUiDtFocusColor : rgba(77, 144, 254, 0.5);
-@sapUiDtTargetZoneColor : green;
-@sapUiDtSelectionColor : #35F;
-@sapUiDtCuttedColor : white;
+/******************************************************************
+	Style of the DT Overlays - base Theme
+*******************************************************************/
+@_sap_ui_dt_Overlay_FocusBorderColor: @sapUiContentFocusColor; //#000
+@_sap_ui_dt_Overlay_TargetZoneOutlineColor: @sapUiSelected; //#8fb5ff
+@_sap_ui_dt_Overlay_SelectionOutlineColor: @sapUiSelected; //#8fb5ff
+@_sap_ui_dt_Overlay_CuttedBackgroundColor: @sapUiContentImagePlaceholderBackground; // #fff
+@_sap_ui_dt_Overlay_CuttedBorderColor: @sapUiSelected; //#8fb5ff
+@_sap_ui_dt_Overlay_HighlightOutlineColor: @sapUiWarningBorder; //ffff00
+@_sap_ui_dt_Overlay_HoverBackgroundColor: fade(@sapUiSelected, 5%); //rgba(143, 181, 255, 0.1);
+@_sap_ui_dt_Overlay_DropZoneBackgroundColor: fade(@sapUiSelected, 10%); //rgba(143, 181, 255, 0.1);
+@_sap_ui_dt_Overlay_BoxShadow: @sapUiUx3ToolPopupShadow; //0px 6px 12px 0px fade(black, 30);
+
+#overlay-container {
+	position: absolute;
+	top: 0;
+	left: 0;
+}
 
 .sapUiDtOverlay {
 	position: absolute;
@@ -18,9 +32,11 @@
 		pointer-events: none;
 		top: 0;
 		left: 0;
-		width: 100%;
-		height: 100%;
+		right: 0;
+		bottom: 0;
 		box-sizing: border-box;
+		z-index: 2;
+		box-shadow: none;
 	}
 }
 
@@ -28,7 +44,7 @@
 	&:focus {
 		&:before {
 			content: " ";
-			border: 2px solid @sapUiDtFocusColor;
+			border: 0.0625rem dotted @_sap_ui_dt_Overlay_FocusBorderColor; //1px
 		}
 	}
 }
@@ -40,22 +56,65 @@
 	pointer-events: none;
 }
 
-.sapUiDtOverlayTargetZone {
-	.sapUiDtOverlaySelected {
-		&:after {
-			content: none;
+.sapUiDtOverlayDropZone {
+	z-index: 9999999 !important;
+
+	> .sapUiDtOverlayChildren {
+		> .sapUiDtOverlayMovable {
+			background: @_sap_ui_dt_Overlay_DropZoneBackgroundColor;
+			// no "border"
+			&:after {
+				content: none;
+			}
 		}
 	}
+}
+
+.sapUiDtOverlayTargetZone {
 	&:after {
 		content: " ";
-		border: 1px dashed @sapUiDtTargetZoneColor;
+		outline: 0.125rem dashed @_sap_ui_dt_Overlay_TargetZoneOutlineColor; //2px
+		outline-offset: -0.125rem; //2px
 	}
 }
 
 .sapUiDtOverlaySelected {
 	&:after {
 		content: " ";
-		border: 1px solid @sapUiDtSelectionColor;
+		outline: 0.125rem solid @_sap_ui_dt_Overlay_SelectionOutlineColor; //2px
+		outline-offset: -0.125rem; //2px
+		border: none;
+	}
+
+	&.sapUiDtOverlayWithScrollBar:after {
+		bottom: 0;
+		right: 0;
+		top: 0;
+		left: 0;
+		width: initial;
+		height: initial;
+	}
+
+	&.sapUiDtOverlayFocusable {
+		&:focus {
+			&:before {
+				top: 0.125rem; //2px
+				left: 0.125rem; //2px
+				bottom: 0.125rem; //2px
+				right: 0.125rem; //2px
+				width: auto;
+				height: auto;
+			}
+		}
+	}
+}
+
+.sapUiDtOverlayHighlighted:not(.sapUiDtOverlaySelected) {
+	&:after {
+		content: " ";
+		outline: 0.0625rem solid @_sap_ui_dt_Overlay_HighlightOutlineColor; //1px
+		outline-offset: -0.0625rem; //1px
+		box-shadow: @_sap_ui_dt_Overlay_BoxShadow;
 	}
 }
 
@@ -63,15 +122,20 @@
 	cursor: move;
 }
 
-.sapUiDtOverlayCutted {
-	background-color: @sapUiDtCuttedColor !important;
-	opacity: 0.5;
+// Used for non-movable children overlays of movable parents
+.sapUiDtOverlaySelectable:not(.sapUiDtOverlayMovable) {
+	cursor: auto;
 }
 
-#overlay-container {
-	// to prevent overlay's height from expanding the body
-	position: fixed;
-	// position is set in code to prevent RTL style conversion
+.sapUiDtOverlayCutted {
+	background-color: @_sap_ui_dt_Overlay_CuttedBackgroundColor !important;
+	opacity: 0.5;
+
+	&:after {
+		content: " ";
+		outline: 0.063rem solid @_sap_ui_dt_Overlay_CuttedBorderColor; //1px
+		outline-offset: -0.125rem; //2px
+	}
 }
 
 .sapUiDtDragGhostWrapper {
@@ -79,15 +143,22 @@
 	pointer-events: none;
 }
 
+/* fix ghost blinking in FireFox */
+.sap-desktop[data-sap-ui-browser^="ff"] .sapUiDtDragGhostWrapper {
+	top: -9999px;
+	left: -9999px;
+}
+
 /* fix for chrome */
-.sap-desktop[data-sap-ui-browser^="cr"] {
+.sap-desktop[data-sap-ui-browser^="cr"] .sapUiDtDragGhostWrapper {
+	padding-left: -500px;
+	padding-bottom: 500px;
+	bottom: -1000px;
+}
 
-	.sapUiDtDragGhostWrapper {
-		padding-left : -500px;
-		padding-bottom: 500px;
-		bottom: -1000px;
-	}
-
+// Fix for Safari, ghost must not be completly off screen
+.sap-desktop[data-sap-ui-browser^="sf"] .sapUiDtDragGhostWrapper {
+	top: 100vh;
 }
 
 .sapUiDtClonedDom {
@@ -98,5 +169,25 @@
 
 	* {
 		pointer-events: none !important;
+	}
+}
+
+.sapUiDtOverlayScrollContainer {
+	position: absolute;
+}
+
+.sapUiDtOverlayHover {
+	-webkit-transition: background 0.1s cubic-bezier(1, .01, 1, 0);
+	-moz-transition: background 0.1s cubic-bezier(1, .01, 1, 0);
+	-o-transition: background 0.1s cubic-bezier(1, .01, 1, 0);
+	transition: background 0.1s cubic-bezier(1, .01, 1, 0);
+	background: @_sap_ui_dt_Overlay_HoverBackgroundColor;
+
+	&:after {
+		content: " ";
+		transition: box-shadow .25s;
+		box-shadow: @_sap_ui_dt_Overlay_BoxShadow;
+		outline: 0.0625rem solid @_sap_ui_dt_Overlay_SelectionOutlineColor; //1px
+		outline-offset: -0.0625rem; //1px
 	}
 }

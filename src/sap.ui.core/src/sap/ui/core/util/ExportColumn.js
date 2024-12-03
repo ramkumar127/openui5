@@ -3,12 +3,15 @@
  */
 
 // Provides class sap.ui.core.util.ExportColumn
-sap.ui.define(['sap/ui/base/ManagedObject', './ExportCell'],
-	function(ManagedObject, ExportCell) {
+sap.ui.define([
+	'sap/ui/base/ManagedObject',
+	'./ExportCell' // convenience dependency for legacy code that uses global names
+],
+	function(ManagedObject) {
 	'use strict';
 
 	/**
-	 * Constructor for a new ExportCell.
+	 * Constructor for a new ExportColumn.
 	 *
 	 * @param {string} [sId] id for the new control, generated automatically if no id is given
 	 * @param {object} [mSettings] initial settings for the new control
@@ -21,8 +24,8 @@ sap.ui.define(['sap/ui/base/ManagedObject', './ExportCell'],
 	 * @version ${version}
 	 * @since 1.22.0
 	 *
-	 * @constructor
 	 * @public
+	 * @deprecated As of version 1.73, replaced by the export functionality of the <code>sap.ui.export</code> library.
 	 * @alias sap.ui.core.util.ExportColumn
 	 */
 	var ExportColumn = ManagedObject.extend("sap.ui.core.util.ExportColumn", {

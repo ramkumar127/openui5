@@ -3,8 +3,13 @@
  */
 
 // Provides control sap.ui.commons.SegmentedButton.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate/ItemNavigation'],
-	function(jQuery, Control, ItemNavigation) {
+sap.ui.define([
+    'sap/ui/thirdparty/jquery',
+    'sap/ui/core/Control',
+    'sap/ui/core/delegate/ItemNavigation',
+    './SegmentedButtonRenderer'
+],
+	function(jQuery, Control, ItemNavigation, SegmentedButtonRenderer) {
 	"use strict";
 
 
@@ -18,20 +23,22 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 	 * @class
 	 * The SegmentedButton provides a group of multiple buttons. Only one button can be active. The behaviour is more ore less like a radio button group.
 	 * @extends sap.ui.core.Control
-	 * @implements sap.ui.commons.ToolbarItem
+	 * @implements sap.ui.commons.ToolbarItem, sap.ui.core.IFormContent
 	 * @version ${version}
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated as of version 1.38, replaced by {@link sap.m.SegmentedButton}
 	 * @alias sap.ui.commons.SegmentedButton
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var SegmentedButton = Control.extend("sap.ui.commons.SegmentedButton", /** @lends sap.ui.commons.SegmentedButton.prototype */ { metadata : {
 
 		interfaces : [
-			"sap.ui.commons.ToolbarItem"
+			"sap.ui.commons.ToolbarItem",
+			"sap.ui.core.IFormContent"
 		],
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -70,8 +77,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 		}
 	}});
 
-	/* This file defines behavior for the SegmentedButton control */
-
 
 	/**
 	 * Initialization hook for the SegmentedButton.
@@ -108,6 +113,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 	};
 	/**
 	 * @private
+	 * @param {jQuery.Event} oEvent The fired event
 	 */
 	SegmentedButton.prototype._buttonSelected = function(oEvent) {
 		var oOldButtonSelection = sap.ui.getCore().byId(this.getSelectedButton()),
@@ -120,6 +126,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 	};
 	/**
 	 * @private
+	 * @param {boolean} bAddDelegate Whether a delegate is attached
 	 */
 	SegmentedButton.prototype._setItemNavigation = function(bAddDelegate) {
 		var oButton,
@@ -183,7 +190,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 		var $content = this.$();
 		if ($content.length > 0) {
 			var rm = sap.ui.getCore().createRenderManager();
-			sap.ui.commons.SegmentedButtonRenderer.renderButtons(rm, this);
+			SegmentedButtonRenderer.renderButtons(rm, this);
 			rm.flush($content[0]);
 			rm.destroy();
 		}
@@ -237,7 +244,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 		}
 		if (oButtonOld) {
 			oButtonOld.removeStyleClass("sapUiSegButtonSelected");
-			oButtonOld.$().blur();
+			oButtonOld.$().trigger("blur");
 		}
 		if (oButtonOld && oButtonOld._icon) {
 			oButtonOld.setIcon(oButtonOld._icon);
@@ -250,6 +257,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 			}
 			oButton.addStyleClass("sapUiSegButtonSelected");
 		}
+
+		return this;
 	};
 
 	SegmentedButton.prototype.setEnabled = function(bEnabled) {
@@ -263,6 +272,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 			this.addDelegate(this._oItemNavigation);
 		}
 		this.setProperty("enabled", bEnabled);
+		return this;
 	};
 
 	/*
@@ -278,7 +288,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 			oButton.detachPress(this._buttonSelected, this);
 		}
 
-		var oClone = sap.ui.core.Element.prototype.clone.apply(this, arguments);
+		var oClone = Control.prototype.clone.apply(this, arguments);
 
 		for (i = 0; i < aButtons.length; i++) {
 			oButton = aButtons[i];
@@ -296,4 +306,4 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/delegate
 
 	return SegmentedButton;
 
-}, /* bExport= */ true);
+});

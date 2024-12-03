@@ -1,18 +1,16 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta charset="utf-8">
 <title>Object Header used in Grid - sap.m</title>
 
-<script src="../../../resources/sap-ui-core.js" type="text/javascript" id="sap-ui-bootstrap" data-sap-ui-libs="sap.ui.layout,sap.m" data-sap-ui-theme="sap_bluecrystal">
+<script src="shared-config.js"></script>
+<script src="../../../resources/sap-ui-core.js" id="sap-ui-bootstrap" data-sap-ui-libs="sap.ui.layout,sap.m">
 
 </script>
 
-<script type="text/javascript">
+<script>
 	jQuery.sap.require("sap.ui.core.IconPool");
-
-
 
 	var marginStyle = jQuery.device.is.phone ? "sapUiSmallMargin" : "sapUiMediumMargin";
 
@@ -27,14 +25,12 @@
 		text : "Contract #D1234567890 Ñagçyfox",
 		active : true,
 		press : function() {
-
 			attrs2[0].setText("Ñagçyfox #D1234567890 Contract");
 		}
 	}), new sap.m.ObjectAttribute({
 		text : "Created by: John Doe Ñagçyfox",
 		active : true,
 		press : function() {
-
 			attrs2[0].setText("Ñagçyfox Contract #D1234567890");
 		}
 	}) ];
@@ -86,11 +82,10 @@
 			"oh2",
 			{
 				title : "Ñagçyfox Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis luctus, turpis vitae porttitor hendrerit, elit dui mollis neque, id suscipit lorem mi in sem.",
-
 				statuses : [ new sap.m.ObjectStatus({
 					text : ""
 				}), new sap.m.ObjectStatus({}) ],
-				attributes : [ new sap.m.ObjectAttribute({}), new sap.m.ObjectAttribute({}), new sap.m.ObjectAttribute({}), new sap.m.ObjectAttribute({}), ]
+				attributes : [ new sap.m.ObjectAttribute({}), new sap.m.ObjectAttribute({}), new sap.m.ObjectAttribute({}), new sap.m.ObjectAttribute({}) ]
 			});
 
 	var oh3 = new sap.m.ObjectHeader(
@@ -139,10 +134,12 @@
 					text : "This one is invisible",
 					visible : false
 				}),
-				    new sap.m.ObjectAttribute({
+				new sap.m.ObjectAttribute({
 					text : "Ñagçyfox Contract #D1234567890"
 				}) ],
-				markFavorite : true
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Favorite})
+				]
 			});
 
 	var oh4PressHandler = function(oEvent) {
@@ -152,7 +149,7 @@
 		} else {
 			oh4.setIcon(sap.ui.core.IconPool.getIconURI("attachment"));
 		}
-	}
+	};
 
 	var oh4 = new sap.m.ObjectHeader("oh4", {
 		intro : "On behalf of John Smith Ñagçyfox",
@@ -190,7 +187,7 @@
 		content: [oh1, oh2, oh3, oh4]
 	});
 
-	var gridOHeader = new sap.m.ObjectHeader ({
+	var gridOHeader = new sap.m.ObjectHeader({
 		title: "Create fictitious vendor and initiate payment to the vendor [Vendor Management]",
 		condensed: true });
 	gridOHeader.addAttribute(new sap.m.ObjectAttribute({ text: "P001" }));
@@ -206,11 +203,8 @@
 
 	var masterPage = new sap.m.Page({
 		content: [headerGrid, facetGrid],
-		showNavButton: true,
+		showNavButton: true
 	});
-
-
-
 
 	// put all the testing object header objects on the testing page
 	var app = new sap.m.App();

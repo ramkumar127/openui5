@@ -3,8 +3,11 @@
  */
 
 // Provides utility class sap.ui.core.BusyIndicatorUtils
-sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
-	function(jQuery, Device) {
+sap.ui.define([
+	'./BlockLayerUtils',
+	"sap/ui/core/Lib",
+	'sap/ui/core/library'],
+	function(BlockLayerUtils, Library, coreLibrary) {
 	"use strict";
 
 	// Static class
@@ -12,134 +15,156 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 	/**
 	 * @alias sap.ui.core.BusyIndicatorUtils
 	 * @namespace
-	 * @public
+	 * @private
+	 * @ui5-restricted sap.ui.core, sap.chart
 	 */
 	var BusyIndicatorUtils = function() {};
+
+	var BusyIndicatorSize = coreLibrary.BusyIndicatorSize;
 
 	/**
 	 * Returns the HTML content for the busy indicator
 	 * styling + animation: LocalBusyIndicator.less
 	 *
-	 * @param {string} sSize either "Medium" or "Big", determines the size of the indicator
-	 * @returns {DOM.element} the element for the busy indicator
+	 * @param {string} sSize either "Large", "Medium" or "Section". Other sizes will be mapped to "Medium"
+	 * @returns {Element} the element for the busy indicator
+	 * @private
+	 * @ui5-restricted sap.ui.core, sap.chart
 	 */
 	BusyIndicatorUtils.getElement = function(sSize) {
-		//default size is medium
-		var sSizeClass = "sapUiLocalBusyIndicatorSizeMedium";
-		if (sSize === "Big") {
-			sSizeClass = "sapUiLocalBusyIndicatorSizeBig";
+		var sSizeClass;
+
+		switch (sSize) {
+			case BusyIndicatorSize.Large:
+				sSizeClass = "sapUiLocalBusyIndicatorSizeBig sapUiLocalBusyIndicatorShowContainer";
+				break;
+			case BusyIndicatorSize.Medium:
+				sSizeClass = "sapUiLocalBusyIndicatorSizeMedium";
+				break;
+			case BusyIndicatorSize.Section:
+				sSizeClass = "sapUiLocalBusyIndicatorSizeSection sapUiLocalBusyIndicatorShowContainer";
+				break;
+			default:
+				//default size is medium
+				sSizeClass = "sapUiLocalBusyIndicatorSizeMedium";
+				break;
 		}
 
 		var oContainer = document.createElement("div");
-		oContainer.className = "sapUiLocalBusyIndicator " + sSizeClass;
-		oContainer.setAttribute("role", "progressbar");
-		oContainer.setAttribute("aria-valuemin", "0");
-		oContainer.setAttribute("aria-valuemax", "100");
-		oContainer.setAttribute("alt", "");
-		oContainer.setAttribute("tabIndex", "0");
+		oContainer.className = "sapUiLocalBusyIndicator " + sSizeClass + " sapUiLocalBusyIndicatorFade";
 
-		var oAnimation = document.createElement("div");
-		oAnimation.className = "sapUiLocalBusyIndicatorAnimation sapUiLocalBusyIndicatorAnimStandard";
-		oAnimation.appendChild(document.createElement("div"));
-		oAnimation.appendChild(document.createElement("div"));
-		oAnimation.appendChild(document.createElement("div"));
+		BusyIndicatorUtils.addAriaAttributes(oContainer);
 
-		oContainer.appendChild(oAnimation);
+		addAnimation(oContainer);
 
 		return oContainer;
 	};
 
-	/**
-	 * Adds the BusyIndicator to the given control.
-	 *
-	 * @param {jQuery} $control a jQuery DOM instance to which the busy
-	 *                     indicator is added
-	 * @param {string} sBusyIndicatorId the actual DOM ID which will be used for
-	 *                     the busy indicator content
-	 * @param {string} sSize either "Medium" or "Big", determines the size of the
-	 *                     indicator, default is "Medium"
-	 * @returns {object} a jQuery object for the busy indicator
-	 */
-	BusyIndicatorUtils.addHTML = function ($control, sBusyIndicatorId, sSize) {
-		var oElement = BusyIndicatorUtils.getElement(sSize);
-		oElement.id = sBusyIndicatorId;
+	function addAnimation(oContainer, sSizeClass) {
+		sSizeClass  = sSizeClass || "sapUiLocalBusyIndicatorAnimStandard";
 
-		var oDomRef = $control.get(0);
-		oDomRef.appendChild(oElement);
-		oDomRef.className += " sapUiLocalBusy";
+		// determine automation size class
+		var oAnimation = document.createElement("div");
+		oAnimation.className = "sapUiLocalBusyIndicatorAnimation " + sSizeClass;
+		oAnimation.appendChild(document.createElement("div"));
+		oAnimation.appendChild(document.createElement("div"));
+		oAnimation.appendChild(document.createElement("div"));
 
-		var vAnimation = oElement.children[0];
-		var iWidth = vAnimation.offsetWidth;
 
-		// with 'offsetWidth' the browser is forced to render the added
-		// BusyIndicator and then we add the fade in Class
-		oElement.className += " sapUiLocalBusyIndicatorFade";
+		oContainer.appendChild(oAnimation);
+	}
+
+	function handleAutoAnimationSize(oBusyBlockState, sSize) {
+		var oParentDOM = oBusyBlockState.$parent.get(0),
+			oBlockLayerDOM = oBusyBlockState.$blockLayer.get(0);
+
+		// get animation container
+		var oAnimation = oBlockLayerDOM.children[0],
+			iWidth = oAnimation.offsetWidth;
 
 		// We can only determine the actual animation after the browser has
 		// calculated the size of the indicator we need to know the pixel-size of
 		// 3rem, under which the indicator will animate differently
-		if ($control[0].offsetWidth < iWidth) {
-			vAnimation.className = "sapUiLocalBusyIndicatorAnimation sapUiLocalBusyIndicatorAnimSmall";
+		if (oParentDOM.offsetWidth < iWidth) {
+			oAnimation.className = "sapUiLocalBusyIndicatorAnimation sapUiLocalBusyIndicatorAnimSmall";
 		}
+	}
 
-		//Set the actual DOM Element to 'aria-busy'
-		$control.attr('aria-busy', true);
+	/**
+	 * Adds the necessary ARIA attributes to the given DOM element.
+	 * @param {object} oDOM The DOM which gets added for the busy animation
+	 * @private
+	 */
+	BusyIndicatorUtils.addAriaAttributes = function(oDOM, oControl) {
+		const oResourceBundle = Library.getResourceBundleFor("sap.ui.core");
 
-		return jQuery(oElement);
+		// make the blockLayer tabbable
+		oDOM.setAttribute("tabindex", "0");
+
+		// attributes for inderterminate progressbar
+		oDOM.setAttribute("role", "progressbar");
+		oDOM.setAttribute("aria-valuemin", "0");
+		oDOM.setAttribute("aria-valuemax", "100");
+		oDOM.setAttribute("aria-valuetext", oResourceBundle.getText("BUSY_VALUE_TEXT"));
+
+		// message to describe current state to screen readers
+		oDOM.setAttribute("title", oResourceBundle.getText("BUSY_TEXT"));
+
+		// TODO: tooltip: Check if control provides aria-describedby attribute?
+		const oDomRef = oControl?.getDomRef();
+		oDomRef?.setAttribute("aria-busy", "true");
 	};
 
 	/**
-	 * Pragmatic IE9 support, looks a bit different than the keyframes anymation.
-	 * TODO: Is this needed? When will IE9 go out of support.
+	 * Adds the DOM element for the BusyIndicator animation to the contained DOM element in the given block-state.
+	 * @param {object} oBusyBlockState The given block-state on which the DOM gets added for the busy animation
+	 * @param {sap.ui.core.BusyIndicatorSize} sSize either "Auto", "Large", "Medium" or "Small", determines the size of the
+	 *                     indicator, default is "Medium"
+	 * @see sap.ui.core.BusyIndicatorSize
 	 */
-	BusyIndicatorUtils.animateIE9 = {
-		/**
-		 * Starts the Animation for the given busy indicator (jQuery instance)
-		 *
-		 * @param {object} $BusyIndicator is the jQuery object of the busyIndicator
-		 */
-		start: function ($BusyIndicator) {
+	BusyIndicatorUtils.addHTML = function (oBusyBlockState, sSize) {
+		var sSizeClass, sAnimationSizeClass;
 
-			if ($BusyIndicator && Device.browser.msie &&  Device.browser.version <= 9) {
+		switch (sSize) {
+			case BusyIndicatorSize.Small:
+				sSizeClass = "sapUiLocalBusyIndicatorSizeMedium";
+				sAnimationSizeClass = "sapUiLocalBusyIndicatorAnimSmall";
+				break;
+			case BusyIndicatorSize.Section:
+				sSizeClass = "sapUiLocalBusyIndicatorSizeSection sapUiLocalBusyIndicatorShowContainer";
+				sAnimationSizeClass = "sapUiLocalBusyIndicatorAnimStandard ";
+				break;
+			case BusyIndicatorSize.Large:
+				sSizeClass = "sapUiLocalBusyIndicatorSizeBig sapUiLocalBusyIndicatorShowContainer";
+				sAnimationSizeClass = "sapUiLocalBusyIndicatorAnimStandard";
+				break;
+			case BusyIndicatorSize.Auto:
+				sSizeClass = "sapUiLocalBusyIndicatorSizeMedium";
+				sAnimationSizeClass = "sapUiLocalBusyIndicatorAnimStandard";
+				break;
+			default:
+				//default size is medium
+				sSizeClass = "sapUiLocalBusyIndicatorSizeMedium";
+				sAnimationSizeClass = "sapUiLocalBusyIndicatorAnimStandard";
+				break;
+		}
 
-				var fnAnimate = function ($div, iDelay) {
-					var fnScale = function (iTo) {
-						$div.animate({ opacity: iTo }, {
-							step: function (now) {
-								$div.css("-ms-transform","scale(" + now + "," + now + ")");
-							},
-							complete: function () {
-								// start again, but the scale factor
-								fnScale(iTo == 1 ? 0.3 : 1);
-							},
-							duration: 700
-						}, "linear");
-					};
-					setTimeout(function(){fnScale(0.3);}, iDelay);
-				};
+		if (!oBusyBlockState) {
+			return;
+		}
 
-				var aDivsToAnimate = $BusyIndicator.find(".sapUiLocalBusyIndicatorAnimation > div");
+		var oParentDOM = oBusyBlockState.$parent.get(0),
+			oBlockLayerDOM = oBusyBlockState.$blockLayer.get(0);
 
-				for (var i = 0; i < aDivsToAnimate.length; i++) {
-					fnAnimate(jQuery(aDivsToAnimate[i]), i * 300);
-				}
+		// aria attribtues
+		BusyIndicatorUtils.addAriaAttributes(oBlockLayerDOM, oBusyBlockState.control);
 
-			}
+		oParentDOM.className += " sapUiLocalBusy";
+		oBlockLayerDOM.className += " sapUiLocalBusyIndicator " + sSizeClass + " sapUiLocalBusyIndicatorFade";
+		addAnimation(oBlockLayerDOM, sAnimationSizeClass);
 
-		},
-
-		/**
-		 * Stops the Animation for the given busy indicator (jQuery instance)
-		 *
-		 * @param {object} $BusyIndicator is the jQuery object of the BusyIndicator
-		 */
-		stop: function ($BusyIndicator) {
-			if ($BusyIndicator && Device.browser.msie &&  Device.browser.version <= 9) {
-				var aDivsToAnimate = $BusyIndicator.find(".sapUiLocalBusyIndicatorAnimation > div");
-				for (var i = 0; i < aDivsToAnimate.length; i++) {
-					jQuery(aDivsToAnimate[i]).stop();
-				}
-			}
+		if (sSize === BusyIndicatorSize.Auto) {
+			handleAutoAnimationSize(oBusyBlockState);
 		}
 	};
 

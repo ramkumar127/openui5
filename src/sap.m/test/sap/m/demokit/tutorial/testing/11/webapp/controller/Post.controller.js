@@ -1,7 +1,7 @@
 sap.ui.define([
-	'sap/ui/demo/bulletinboard/controller/BaseController',
+	'./BaseController',
 	'sap/ui/model/json/JSONModel',
-	'sap/ui/demo/bulletinboard/model/formatter'
+	'../model/formatter'
 ], function (BaseController, JSONModel, formatter) {
 	"use strict";
 
@@ -22,8 +22,8 @@ sap.ui.define([
 			// detail page is busy indication immediately so there is no break in
 			// between the busy indication for loading the view's meta data
 			var oViewModel = new JSONModel({
-					busy: false
-				});
+				busy: false
+			});
 
 			this.getRouter().getRoute("post").attachPatternMatched(this._onPostMatched, this);
 			this.setModel(oViewModel, "postView");

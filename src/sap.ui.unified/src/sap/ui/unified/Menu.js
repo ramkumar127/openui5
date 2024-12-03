@@ -3,11 +3,57 @@
  */
 
 // Provides control sap.ui.unified.Menu.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', './MenuItemBase', './library', 'jquery.sap.script'],
-	function(jQuery, Control, Popup, MenuItemBase, library/* , jQuerySap */) {
+sap.ui.define([
+	"sap/base/i18n/Localization",
+	'sap/ui/core/Element',
+	'sap/ui/core/Control',
+	'sap/ui/Device',
+	'sap/ui/core/Popup',
+	'./MenuItemBase',
+	'./MenuItem',
+	'./library',
+	"sap/ui/core/Core",
+	'sap/ui/core/library',
+	"sap/ui/core/RenderManager",
+	'sap/ui/unified/MenuRenderer',
+	"sap/ui/dom/containsOrEquals",
+	"sap/ui/thirdparty/jquery",
+	"sap/ui/events/KeyCodes",
+	"sap/base/Log",
+	"sap/ui/events/ControlEvents",
+	"sap/ui/events/PseudoEvents",
+	"sap/ui/events/checkMouseEnterOrLeave"
+], function(
+	Localization,
+	Element,
+	Control,
+	Device,
+	Popup,
+	MenuItemBase,
+	MenuItem,
+	library,
+	oCore,
+	coreLibrary,
+	RenderManager,
+	MenuRenderer,
+	containsOrEquals,
+	jQuery,
+	KeyCodes,
+	Log,
+	ControlEvents,
+	PseudoEvents,
+	checkMouseEnterOrLeave
+) {
 	"use strict";
 
+	// shortcut for sap.ui.core.Popup.Dock
+	var Dock = Popup.Dock;
 
+	// shortcut for sap.ui.core.OpenState
+	var OpenState = coreLibrary.OpenState;
+
+	// shortcut for sap.ui.core.ItemSelectionMode
+	var ItemSelectionMode = coreLibrary.ItemSelectionMode;
 
 	/**
 	 * Constructor for a new Menu control.
@@ -19,6 +65,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 * A menu is an interactive element which provides a choice of different actions to the user. These actions (items) can also be organized in submenus.
 	 * Like other dialog-like controls, the menu is not rendered within the control hierarchy. Instead it can be opened at a specified position via a function call.
 	 * @extends sap.ui.core.Control
+	 * @implements sap.ui.core.IContextMenu
 	 *
 	 * @author SAP SE
 	 * @version ${version}
@@ -27,81 +74,99 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 * @constructor
 	 * @public
 	 * @alias sap.ui.unified.Menu
-	 * @ui5-metamodel This control/element will also be described in the UI5 (legacy) design time meta model
 	 */
-	var Menu = Control.extend("sap.ui.unified.Menu", /** @lends sap.ui.unified.Menu.prototype */ { metadata : {
+	var Menu = Control.extend("sap.ui.unified.Menu", /** @lends sap.ui.unified.Menu.prototype */ {
+		metadata : {
+			interfaces: [
+				"sap.ui.core.IContextMenu"
+			],
+			library : "sap.ui.unified",
+			properties : {
 
-		library : "sap.ui.unified",
-		properties : {
+				/**
+				 * When a menu is disabled none of its items can be selected by the user.
+				 * The enabled property of an item {@link sap.ui.unified.MenuItemBase#getEnabled} has no effect when the menu of the item is disabled.
+				 */
+				enabled : {type : "boolean", group : "Behavior", defaultValue : true},
 
-			/**
-			 * When a menu is disabled none of its items can be selected by the user.
-			 * The enabled property of an item (@link sap.ui.unified.MenuItemBase#getEnabled) has no effect when the menu of the item is disabled.
-			 */
-			enabled : {type : "boolean", group : "Behavior", defaultValue : true},
+				/**
+				 * Accessible label / description of the menu for assistive technologies like screenreaders.
+				 * @deprecated as of version 1.27.0, replaced by <code>ariaLabelledBy</code> association
+				 */
+				ariaDescription : {type : "string", group : "Accessibility", defaultValue : null, deprecated: true},
 
-			/**
-			 * Accessible label / description of the menu for assistive technologies like screenreaders.
-			 * @deprecated Since version 1.27.0 Please use association <code>ariaLabelledBy</code> instead.
-			 */
-			ariaDescription : {type : "string", group : "Accessibility", defaultValue : null},
+				/**
+				 * The maximum number of items which are displayed before an overflow mechanism takes effect.
+				 * A value smaller than 1 means an infinite number of visible items.
+				 * The overall height of the menu is limited by the height of the screen. If the maximum possible height is reached, an
+				 * overflow takes effect, even if the maximum number of visible items is not yet reached.
+				 */
+				maxVisibleItems : {type : "int", group : "Behavior", defaultValue : 0},
 
-			/**
-			 * The maximum number of items which are displayed before an overflow mechanism takes effect.
-			 * A value smaller than 1 means an infinite number of visible items.
-			 * The overall height of the menu is limited by the height of the screen. If the maximum possible height is reached, an
-			 * overflow takes effect, even if the maximum number of visible items is not yet reached.
-			 */
-			maxVisibleItems : {type : "int", group : "Behavior", defaultValue : 0},
+				/**
+				 * The keyboard can be used to navigate through the items of a menu. Beside the arrow keys for single steps and the <i>Home</i> / <i>End</i> keys for jumping
+				 * to the first / last item, the <i>Page Up</i> / <i>Page Down</i> keys can be used to jump an arbitrary number of items up or down. This number can be defined via the <code>pageSize</code> property.
+				 * For values smaller than 1, paging behaves in a similar way to when using the <i>Home</i> / <i>End</i> keys. If the value equals 1, the paging behavior is similar to that of the arrow keys.
+				 * @since 1.25.0
+				 */
+				pageSize : {type : "int", group : "Behavior", defaultValue : 5}
 
-			/**
-			 * The keyboard can be used to navigate through the items of a menu. Beside the arrow keys for single steps and the <i>Home</i> / <i>End</i> keys for jumping
-			 * to the first / last item, the <i>Page Up</i> / <i>Page Down</i> keys can be used to jump an arbitrary number of items up or down. This number can be defined via the <code>pageSize</code> property.
-			 * For values smaller than 1, paging behaves in a similar way to when using the <i>Home</i> / <i>End</i> keys. If the value equals 1, the paging behavior is similar to that of the arrow keys.
-			 * @since 1.25.0
-			 */
-			pageSize : {type : "int", group : "Behavior", defaultValue : 5}
-		},
-		defaultAggregation : "items",
-		aggregations : {
+			},
+			defaultAggregation : "items",
+			aggregations : {
 
-			/**
-			 * The available actions to be displayed as items of the menu.
-			 */
-			items : {type : "sap.ui.unified.MenuItemBase", multiple : true, singularName : "item"}
-		},
-		associations : {
+				/**
+				 * The available actions to be displayed as items of the menu.
+				 */
+				items : {type : "sap.ui.unified.IMenuItem", multiple : true, singularName : "item", defaultClass: MenuItem}
 
-			/**
-			 * Reference to accessible labels (ids of existing DOM elements or controls) for assistive technologies like screenreaders.
-			 * @see "WAI-ARIA Standard (attribute aria-labelledby)"
-			 * @since 1.26.3
-			 */
-			ariaLabelledBy : {type : "sap.ui.core.Control", multiple : true, singularName : "ariaLabelledBy"}
-		},
-		events : {
+			},
+			associations : {
 
-			/**
-			 * Fired on the root menu of a menu hierarchy whenever a user selects an item within the menu or within one of its direct or indirect submenus.
-			 * <b>Note:</b> There is also a select event available for each single menu item. This event and the event of the menu items are redundant.
-			 */
-			itemSelect : {
-				parameters : {
+				/**
+				 * Reference to accessible labels (ids of existing DOM elements or controls) for assistive technologies like screenreaders.
+				 * @see "WAI-ARIA Standard (attribute aria-labelledby)"
+				 * @since 1.26.3
+				 */
+				ariaLabelledBy : {type : "sap.ui.core.Control", multiple : true, singularName : "ariaLabelledBy"}
 
-					/**
-					 * The action (item) which was selected by the user.
-					 */
-					item : {type : "sap.ui.unified.MenuItemBase"}
+			},
+			events : {
+
+				/**
+				 * Fired on the root menu of a menu hierarchy whenever a user selects an item within the menu or within one of its direct or indirect submenus.
+				 * <b>Note:</b> There is also a select event available for each single menu item. This event and the event of the menu items are redundant.
+				 */
+				itemSelect : {
+					parameters : {
+
+						/**
+						 * The action (item) which was selected by the user.
+						 */
+						item : {type : "sap.ui.unified.MenuItemBase"}
+					}
+				},
+
+				/**
+				 * Fired when the menu is closed.
+				 * @since 1.129
+				 */
+				closed: {},
+
+				/**
+				 * Fired before the menu is closed.
+				 * This event can be prevented which effectively prevents the menu from closing.
+				 * sinnce 1.131
+				 */
+				beforeClose : {
+					allowPreventDefault : true
 				}
+
 			}
-		}
-	}});
+		},
 
-
-
-
-
-
+		renderer: MenuRenderer
+	});
 
 	(function(window) {
 
@@ -115,9 +180,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		this.oOpenedSubMenu = null;
 		this.oHoveredItem = null;
 		this.oPopup = null; // Will be created lazily
+		this._bOpenedAsContextMenu = false; // defines whether the menu is opened as a context menu
 		this.fAnyEventHandlerProxy = jQuery.proxy(function(oEvent){
 			var oRoot = this.getRootMenu();
-			if (oRoot != this || !this.bOpen || !this.getDomRef() || (oEvent.type != "mousedown" && oEvent.type != "touchstart")) {
+			if (oRoot != this || !this.isOpen() || !this.getDomRef() || (oEvent.type != "mousedown" && oEvent.type != "touchstart")) {
 				return;
 			}
 			oRoot.handleOuterEvent(this.getId(), oEvent); //TBD: standard popup autoclose
@@ -126,6 +192,39 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 			that.close();
 		};
 		this.bUseTopStyle = false;
+	};
+
+	/*
+	 * Allows for any custom function to be called back when accessibility attributes
+	 * of the menu are about to be rendered.
+	 * The function is called once per MenuItem.
+	 *
+	 * @param {function} fn The callback function
+	 * @private
+	 * @ui5-restricted sap.m.Menu
+	 * @returns void
+	 */
+	Menu.prototype._setCustomEnhanceAccStateFunction = function(fn) {
+		this._fnCustomEnhanceAccStateFunction = fn;
+	};
+
+	/*
+	 * Enables any consumer of the menu to enhance its accessibility state by calling
+	 * back its custom provided function Menu#_setCustomEnhanceAccStateFunction.
+	 *
+	 * @param {sap.ui.core.Element} oElement
+	 *   The Control/Element for which ARIA properties are collected
+	 * @param {object} mAriaProps
+	 *   Map of ARIA properties keyed by their name (without prefix "aria-"); the method
+	 *   implementation can enhance this map in any way (add or remove properties, modify values)
+	 * @overrides sap.ui.core.Element.prototype.enhanceAccessibilityState
+	 */
+	Menu.prototype.enhanceAccessibilityState = function(oElement, mAriaProps) {
+		var bIsAccFunctionValid = typeof this._fnCustomEnhanceAccStateFunction === "function";
+
+		if (bIsAccFunctionValid) {
+			this._fnCustomEnhanceAccStateFunction(oElement, mAriaProps);
+		}
 	};
 
 	/**
@@ -140,24 +239,26 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 			delete this.oPopup;
 		}
 
-		jQuery.sap.unbindAnyEvent(this.fAnyEventHandlerProxy);
+		ControlEvents.unbindAnyEvent(this.fAnyEventHandlerProxy);
 		if (this._bOrientationChangeBound) {
-			jQuery(window).unbind("orientationchange", this.fOrientationChangeHandler);
+			jQuery(window).off("orientationchange", this.fOrientationChangeHandler);
 			this._bOrientationChangeBound = false;
 		}
 
 		// Cleanup
 		this._resetDelayedRerenderItems();
+		this._detachResizeHandler();
 	};
 
 	/**
 	 * Called when the control or its children are changed.
+	 * @param {sap.ui.core.Element} oOrigin The originating control
 	 * @private
 	 */
 	Menu.prototype.invalidate = function(oOrigin){
 		if (oOrigin instanceof MenuItemBase && this.getDomRef()) {
 			this._delayedRerenderItems();
-		} else {
+		} else if (this.oPopup && this.oPopup.isOpen()) {
 			Control.prototype.invalidate.apply(this, arguments);
 		}
 	};
@@ -168,6 +269,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 */
 	Menu.prototype.onBeforeRendering = function() {
 		this._resetDelayedRerenderItems();
+		this.$().off("mousemove");
 	};
 
 	/**
@@ -176,12 +278,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 */
 	Menu.prototype.onAfterRendering = function() {
 		if (this.$().parent().attr("id") != "sap-ui-static") {
-			jQuery.sap.log.error("sap.ui.unified.Menu: The Menu is popup based and must not be rendered directly as content of the page.");
+			Log.error("sap.ui.unified.Menu: The Menu is popup based and must not be rendered directly as content of the page.");
 			this.close();
 			this.$().remove();
 		}
 
-		var aItems = this.getItems();
+		var aItems = this._getItems();
 
 		for (var i = 0; i < aItems.length; i++) {
 			if (aItems[i].onAfterRendering && aItems[i].getDomRef()) {
@@ -194,6 +296,34 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		}
 
 		checkAndLimitHeight(this);
+		this.$().on("mousemove", this._focusMenuItem.bind(this));
+	};
+
+	/**
+	 * Called when mouse cursor is moved over the menu items
+	 * @private
+	 */
+	Menu.prototype._focusMenuItem = function(oEvent) {
+		if (!Device.system.desktop) {
+			return;
+		}
+		var oItem = this.getItemByDomRef(oEvent.target);
+		if (!this.isOpen() || !oItem) {
+			return;
+		}
+
+		if (this.oOpenedSubMenu && containsOrEquals(this.oOpenedSubMenu.getDomRef(), oEvent.target)) {
+			return;
+		}
+
+		this.setHoveredItem(oItem);
+
+		var bShouldFocusItem = oItem && (oItem.getDomRef() !== document.activeElement);
+		if (bShouldFocusItem) {
+			oItem.focus(this);
+		}
+
+		this._openSubMenuDelayed(oItem);
 	};
 
 	/**
@@ -201,7 +331,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 * @private
 	 */
 	Menu.prototype.onThemeChanged = function(){
-		if (this.getDomRef() && this.getPopup().getOpenState() === sap.ui.core.OpenState.OPEN) {
+		if (this.getDomRef() && this.getPopup().getOpenState() === OpenState.OPEN) {
 			checkAndLimitHeight(this);
 			this.getPopup()._applyPosition(this.getPopup()._oLastPosition);
 		}
@@ -209,10 +339,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 
 
 	//****** API Methods ******
-
-	Menu.prototype.setPageSize = function(iSize){
-		return this.setProperty("pageSize", iSize, true); /*No rerendering required*/
-	};
 
 	Menu.prototype.addItem = function(oItem){
 		this.addAggregation("items", oItem, !!this.getDomRef());
@@ -254,17 +380,17 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		this._resetDelayedRerenderItems();
 		this._discardOpenSubMenuDelayed();
 
-		this._itemRerenderTimer = jQuery.sap.delayedCall(0, this, function(){
+		this._itemRerenderTimer = setTimeout(function(){
 			var oDomRef = this.getDomRef();
 			if (oDomRef) {
-				var oRm = sap.ui.getCore().createRenderManager();
-				sap.ui.unified.MenuRenderer.renderItems(oRm, this);
+				var oRm = new RenderManager().getInterface();
+				MenuRenderer.renderItems(oRm, this);
 				oRm.flush(oDomRef);
 				oRm.destroy();
 				this.onAfterRendering();
 				this.getPopup()._applyPosition(this.getPopup()._oLastPosition);
 			}
-		});
+		}.bind(this), 0);
 	};
 
 	/**
@@ -272,12 +398,23 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 */
 	Menu.prototype._resetDelayedRerenderItems = function(){
 		if (this._itemRerenderTimer) {
-			jQuery.sap.clearDelayedCall(this._itemRerenderTimer);
+			clearTimeout(this._itemRerenderTimer);
 			delete this._itemRerenderTimer;
 		}
 	};
 
-
+	/**
+	 * Called when the resize handler should be detached (e.g. on exit and close).
+	 * @private
+	 */
+	Menu.prototype._detachResizeHandler = function(){
+		// detach listener in case it is not detached in close
+		// in IE when destroy is called both close and exit were called and detach was called twice
+		if (this._hasResizeListener) {
+			Device.resize.detachHandler(this._handleResizeChange, this);
+			this._hasResizeListener = false;
+		}
+	};
 
 	/**
 	 * Opens the menu at the specified position.
@@ -288,19 +425,22 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 * See {@link sap.ui.core.Popup#open Popup#open} for further details about popup positioning.
 	 *
 	 * @param {boolean} bWithKeyboard Indicates whether or not the first item shall be highlighted when the menu is opened (keyboard case)
-	 * @param {sap.ui.core.Element|DOMRef} oOpenerRef The element which will get the focus back again after the menu was closed
-	 * @param {sap.ui.core.Dock} sMy The reference docking location of the menu for positioning the menu on the screen
-	 * @param {sap.ui.core.Dock} sAt The 'of' element's reference docking location for positioning the menu on the screen
-	 * @param {sap.ui.core.Element|DOMRef} oOf The menu is positioned relatively to this element based on the given dock locations
-	 * @param {string} [sOffset] The offset relative to the docking point, specified as a string with space-separated pixel values (e.g. "0 10" to move the popup 10 pixels to the right)
-	 * @param {sap.ui.core.Collision} [sCollision] The collision defines how the position of the menu should be adjusted in case it overflows the window in some direction
+	 * @param {sap.ui.core.Element|Element} oOpenerRef The element which will get the focus back again after the menu was closed
+	 * @param {sap.ui.core.Dock} my The reference docking location of the menu for positioning the menu on the screen
+	 * @param {sap.ui.core.Dock} at The 'of' element's reference docking location for positioning the menu on the screen
+	 * @param {sap.ui.core.Element|Element} of The menu is positioned relatively to this element based on the given dock locations
+	 * @param {string} [offset] The offset relative to the docking point, specified as a string with space-separated pixel values (e.g. "10 0" to move the popup 10 pixels to the right)
+	 * @param {sap.ui.core.Collision} [collision='flipfit flipfit'] The collision defines how the position of the menu should be adjusted in case it overflows the window in some direction
 	 *
-	 * @type void
+	 * @type {void}
 	 * @public
-	 * @ui5-metamodel This method will also be described in the UI5 (legacy) design time meta model
 	 */
 	Menu.prototype.open = function(bWithKeyboard, oOpenerRef, my, at, of, offset, collision){
-		if (this.bOpen) {
+		var oNextSelectableItem;
+
+		this._bLeavingMenu = false;
+
+		if (this.isOpen()) {
 			return;
 		}
 
@@ -311,35 +451,132 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		this.bIgnoreOpenerDOMRef = false;
 
 		// Open the sap.ui.core.Popup
-		this.getPopup().open(0, my, at, of, offset || "0 0", collision || "_sapUiCommonsMenuFlip _sapUiCommonsMenuFlip", true);
-		this.bOpen = true;
+		this.getPopup().open(0, my, at, of, offset || "0 0", collision || "flipfit flipfit", function(oPopupPosition) {
+			var oOfDom = this.getPopup()._getOfDom(of);
+			if (!oOfDom || !jQuery(oOfDom).is(":visible") || !_isElementInViewport(oOfDom)) {
+				// close the menu if the opener is not visible or not in the viewport anymore
+				this.close();
+			} else {
+				// else the Menu should follow the opener
+				// for example in ObjectPage, where we have scrolling, but the opener button is sticked
+				this.getPopup()._applyPosition(oPopupPosition.lastPosition);
+			}
+		}.bind(this));
 
-		// Set the tab index of the menu and focus
-		var oDomRef = this.getDomRef();
-		jQuery(oDomRef).attr("tabIndex", 0).focus();
+		this.bOpen = this.getPopup().isOpen();
+
+		Device.resize.attachHandler(this._handleResizeChange, this);
+		// mark that the resize handler is attach so we know to detach it later on
+		this._hasResizeListener = true;
 
 		// Mark the first item when using the keyboard
-		if (bWithKeyboard) {
-			this.setHoveredItem(this.getNextSelectableItem(-1));
+		if (bWithKeyboard || this.getRootMenu().getId() === this.getId()) {
+			oNextSelectableItem = this.getNextSelectableItem(-1);
+			this.setHoveredItem(oNextSelectableItem);
+			oNextSelectableItem && oNextSelectableItem.focus(this);
 		}
 
-		jQuery.sap.bindAnyEvent(this.fAnyEventHandlerProxy);
-		if (sap.ui.Device.support.orientation && this.getRootMenu() === this) {
-			jQuery(window).bind("orientationchange", this.fOrientationChangeHandler);
+		ControlEvents.bindAnyEvent(this.fAnyEventHandlerProxy);
+		if (Device.support.orientation && this.getRootMenu() === this) {
+			jQuery(window).on("orientationchange", this.fOrientationChangeHandler);
 			this._bOrientationChangeBound = true;
 		}
 	};
 
+	Menu.prototype._handleResizeChange = function() {
+		this.getPopup()._applyPosition(this.getPopup()._oLastPosition);
+	};
+
+	/**
+	 * Opens the menu as a context menu.
+	 * @param {jQuery.Event | object} oEvent The event object or an object containing offsetX, offsetY
+	 * values and left, top values of the element's position
+	 * @param {sap.ui.core.Element|HTMLElement} oOpenerRef - Might be UI5 Element or DOM Element
+	 * @public
+	 */
+	Menu.prototype.openAsContextMenu = function(oEvent, oOpenerRef) {
+			var iOffsetX, iOffsetY, bRTL, eDock, oOpenerRefOffset;
+
+			oOpenerRef = oOpenerRef instanceof Element ? oOpenerRef.getDomRef() : oOpenerRef;
+
+			if (oEvent instanceof jQuery.Event) {
+				oOpenerRefOffset = jQuery(oOpenerRef).offset();
+				iOffsetX = oEvent.pageX - oOpenerRefOffset.left;
+				iOffsetY = oEvent.pageY - oOpenerRefOffset.top;
+				this._iX = oEvent.clientX;
+				this._iY = oEvent.clientY;
+			} else {
+				// for explicit position coordinates
+				iOffsetX = oEvent.offsetX || 0;
+				iOffsetY = oEvent.offsetY || 0;
+				this._iX = oEvent.left || 0;
+				this._iY = oEvent.top || 0;
+			}
+
+			bRTL = Localization.getRTL();
+			eDock = Dock;
+
+			if (bRTL) {
+				iOffsetX = oOpenerRef.clientWidth - iOffsetX;
+			}
+			this._bOpenedAsContextMenu = true;
+			this.open(true, oOpenerRef, eDock.BeginTop, eDock.BeginTop, oOpenerRef, iOffsetX + " " + iOffsetY, 'fit');
+	};
+
+	Menu.prototype._handleOpened = function () {
+		var $Menu, $Window, iCalcedX, iCalcedY,
+			iRight, iBottom, bRTL, bRecalculate,
+			iMenuWidth, iMenuHeight;
+
+		if (!this._bOpenedAsContextMenu) {
+			return;
+		}
+
+		$Menu = this.$();
+		$Window = jQuery(window);
+		iCalcedX = this._iX;
+		iCalcedY = this._iY;
+		iRight = $Window.scrollLeft() + $Window.width();
+		iBottom = $Window.scrollTop() + $Window.height();
+		bRTL = Localization.getRTL();
+		bRecalculate = false;
+		iMenuWidth = $Menu.width();
+		iMenuHeight = $Menu.height();
+
+		if (iCalcedY + iMenuHeight > iBottom) {
+			iCalcedY = iCalcedY - iMenuHeight;
+			bRecalculate = true;
+		}
+
+		if (bRTL) {
+			if ((iRight - iCalcedX) + iMenuWidth > iRight) {
+				iCalcedX = iRight - (iCalcedX + iMenuWidth);
+				bRecalculate = true;
+			} else {
+				iCalcedX = iRight - iCalcedX;
+				bRecalculate = true;
+			}
+		} else {
+			if (iCalcedX + iMenuWidth > iRight) {
+				iCalcedX = iCalcedX - iMenuWidth;
+				bRecalculate = true;
+			}
+		}
+
+		// set the flag to initial state as same menu could be used as a context menu or a normal menu
+		this._bOpenedAsContextMenu = false;
+
+		bRecalculate && this.oPopup.setPosition("begin top", "begin top", $Window, iCalcedX + " " + iCalcedY, "flipfit");
+	};
 
 	/**
 	 * Closes the menu.
 	 *
-	 * @type void
+	 * @type {void}
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	Menu.prototype.close = function() {
-		if (!this.bOpen || Menu._dbg /*Avoid closing for debugging purposes*/) {
+	Menu.prototype.close = function(bWithKeyboard) {
+		if (!this.isOpen() || Menu._dbg /*Avoid closing for debugging purposes*/) {
 			return;
 		}
 
@@ -350,24 +587,27 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		// Remove fixed flag if it existed
 		delete this._bFixed;
 
-		jQuery.sap.unbindAnyEvent(this.fAnyEventHandlerProxy);
+		ControlEvents.unbindAnyEvent(this.fAnyEventHandlerProxy);
 		if (this._bOrientationChangeBound) {
-			jQuery(window).unbind("orientationchange", this.fOrientationChangeHandler);
+			jQuery(window).off("orientationchange", this.fOrientationChangeHandler);
 			this._bOrientationChangeBound = false;
 		}
 
-		this.bOpen = false;
 		// Close all sub menus if there are any
 		this.closeSubmenu();
 
 		// Reset the hover state
 		this.setHoveredItem();
 
-		// Reset the tab index of the menu and focus the opener (if there is any)
-		jQuery(this.getDomRef()).attr("tabIndex", -1);
-
+		if (!bWithKeyboard) {
+			this.bIgnoreOpenerDOMRef = true;
+		}
 		// Close the sap.ui.core.Popup
 		this.getPopup().close(0);
+
+		this.bOpen = this.getPopup().isOpen();
+
+		this._detachResizeHandler();
 
 		//Remove the Menus DOM after it is closed
 		this._resetDelayedRerenderItems();
@@ -380,19 +620,31 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	};
 
 	/**
+	 * Returns whether the <code>Menu</code> is currently open.
+	 * @returns {boolean} true if menu is open
+	 * @public
+	 */
+	Menu.prototype.isOpen = function() {
+		return this.getPopup().isOpen();
+	};
+
+	/**
 	 * This function is called when the Menu was closed.
 	 *
 	 * @since 1.17.0
 	 * @private
 	 */
 	Menu.prototype._menuClosed = function() {
+
+		this.fireClosed();
+
 		//TBD: standard popup autoclose: this.close(); //Ensure proper cleanup
 		if (this.oOpenerRef) {
 			if (!this.bIgnoreOpenerDOMRef) {
 				try {
 					this.oOpenerRef.focus();
 				} catch (e) {
-					jQuery.sap.log.warning("Menu.close cannot restore the focus on opener " + this.oOpenerRef + ", " + e);
+					Log.warning("Menu.close cannot restore the focus on opener " + this.oOpenerRef + ", " + e);
 				}
 			}
 			this.oOpenerRef = undefined;
@@ -409,90 +661,135 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 
 
 	Menu.prototype.onsapnext = function(oEvent){
+		var iIdx,
+			oNextSelectableItem,
+			oSubMenu = this.oHoveredItem ? this.oHoveredItem.getSubmenu() : undefined;
+
 		//right or down (RTL: left or down)
-		if (oEvent.keyCode != jQuery.sap.KeyCodes.ARROW_DOWN) {
+		if (oEvent.keyCode !== KeyCodes.ARROW_DOWN && !oEvent.metaKey && !oEvent.altKey) {
 			//Go to sub menu if available
-			if (this.oHoveredItem && this.oHoveredItem.getSubmenu() && this.checkEnabled(this.oHoveredItem)) {
-				this.openSubmenu(this.oHoveredItem, true);
+			if (oSubMenu) {
+				if (oSubMenu.isOpen()) {
+					oNextSelectableItem = oSubMenu.getNextSelectableItem(-1);
+					oSubMenu.setHoveredItem(oNextSelectableItem);
+					oNextSelectableItem && oNextSelectableItem.focus(this);
+				} else {
+					this.openSubmenu(this.oHoveredItem, true);
+				}
 			}
 			return;
 		}
 
-		//Go to the next selectable item
-		var iIdx = this.oHoveredItem ? this.indexOfAggregation("items", this.oHoveredItem) : -1;
-		this.setHoveredItem(this.getNextSelectableItem(iIdx));
+		if (oSubMenu && oSubMenu.isOpen()) {
+			this.closeSubmenu(false, true);
+		}
 
-		oEvent.preventDefault();
-		oEvent.stopPropagation();
+		//Go to the next selectable item
+		iIdx = this.oHoveredItem ? this._getItems().indexOf(this.oHoveredItem) : -1;
+		oNextSelectableItem = this.getNextSelectableItem(iIdx);
+		this.setHoveredItem(oNextSelectableItem);
+		oNextSelectableItem && oNextSelectableItem.focus(this);
+
+		if (!oEvent.metaKey && !oEvent.altKey) {
+			oEvent.preventDefault();
+			oEvent.stopPropagation();
+		}
 	};
 
+	Menu.prototype.onsapnextmodifiers = Menu.prototype.onsapnext;
+
 	Menu.prototype.onsapprevious = function(oEvent){
+		var iIdx = this.oHoveredItem ? this._getItems().indexOf(this.oHoveredItem) : -1,
+			oPrevSelectableItem = this.getPreviousSelectableItem(iIdx),
+			oSubMenu = this.oHoveredItem ? this.oHoveredItem.getSubmenu() : null;
+
 		//left or up (RTL: right or up)
-		if (oEvent.keyCode != jQuery.sap.KeyCodes.ARROW_UP) {
+		if (oEvent.keyCode !== KeyCodes.ARROW_UP && !oEvent.metaKey && !oEvent.altKey) {
 			//Go to parent menu if this is a sub menu
 			if (this.isSubMenu()) {
-				this.close();
+				this.close(true);
 			}
 			oEvent.preventDefault();
 			oEvent.stopPropagation();
 			return;
 		}
 
-		//Go to the previous selectable item
-		var iIdx = this.oHoveredItem ? this.indexOfAggregation("items", this.oHoveredItem) : -1;
-		this.setHoveredItem(this.getPreviousSelectableItem(iIdx));
+		if (oSubMenu && oSubMenu.isOpen()) {
+			this.closeSubmenu(false, true);
+		}
 
-		oEvent.preventDefault();
-		oEvent.stopPropagation();
+		//Go to the previous selectable item
+		this.setHoveredItem(oPrevSelectableItem);
+		oPrevSelectableItem && oPrevSelectableItem.focus(this);
+
+		if (!oEvent.metaKey && !oEvent.altKey) {
+			oEvent.preventDefault();
+			oEvent.stopPropagation();
+		}
 	};
 
+	Menu.prototype.onsappreviousmodifiers = Menu.prototype.onsapprevious;
+
 	Menu.prototype.onsaphome = function(oEvent){
+		var oNextSelectableItem = this.getNextSelectableItem(-1);
 		//Go to the first selectable item
-		this.setHoveredItem(this.getNextSelectableItem(-1));
+		this.setHoveredItem(oNextSelectableItem);
+		oNextSelectableItem && oNextSelectableItem.focus(this);
 
 		oEvent.preventDefault();
 		oEvent.stopPropagation();
 	};
 
 	Menu.prototype.onsapend = function(oEvent){
+		var oPrevSelectableItem = this.getPreviousSelectableItem(this._getItems().length);
+
 		//Go to the last selectable item
-		this.setHoveredItem(this.getPreviousSelectableItem(this.getItems().length));
+		this.setHoveredItem(oPrevSelectableItem);
+		oPrevSelectableItem && oPrevSelectableItem.focus(this);
 
 		oEvent.preventDefault();
 		oEvent.stopPropagation();
 	};
 
 	Menu.prototype.onsappagedown = function(oEvent) {
+		var aItems = this._getItems(),
+			iIdx = this.oHoveredItem ? aItems.indexOf(this.oHoveredItem) : -1,
+			oNextSelectableItem;
+
 		if (this.getPageSize() < 1) {
 			this.onsapend(oEvent);
 			return;
 		}
-		var iIdx = this.oHoveredItem ? this.indexOfAggregation("items", this.oHoveredItem) : -1;
 		iIdx += this.getPageSize();
-
-		if (iIdx >= this.getItems().length) {
+		if (iIdx >= aItems.length) {
 			this.onsapend(oEvent);
 			return;
 		}
-		this.setHoveredItem(this.getNextSelectableItem(iIdx - 1)); //subtract 1 to preserve computed page offset because getNextSelectableItem already offsets 1 item down
+		oNextSelectableItem = this.getNextSelectableItem(iIdx - 1);
+		this.setHoveredItem(oNextSelectableItem); //subtract 1 to preserve computed page offset because getNextSelectableItem already offsets 1 item down
+		oNextSelectableItem && oNextSelectableItem.focus(this);
 
 		oEvent.preventDefault();
 		oEvent.stopPropagation();
 	};
 
 	Menu.prototype.onsappageup = function(oEvent) {
+		var iIdx = this.oHoveredItem ? this._getItems().indexOf(this.oHoveredItem) : -1,
+			oPrevSelectableItem;
+
 		if (this.getPageSize() < 1) {
 			this.onsaphome(oEvent);
 			return;
 		}
-
-		var iIdx = this.oHoveredItem ? this.indexOfAggregation("items", this.oHoveredItem) : -1;
 		iIdx -= this.getPageSize();
 		if (iIdx < 0) {
 			this.onsaphome(oEvent);
 			return;
 		}
-		this.setHoveredItem(this.getPreviousSelectableItem(iIdx + 1)); //add 1 to preserve computed page offset because getPreviousSelectableItem already offsets one item up
+
+		oPrevSelectableItem = this.getPreviousSelectableItem(iIdx + 1);
+		this.setHoveredItem(oPrevSelectableItem); //add 1 to preserve computed page offset because getPreviousSelectableItem already offsets one item up
+		oPrevSelectableItem && oPrevSelectableItem.focus(this);
 
 		oEvent.preventDefault();
 		oEvent.stopPropagation();
@@ -505,18 +802,25 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	};
 
 	Menu.prototype.onkeyup = function(oEvent){
+		// focus menuItems
+		if (this.oHoveredItem && (jQuery(oEvent.target).prop("tagName") != "INPUT")) {
+			var oDomRef = this.oHoveredItem.getDomRef();
+			jQuery(oDomRef).trigger("focus");
+		}
+
 		//like sapselect but on keyup:
 		//Using keydown has the following side effect:
 		//If the selection leads to a close of the menu and the focus is restored to the caller (e.g. a button)
 		//the keyup is fired on the caller (in case of a button a click event is fired there in FF -> Bad!)
 		//The attribute _sapSelectOnKeyDown is used to avoid the problem the other way round (Space is pressed
 		//on Button which opens the menu and the space keyup immediately selects the first item)
-		if (!this._sapSelectOnKeyDown) {
+		//The device checks are made, because of the new functionality of iOS13, that brings desktop view on tablet
+		if (!this._sapSelectOnKeyDown && ( oEvent.key !== KeyCodes.Space || (!Device.os.macintosh && window.navigator.maxTouchPoints <= 1))) {
 			return;
 		} else {
 			this._sapSelectOnKeyDown = false;
 		}
-		if (!jQuery.sap.PseudoEvents.sapselect.fnCheck(oEvent)) {
+		if (!PseudoEvents.events.sapselect.fnCheck(oEvent) && oEvent.key !== "Enter") {
 			return;
 		}
 		this.selectItem(this.oHoveredItem, true, false);
@@ -532,70 +836,57 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	Menu.prototype.onsapbackspacemodifiers = Menu.prototype.onsapbackspace;
 
 	Menu.prototype.onsapescape = function(oEvent){
-		this.close();
+		this._bLeavingMenu = true;
+		this.close(true);
 		oEvent.preventDefault();
 		oEvent.stopPropagation();
 	};
 
-	Menu.prototype.onsaptabnext = Menu.prototype.onsapescape;
-	Menu.prototype.onsaptabprevious = Menu.prototype.onsapescape;
-
-	Menu.prototype.onmouseover = function(oEvent){
-		if (!sap.ui.Device.system.desktop) {
-			return;
+	Menu.prototype.onsaptabnext = function(oEvent){
+		if (this.isSubMenu()){
+			oEvent.preventDefault();
 		}
-		var oItem = this.getItemByDomRef(oEvent.target);
-		if (!this.bOpen || !oItem || oItem == this.oHoveredItem) {
-			return;
-		}
-
-		if (this.oOpenedSubMenu && jQuery.sap.containsOrEquals(this.oOpenedSubMenu.getDomRef(), oEvent.target)) {
-			return;
-		}
-
-		this.setHoveredItem(oItem);
-
-		if (jQuery.sap.checkMouseEnterOrLeave(oEvent, this.getDomRef())) {
-			this.getDomRef().focus();
-		}
-
-		this._openSubMenuDelayed(oItem);
-
+		this._bLeavingMenu = true;
+		this.close(true);
+		oEvent.stopPropagation();
 	};
+
+	Menu.prototype.onsaptabprevious = Menu.prototype.onsaptabnext;
 
 	Menu.prototype._openSubMenuDelayed = function(oItem){
 		if (!oItem) {
 			return;
 		}
+		var oSubmenu = oItem.getSubmenu(),
+			bHasSubmenu = oSubmenu && oSubmenu._getItems().length;
+
 		this._discardOpenSubMenuDelayed();
-		this._delayedSubMenuTimer = jQuery.sap.delayedCall(
-			oItem.getSubmenu() && this.checkEnabled(oItem) ? Menu._DELAY_SUBMENU_TIMER : Menu._DELAY_SUBMENU_TIMER_EXT,
-			this,
-			function(){
-				this.closeSubmenu();
-				if (!oItem.getSubmenu() || !this.checkEnabled(oItem)) {
-					return;
-				}
+		this._delayedSubMenuTimer = setTimeout(function(){
+			if (bHasSubmenu) {
 				this.setHoveredItem(oItem);
+				oItem && oItem.focus(this);
 				this.openSubmenu(oItem, false, true);
-		});
+			}
+		}.bind(this), bHasSubmenu ? Menu._DELAY_SUBMENU_TIMER : Menu._DELAY_SUBMENU_TIMER_EXT);
 	};
 
 	Menu.prototype._discardOpenSubMenuDelayed = function(oItem){
 		if (this._delayedSubMenuTimer) {
-			jQuery.sap.clearDelayedCall(this._delayedSubMenuTimer);
+			clearTimeout(this._delayedSubMenuTimer);
 			this._delayedSubMenuTimer = null;
 		}
 	};
 
 	Menu.prototype.onmouseout = function(oEvent){
-		if (!sap.ui.Device.system.desktop) {
+		if (!Device.system.desktop) {
 			return;
 		}
 
-		if (jQuery.sap.checkMouseEnterOrLeave(oEvent, this.getDomRef())) {
+		if (checkMouseEnterOrLeave(oEvent, this.getDomRef())) {
+			this.setHoveredItem(null);
 			if (!this.oOpenedSubMenu || !(this.oOpenedSubMenu.getParent() === this.oHoveredItem)) {
-				this.setHoveredItem(null);
+				this.setHoveredItem(this.oHoveredItem);
+
 			}
 			this._discardOpenSubMenuDelayed();
 		}
@@ -608,9 +899,22 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 */
 	Menu.prototype.onsapfocusleave = function(oEvent){
 		// Only the deepest opened sub menu should handle the event or ignore the event from an item
-		if (this.oOpenedSubMenu || !this.bOpen) {
+		if (this.oOpenedSubMenu || !this.isOpen()) {
 			return;
 		}
+
+		// Button resets the focus manually to the button in Firefox
+		// but we need the focus to remain in the menu
+		if (Device.os.name == "mac" && Device.browser.firefox && this.isOpen()) {
+			var sControlId = oEvent.relatedControlId,
+				oRelatedControl = sControlId ? oCore.byId(sControlId) : null,
+				bMenuItem = oRelatedControl && oRelatedControl instanceof MenuItemBase;
+			if (oRelatedControl && !bMenuItem) {
+				this._getItems()[0].focus();
+				return;
+			}
+		}
+
 		this.getRootMenu().handleOuterEvent(this.getId(), oEvent); //TBD: standard popup autoclose
 	};
 
@@ -622,7 +926,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		//-> This function and all its callers are obsolete when switching later to standard popup autoclose
 		//   (all needed further code locations for that change are marked with "TBD: standard popup autoclose")
 		var isInMenuHierarchy = false,
-			touchEnabled = this.getPopup().touchEnabled;
+		// before we were relaying on Popup.touchEnabled, but the logic in the Popup was changed
+		// and touchEnabled wasn't valid anymore for Combi devices, which caused the Menu to close automatically right after it was opened
+		// check for if the device is combi was added because of change in the Chrome70 browser version where the touch events are "disabled" by default
+		// e.g. document.ontouchstart returns false
+		touchEnabled = Device.support.touch || Device.system.combi;
 
 		this.bIgnoreOpenerDOMRef = false;
 
@@ -633,7 +941,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 			}
 			var that = this;
 			while (that && !isInMenuHierarchy) {
-				if (jQuery.sap.containsOrEquals(that.getDomRef(), oEvent.target)) {
+				if (containsOrEquals(that.getDomRef(), oEvent.target)) {
 					isInMenuHierarchy = true;
 				}
 				that = that.oOpenedSubMenu;
@@ -646,7 +954,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 				var that = this;
 				while (that && !isInMenuHierarchy) {
 					if ((that.oOpenedSubMenu && that.oOpenedSubMenu.getId() == oEvent.relatedControlId)
-							|| jQuery.sap.containsOrEquals(that.getDomRef(), jQuery.sap.byId(oEvent.relatedControlId).get(0))) {
+							|| containsOrEquals(that.getDomRef(), jQuery(document.getElementById(oEvent.relatedControlId)).get(0))) {
 						isInMenuHierarchy = true;
 					}
 					that = that.oOpenedSubMenu;
@@ -657,18 +965,18 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 			}
 		}
 
-		if (!isInMenuHierarchy) {
+		if (!isInMenuHierarchy && this.fireBeforeClose()) {
 			this.close();
 		}
 	};
 
 	Menu.prototype.getItemByDomRef = function(oDomRef){
-		var oItems = this.getItems(),
+		var oItems = this._getItems(),
 			iLength = oItems.length;
 		for (var i = 0;i < iLength;i++) {
 			var oItem = oItems[i],
 				oItemRef = oItem.getDomRef();
-			if (jQuery.sap.containsOrEquals(oItemRef, oDomRef)) {
+			if (containsOrEquals(oItemRef, oDomRef)) {
 				return oItem;
 			}
 		}
@@ -681,12 +989,19 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		}
 
 		var oSubMenu = oItem.getSubmenu();
-
-		if (!oSubMenu) {
+		if (!oSubMenu || !oSubMenu._getItems().length) {
 			// This is a normal item -> Close all menus and fire event.
-			this.getRootMenu().close();
+			// Call Menu.prototype.close with argument value equal to "true"
+			// in order not to ignore the opener DOM reference
+			if (this.fireBeforeClose()) {
+				this.getRootMenu().close(true);
+			}
+
+			if (oItem._getItemSelectionMode && oItem._getItemSelectionMode() !== ItemSelectionMode.None) {
+				oItem.setSelected(!oItem.getSelected());
+			}
 		} else {
-			if (!sap.ui.Device.system.desktop && this.oOpenedSubMenu === oSubMenu) {
+			if (!Device.system.desktop && this.oOpenedSubMenu === oSubMenu) {
 				this.closeSubmenu();
 			} else {
 				// Item with sub menu was triggered -> Open sub menu and fire event.
@@ -725,6 +1040,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 			this.oPopup = new Popup(this, false, true, false); // content, modal, shadow, autoclose (TBD: standard popup autoclose)
 			this.oPopup.setDurations(0, 0);
 			this.oPopup.attachClosed(this._menuClosed, this);
+
+			this.oPopup.attachOpened(this._handleOpened, this);
 		}
 		return this.oPopup;
 	};
@@ -736,33 +1053,19 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 
 		if (!oItem) {
 			this.oHoveredItem = null;
-			jQuery(this.getDomRef()).removeAttr("aria-activedescendant");
 			return;
 		}
 
 		this.oHoveredItem = oItem;
 		oItem.hover(true, this);
-		this._setActiveDescendant(this.oHoveredItem);
 
 		this.scrollToItem(this.oHoveredItem);
-	};
-
-	Menu.prototype._setActiveDescendant = function(oItem){
-		if (sap.ui.getCore().getConfiguration().getAccessibility() && oItem) {
-			var that = this;
-			that.$().removeAttr("aria-activedescendant");
-			setTimeout(function(){
-				//Setting active descendant must be a bit delayed. Otherwise the screenreader does not announce it.
-				if (that.oHoveredItem === oItem) {
-					that.$().attr("aria-activedescendant", that.oHoveredItem.getId());
-				}
-			}, 10);
-		}
 	};
 
 	/**
 	 * Opens the submenu of the given item (if any).
 	 *
+	 * @param {Object} oItem The item opener
 	 * @param {boolean} bWithKeyboard Whether the submenu is opened via keyboard
 	 * @param {boolean} bWithHover Whether the submenu is opened on hover or not (click)
 	 *
@@ -771,6 +1074,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	Menu.prototype.openSubmenu = function(oItem, bWithKeyboard, bWithHover){
 		var oSubMenu = oItem.getSubmenu();
 		if (!oSubMenu) {
+			return;
+		}
+
+		if (!this.checkEnabled(oItem)) {
 			return;
 		}
 
@@ -788,11 +1095,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 				|| (!bWithHover && !this.oOpenedSubMenu._bFixed);
 
 			this.oOpenedSubMenu._bringToFront();
-		} else {
+		} else if (oSubMenu._getItems().length) {
 			// Open the sub menu
 			this.oOpenedSubMenu = oSubMenu;
 			var eDock = Popup.Dock;
-			oSubMenu.open(bWithKeyboard, this, eDock.BeginTop, eDock.EndTop, oItem, "0 0");
+			oSubMenu.open(bWithKeyboard, oItem, eDock.BeginTop, eDock.EndTop, oItem, "-4 4");
 		}
 	};
 
@@ -820,6 +1127,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	/**
 	 * Scrolls an item into the visual viewport.
 	 *
+	 * @param {Object} oItem The item to be scrolled to
 	 * @private
 	 */
 	Menu.prototype.scrollToItem = function(oItem) {
@@ -852,7 +1160,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	Menu.prototype._bringToFront = function() {
 		// This is a hack. We "simulate" a mouse-down-event on the submenu so that it brings itself
 		// to the front.
-		jQuery.sap.byId(this.getPopup().getId()).mousedown();
+		jQuery(document.getElementById(this.getPopup().getId())).mousedown();
 	};
 
 	Menu.prototype.checkEnabled = function(oItem){
@@ -860,53 +1168,31 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	};
 
 	Menu.prototype.getNextSelectableItem = function(iIdx){
-		var oItem = null;
-		var aItems = this.getItems();
+		var aItems = this._getItems();
+		var oItem = aItems[iIdx];
 
 		// At first, start with the next index
 		for (var i = iIdx + 1; i < aItems.length; i++) {
-			if (aItems[i].getVisible() && this.checkEnabled(aItems[i])) {
-				oItem = aItems[i];
-				break;
+			if (aItems[i].getVisible()) {
+				return aItems[i];
 			}
 		}
 
-		// If nothing found, start from the beginning
-		if (!oItem) {
-			for (var i = 0; i <= iIdx; i++) {
-				if (aItems[i].getVisible() && this.checkEnabled(aItems[i])) {
-					oItem = aItems[i];
-					break;
-				}
-			}
-		}
-
-		return oItem;
+		return oItem && oItem.getVisible() ? oItem : null;
 	};
 
 	Menu.prototype.getPreviousSelectableItem = function(iIdx){
-		var oItem = null;
-		var aItems = this.getItems();
+		var aItems = this._getItems();
+		var oItem = aItems[iIdx];
 
 		// At first, start with the previous index
 		for (var i = iIdx - 1; i >= 0; i--) {
-			if (aItems[i].getVisible() && this.checkEnabled(aItems[i])) {
-				oItem = aItems[i];
-				break;
+			if (aItems[i].getVisible()) {
+				return aItems[i];
 			}
 		}
 
-		// If nothing found, start from the end
-		if (!oItem) {
-			for (var i = aItems.length - 1; i >= iIdx; i--) {
-				if (aItems[i].getVisible() && this.checkEnabled(aItems[i])) {
-					oItem = aItems[i];
-					break;
-				}
-			}
-		}
-
-		return oItem;
+		return oItem && oItem.getVisible() ? oItem : null;
 	};
 
 	Menu.prototype.setRootMenuTopStyle = function(bUseTopStyle){
@@ -916,7 +1202,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 
 
 	Menu.rerenderMenu = function(oMenu){
-		var aItems = oMenu.getItems();
+		var aItems = oMenu._getItems();
 		for (var i = 0; i < aItems.length; i++) {
 			var oSubMenu = aItems[i].getSubmenu();
 			if (oSubMenu) {
@@ -925,13 +1211,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		}
 
 		oMenu.invalidate();
-		oMenu.rerender();
 	};
 
 	Menu.prototype.focus = function(){
-		if (this.bOpen) {
+		if (this.isOpen()) {
 			Control.prototype.focus.apply(this, arguments);
-			this._setActiveDescendant(this.oHoveredItem);
 		}
 	};
 
@@ -939,6 +1223,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 * Checks whether the Menu should run with cozy design.
 	 * This function must only be called on the root menu (getRootMenu) to get proper results.
 	 *
+	 * @returns {boolean} Whether the Menu should is run in cozy design mode
 	 * @private
 	 */
 	Menu.prototype.isCozy = function(){
@@ -961,15 +1246,52 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		return false;
 	};
 
+	/**
+	 * Returns all items that have <code>selected</code> properties set to <code>true</code>.
+	 * <b>Note:</b> Only items with <code>selected</code> property set that are members of <code>MenuItemGroup</code> with <code>ItemSelectionMode</code> property
+	 * set to {@link sap.ui.core.ItemSelectionMode.SingleSelect} or {@link sap.ui.unified.ItemSelectionMode.MultiSelect}> are taken into account.
+	 * @since 1.127.0
+	 * @public
+	 * @returns {Array} Array of all selected items
+	 */
+	Menu.prototype.getSelectedItems = function() {
+		return this._getItems().filter((oItem) => oItem.getSelected && oItem.getSelected() && oItem._getItemSelectionMode() !== ItemSelectionMode.None);
+	};
+
+	/**
+	 * Returns list of items stored in <code>items</code> aggregation. If there are group items,
+	 * the items of the group are returned instead of their group item.
+	 *
+	 * @returns {sap.ui.unified.MenuItem} List of all menu items
+	 * @private
+	 */
+	Menu.prototype._getItems = function(){
+		var aItems = this.getItems(),
+			aItemList = [],
+			aGroupItems,
+			i;
+
+		for (i = 0; i < aItems.length; i++) {
+			if (aItems[i].getItems) {
+				aGroupItems = aItems[i].getItems();
+				for (var j = 0; j < aGroupItems.length; j++) {
+					aItemList.push(aGroupItems[j]);
+				}
+			} else {
+				aItemList.push(aItems[i]);
+			}
+		}
+
+		return aItemList;
+	};
 
 	///////////////////////////////////////// Hidden Functions /////////////////////////////////////////
 
 	function checkCozyMode(oRef) {
-		if (!oRef) {
+		if (!oRef || !oRef.getDomRef) {
 			return false;
 		}
-		oRef = oRef.$ ? oRef.$() : jQuery(oRef);
-		return oRef.closest(".sapUiSizeCompact,.sapUiSizeCondensed,.sapUiSizeCozy").hasClass("sapUiSizeCozy");
+		return !!oRef.getDomRef()?.closest(".sapUiSizeCompact,.sapUiSizeCondensed,.sapUiSizeCozy")?.classList.contains("sapUiSizeCozy");
 	}
 
 	function setItemToggleState(oMenu, bOpen){
@@ -986,7 +1308,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 			$Menu = oMenu.$();
 
 		if (iMaxVisibleItems > 0) {
-			var aItems = oMenu.getItems();
+			var aItems = oMenu._getItems();
 			for (var i = 0; i < aItems.length; i++) {
 				if (aItems[i].getDomRef()) {
 					iMaxHeight = Math.min(iMaxHeight, aItems[i].$().outerHeight(true) * iMaxVisibleItems);
@@ -1002,231 +1324,30 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		}
 	}
 
-	//**********************************************
+	function _isElementInViewport(oDomElement) {
+		var mRect;
 
-	/*!
-	 * The following code is taken from
-	 * jQuery UI 1.10.3 - 2013-11-18
-	 * jquery.ui.position.js
-	 *
-	 * http://jqueryui.com
-	 * Copyright 2013 jQuery Foundation and other contributors; Licensed MIT
-	 */
+		if (!oDomElement) {
+			return false;
+		}
 
-	//TODO: Get rid of this coding when jQuery UI 1.8 is no longer supported and the framework was switched to jQuery UI 1.9 ff.
+		if (oDomElement instanceof jQuery) {
+			oDomElement = oDomElement.get(0);
+		}
 
-	function _migrateDataTojQueryUI110(data){
-		var withinElement = jQuery(window);
-		data.within = {
-			element: withinElement,
-			isWindow: true,
-			offset: withinElement.offset() || { left: 0, top: 0 },
-			scrollLeft: withinElement.scrollLeft(),
-			scrollTop: withinElement.scrollTop(),
-			width: withinElement.width(),
-			height: withinElement.height()
-		};
-		data.collisionPosition = {
-			marginLeft: 0,
-			marginTop: 0
-		};
-		return data;
+		mRect = oDomElement.getBoundingClientRect();
+
+		return (
+			mRect.top >= 0 &&
+			mRect.left >= 0 &&
+			mRect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+			mRect.right <= (window.innerWidth || document.documentElement.clientWidth)
+		);
 	}
-
-	var _pos_jQueryUI110 = {
-		fit: {
-			left: function( position, data ) {
-				var within = data.within,
-					withinOffset = within.isWindow ? within.scrollLeft : within.offset.left,
-					outerWidth = within.width,
-					collisionPosLeft = position.left - data.collisionPosition.marginLeft,
-					overLeft = withinOffset - collisionPosLeft,
-					overRight = collisionPosLeft + data.collisionWidth - outerWidth - withinOffset,
-					newOverRight;
-
-				// element is wider than within
-				if ( data.collisionWidth > outerWidth ) {
-					// element is initially over the left side of within
-					if ( overLeft > 0 && overRight <= 0 ) {
-						newOverRight = position.left + overLeft + data.collisionWidth - outerWidth - withinOffset;
-						position.left += overLeft - newOverRight;
-					// element is initially over right side of within
-					} else if ( overRight > 0 && overLeft <= 0 ) {
-						position.left = withinOffset;
-					// element is initially over both left and right sides of within
-					} else {
-						if ( overLeft > overRight ) {
-							position.left = withinOffset + outerWidth - data.collisionWidth;
-						} else {
-							position.left = withinOffset;
-						}
-					}
-				// too far left -> align with left edge
-				} else if ( overLeft > 0 ) {
-					position.left += overLeft;
-				// too far right -> align with right edge
-				} else if ( overRight > 0 ) {
-					position.left -= overRight;
-				// adjust based on position and margin
-				} else {
-					position.left = Math.max( position.left - collisionPosLeft, position.left );
-				}
-			},
-			top: function( position, data ) {
-				var within = data.within,
-					withinOffset = within.isWindow ? within.scrollTop : within.offset.top,
-					outerHeight = data.within.height,
-					collisionPosTop = position.top - data.collisionPosition.marginTop,
-					overTop = withinOffset - collisionPosTop,
-					overBottom = collisionPosTop + data.collisionHeight - outerHeight - withinOffset,
-					newOverBottom;
-
-				// element is taller than within
-				if ( data.collisionHeight > outerHeight ) {
-					// element is initially over the top of within
-					if ( overTop > 0 && overBottom <= 0 ) {
-						newOverBottom = position.top + overTop + data.collisionHeight - outerHeight - withinOffset;
-						position.top += overTop - newOverBottom;
-					// element is initially over bottom of within
-					} else if ( overBottom > 0 && overTop <= 0 ) {
-						position.top = withinOffset;
-					// element is initially over both top and bottom of within
-					} else {
-						if ( overTop > overBottom ) {
-							position.top = withinOffset + outerHeight - data.collisionHeight;
-						} else {
-							position.top = withinOffset;
-						}
-					}
-				// too far up -> align with top
-				} else if ( overTop > 0 ) {
-					position.top += overTop;
-				// too far down -> align with bottom edge
-				} else if ( overBottom > 0 ) {
-					position.top -= overBottom;
-				// adjust based on position and margin
-				} else {
-					position.top = Math.max( position.top - collisionPosTop, position.top );
-				}
-			}
-		},
-		flip: {
-			left: function( position, data ) {
-				var within = data.within,
-					withinOffset = within.offset.left + within.scrollLeft,
-					outerWidth = within.width,
-					offsetLeft = within.isWindow ? within.scrollLeft : within.offset.left,
-					collisionPosLeft = position.left - data.collisionPosition.marginLeft,
-					overLeft = collisionPosLeft - offsetLeft,
-					overRight = collisionPosLeft + data.collisionWidth - outerWidth - offsetLeft,
-					/*eslint-disable no-nested-ternary */
-					myOffset = data.my[ 0 ] === "left" ?
-						-data.elemWidth :
-						data.my[ 0 ] === "right" ?
-							data.elemWidth :
-							0,
-					atOffset = data.at[ 0 ] === "left" ?
-						data.targetWidth :
-						data.at[ 0 ] === "right" ?
-							-data.targetWidth :
-							0,
-					/*eslint-enable no-nested-ternary */
-					offset = -2 * data.offset[ 0 ],
-					newOverRight,
-					newOverLeft;
-
-				if ( overLeft < 0 ) {
-					newOverRight = position.left + myOffset + atOffset + offset + data.collisionWidth - outerWidth - withinOffset;
-					if ( newOverRight < 0 || newOverRight < Math.abs( overLeft ) ) {
-						position.left += myOffset + atOffset + offset;
-					}
-				} else if ( overRight > 0 ) {
-					newOverLeft = position.left - data.collisionPosition.marginLeft + myOffset + atOffset + offset - offsetLeft;
-					if ( newOverLeft > 0 || Math.abs( newOverLeft ) < overRight ) {
-						position.left += myOffset + atOffset + offset;
-					}
-				}
-			},
-			top: function( position, data ) {
-				var within = data.within,
-					withinOffset = within.offset.top + within.scrollTop,
-					outerHeight = within.height,
-					offsetTop = within.isWindow ? within.scrollTop : within.offset.top,
-					collisionPosTop = position.top - data.collisionPosition.marginTop,
-					overTop = collisionPosTop - offsetTop,
-					overBottom = collisionPosTop + data.collisionHeight - outerHeight - offsetTop,
-					top = data.my[ 1 ] === "top",
-					/*eslint-disable no-nested-ternary */
-					myOffset = top ?
-						-data.elemHeight :
-						data.my[ 1 ] === "bottom" ?
-							data.elemHeight :
-							0,
-					atOffset = data.at[ 1 ] === "top" ?
-						data.targetHeight :
-						data.at[ 1 ] === "bottom" ?
-							-data.targetHeight :
-							0,
-					/*eslint-enable no-nested-ternary */
-					offset = -2 * data.offset[ 1 ],
-					newOverTop,
-					newOverBottom;
-				if ( overTop < 0 ) {
-					newOverBottom = position.top + myOffset + atOffset + offset + data.collisionHeight - outerHeight - withinOffset;
-					if ( ( position.top + myOffset + atOffset + offset) > overTop && ( newOverBottom < 0 || newOverBottom < Math.abs( overTop ) ) ) {
-						position.top += myOffset + atOffset + offset;
-					}
-				} else if ( overBottom > 0 ) {
-					newOverTop = position.top -  data.collisionPosition.marginTop + myOffset + atOffset + offset - offsetTop;
-					if ( ( position.top + myOffset + atOffset + offset) > overBottom && ( newOverTop > 0 || Math.abs( newOverTop ) < overBottom ) ) {
-						position.top += myOffset + atOffset + offset;
-					}
-				}
-			}
-		},
-		flipfit: {
-			left: function() {
-				_pos_jQueryUI110.flip.left.apply( this, arguments );
-				_pos_jQueryUI110.fit.left.apply( this, arguments );
-			},
-			top: function() {
-				_pos_jQueryUI110.flip.top.apply( this, arguments );
-				_pos_jQueryUI110.fit.top.apply( this, arguments );
-			}
-		}
-	};
-
-	jQuery.ui.position._sapUiCommonsMenuFlip = {
-		left: function(position, data){
-
-			if (jQuery.ui.position.flipfit) { //jQuery UI 1.9 ff.
-				jQuery.ui.position.flipfit.left.apply(this, arguments);
-				return;
-			}
-
-			//jQuery UI 1.8
-			data = _migrateDataTojQueryUI110(data);
-			_pos_jQueryUI110.flipfit.left.apply(this, arguments);
-		},
-		top: function(position, data){
-
-			if (jQuery.ui.position.flipfit) { //jQuery UI 1.9 ff.
-				jQuery.ui.position.flipfit.top.apply(this, arguments);
-				return;
-			}
-
-			//jQuery UI 1.8
-			data = _migrateDataTojQueryUI110(data);
-			_pos_jQueryUI110.flipfit.top.apply(this, arguments);
-		}
-	};
-
-	//******************** jQuery UI 1.10.3 End **************************
-
 
 	})(window);
 
 
 	return Menu;
 
-}, /* bExport= */ true);
+});

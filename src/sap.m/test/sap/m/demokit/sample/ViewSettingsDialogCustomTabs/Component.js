@@ -1,26 +1,11 @@
-jQuery.sap.declare("sap.m.sample.ViewSettingsDialogCustomTabs.Component");
+sap.ui.define([
+	'sap/ui/core/UIComponent'
+], function (UIComponent) {
+	"use strict";
 
-sap.ui.core.UIComponent.extend("sap.m.sample.ViewSettingsDialogCustomTabs.Component", {
-
-	metadata : {
-		rootView : "sap.m.sample.ViewSettingsDialogCustomTabs.V",
-		dependencies : {
-			libs : [
-				"sap.m",
-				"sap.ui.layout"
-			]
-		},
-		includes : [ "style.css" ],
-		config : {
-			sample : {
-				files : [
-					"style.css",
-					"V.view.xml",
-					"C.controller.js",
-					"Dialog.fragment.xml",
-					"DialogSingleCustomTab.fragment.xml"
-				]
-			}
+	return UIComponent.extend("sap.m.sample.ViewSettingsDialogCustomTabs.Component", {
+		metadata: {
+			manifest: "json"
 		}
-	}
+	});
 });

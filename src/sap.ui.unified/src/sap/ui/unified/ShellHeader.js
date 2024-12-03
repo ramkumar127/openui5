@@ -2,12 +2,27 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', './library'],
-	function(jQuery, library) {
+sap.ui.define([
+	'./library',
+	"sap/base/i18n/Localization",
+	'sap/ui/core/Control',
+	'sap/ui/Device',
+	"sap/ui/core/ControlBehavior",
+	"sap/ui/core/Lib",
+	'sap/ui/core/theming/Parameters',
+	"sap/ui/thirdparty/jquery"
+],
+	function(library, Localization, Control, Device, ControlBehavior, Library, Parameters, jQuery) {
 	"use strict";
 
 
-	var ShellHeader = sap.ui.core.Control.extend("sap.ui.unified.ShellHeader", {
+	/**
+	 * Internal helper control for the <code>sap.ui.unified.Shell</code>.
+	 *
+	 * @deprecated As of version 1.44.0, the concept has been discarded.
+	 * @private
+	 */
+	var ShellHeader = Control.extend("sap.ui.unified.ShellHeader", {
 
 		metadata: {
 			properties: {
@@ -29,7 +44,7 @@ sap.ui.define(['jquery.sap.global', './library'],
 				rm.write("<div");
 				rm.writeControlData(oHeader);
 				rm.writeAttribute("class", "sapUiUfdShellHeader");
-				if (sap.ui.getCore().getConfiguration().getAccessibility()) {
+				if (ControlBehavior.isAccessibilityEnabled()) {
 					rm.writeAttribute("role", "toolbar");
 				}
 				rm.write(">");
@@ -52,7 +67,7 @@ sap.ui.define(['jquery.sap.global', './library'],
 			renderSearch: function(rm, oHeader) {
 				var oSearch = oHeader.getSearch();
 				rm.write("<div id='", oHeader.getId(), "-hdr-search'");
-				if (sap.ui.getCore().getConfiguration().getAccessibility()) {
+				if (ControlBehavior.isAccessibilityEnabled()) {
 					rm.writeAttribute("role", "search");
 				}
 				rm.writeAttribute("class", "sapUiUfdShellSearch" + (oHeader.getSearchVisible() ? "" : " sapUiUfdShellHidden"));
@@ -68,7 +83,8 @@ sap.ui.define(['jquery.sap.global', './library'],
 				var aItems = begin ? oHeader.getHeadItems() : oHeader.getHeadEndItems();
 
 				for (var i = 0; i < aItems.length; i++) {
-					rm.write("<a tabindex='0' href='javascript:void(0);'");
+
+					rm.write("<div tabindex='0'");
 					rm.writeElementData(aItems[i]);
 					rm.addClass("sapUiUfdShellHeadItm");
 					if (aItems[i].getStartsSection()) {
@@ -91,19 +107,19 @@ sap.ui.define(['jquery.sap.global', './library'],
 					if (tooltip) {
 						rm.writeAttributeEscaped("title", tooltip);
 					}
-					if (sap.ui.getCore().getConfiguration().getAccessibility()) {
+					if (ControlBehavior.isAccessibilityEnabled()) {
 						rm.writeAccessibilityState(aItems[i], {
 							role: "button",
 							selected: null,
 							pressed: aItems[i].getToggleEnabled() ? aItems[i].getSelected() : null
 						});
 					}
-					rm.write("><span></span><div class='sapUiUfdShellHeadItmMarker'><div></div></div></a>");
+					rm.write("><span></span><div class='sapUiUfdShellHeadItmMarker'><div></div></div></div>");
 				}
 
 				var oUser = oHeader.getUser();
 				if (!begin && oUser) {
-					rm.write("<a tabindex='0' href='javascript:void(0);'");
+					rm.write("<div tabindex='0'");
 					rm.writeElementData(oUser);
 					rm.addClass("sapUiUfdShellHeadUsrItm");
 					if (!oUser.getShowPopupIndicator()) {
@@ -114,7 +130,7 @@ sap.ui.define(['jquery.sap.global', './library'],
 					if (tooltip) {
 						rm.writeAttributeEscaped("title", tooltip);
 					}
-					if (sap.ui.getCore().getConfiguration().getAccessibility()) {
+					if (ControlBehavior.isAccessibilityEnabled()) {
 						rm.writeAccessibilityState(oUser, {
 							role: "button"
 						});
@@ -129,7 +145,7 @@ sap.ui.define(['jquery.sap.global', './library'],
 					rm.writeAttributeEscaped("title", sUserName);
 					rm.write(">");
 					rm.writeEscaped(sUserName);
-					rm.write("</span><span class='sapUiUfdShellHeadUsrItmExp' aria-hidden='true'></span></a>");
+					rm.write("</span><span class='sapUiUfdShellHeadUsrItmExp' aria-hidden='true'></span></div>");
 				}
 
 				rm.write("</div>");
@@ -139,7 +155,7 @@ sap.ui.define(['jquery.sap.global', './library'],
 			},
 
 			_renderLogo: function(rm, oHeader) {
-				var rb = sap.ui.getCore().getLibraryResourceBundle("sap.ui.unified"),
+				var rb = Library.getResourceBundleFor("sap.ui.unified"),
 					sLogoTooltip = rb.getText("SHELL_LOGO_TOOLTIP"),
 					sIco = oHeader._getLogo();
 
@@ -149,7 +165,13 @@ sap.ui.define(['jquery.sap.global', './library'],
 				rm.writeAttributeEscaped("alt", sLogoTooltip);
 				rm.write("src='");
 				rm.writeEscaped(sIco);
-				rm.write("' style='", sIco ? "" : "display:none;","'></img>");
+				rm.write("'");
+
+				if (!sIco) {
+					rm.addStyle("display", "none");
+					rm.writeStyles();
+				}
+				rm.write(">");
 				rm.write("</div>");
 			}
 		}
@@ -160,7 +182,7 @@ sap.ui.define(['jquery.sap.global', './library'],
 	ShellHeader.prototype.init = function(){
 		var that = this;
 
-		this._rtl = sap.ui.getCore().getConfiguration().getRTL();
+		this._rtl = Localization.getRTL();
 
 		this._handleMediaChange = function(mParams){
 			if (!that.getDomRef()) {
@@ -168,7 +190,7 @@ sap.ui.define(['jquery.sap.global', './library'],
 			}
 			that._refresh();
 		};
-		sap.ui.Device.media.attachHandler(this._handleMediaChange, this, sap.ui.Device.media.RANGESETS.SAP_STANDARD);
+		Device.media.attachHandler(this._handleMediaChange, this, Device.media.RANGESETS.SAP_STANDARD);
 
 		this._handleResizeChange = function(mParams){
 			if (!that.getDomRef() || !that.getUser()) {
@@ -181,15 +203,15 @@ sap.ui.define(['jquery.sap.global', './library'],
 				that._refresh();
 			}
 		};
-		sap.ui.Device.resize.attachHandler(this._handleResizeChange, this);
+		Device.resize.attachHandler(this._handleResizeChange, this);
 
 		this.data("sap-ui-fastnavgroup", "true", true); // Define group for F6 handling
 	};
 
 	ShellHeader.prototype.exit = function(){
-		sap.ui.Device.media.detachHandler(this._handleMediaChange, this, sap.ui.Device.media.RANGESETS.SAP_STANDARD);
+		Device.media.detachHandler(this._handleMediaChange, this, Device.media.RANGESETS.SAP_STANDARD);
 		delete this._handleMediaChange;
-		sap.ui.Device.resize.detachHandler(this._handleResizeChange, this);
+		Device.resize.detachHandler(this._handleResizeChange, this);
 		delete this._handleResizeChange;
 	};
 
@@ -207,8 +229,7 @@ sap.ui.define(['jquery.sap.global', './library'],
 	ShellHeader.prototype._getLogo = function(){
 		var ico = this.getLogo();
 		if (!ico) {
-			jQuery.sap.require("sap.ui.core.theming.Parameters");
-			ico = sap.ui.core.theming.Parameters._getThemeImage(null, true); // theme logo
+			ico = Parameters._getThemeImage(null, true); // theme logo
 		}
 		return ico;
 	};
@@ -249,4 +270,4 @@ sap.ui.define(['jquery.sap.global', './library'],
 
 	return ShellHeader;
 
-}, /* bExport= */ true);
+});

@@ -3,8 +3,18 @@
  */
 
 // Provides control sap.ui.commons.Accordion.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/thirdparty/jqueryui/jquery-ui-core', 'sap/ui/thirdparty/jqueryui/jquery-ui-widget', 'sap/ui/thirdparty/jqueryui/jquery-ui-mouse', 'sap/ui/thirdparty/jqueryui/jquery-ui-sortable'],
-	function(jQuery, library, Control) {
+sap.ui.define([
+    'sap/ui/thirdparty/jquery',
+    './library',
+    'sap/ui/core/Control',
+    './AccordionRenderer',
+    'sap/ui/dom/jquery/control', // implements jQuery.fn.control'
+    'sap/ui/thirdparty/jqueryui/jquery-ui-core',
+    'sap/ui/thirdparty/jqueryui/jquery-ui-widget',
+    'sap/ui/thirdparty/jqueryui/jquery-ui-mouse',
+    'sap/ui/thirdparty/jqueryui/jquery-ui-sortable'
+],
+	function(jQuery, library, Control, AccordionRenderer) {
 	"use strict";
 
 
@@ -24,12 +34,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated As of version 1.38, replaced by {@link sap.m.Panel}.
 	 * @alias sap.ui.commons.Accordion
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Accordion = Control.extend("sap.ui.commons.Accordion", /** @lends sap.ui.commons.Accordion.prototype */ { metadata : {
 
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -171,7 +182,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 	/**
 	 * PAGE DOWN key behavior
-	 * Limitation: This key combination is used by Firefox 3.6 to navigate between the opened tabs in the browser.
 	 * Opens the next section and focuses on the header
 	 * @param {jQuery.Event} oEvent Browser event
 	 * @private
@@ -208,7 +218,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 	/**
 	 * PAGE UP key behavior
-	 * Limitation: This key combination is used by Firefox 3.6 to navigate between the opened TABS in the browser.
 	 * Opens the previous section and focuses on the header
 	 * @param {jQuery.Event} oEvent Browser event
 	 * @private
@@ -318,7 +327,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		if (oCurrentSection.id == this.getSections()[0].getId()) {
 			oNextFocusableElement = jQuery(oCurrentSection).find("div.sapUiAcdSectionHdr");
 			if (oNextFocusableElement) {
-				oNextFocusableElement.focus();
+				oNextFocusableElement.trigger("focus");
 			}
 		}
 
@@ -333,7 +342,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			if (oPreviousSection) {
 				oNextFocusableElement = jQuery(oPreviousSection).find("div.sapUiAcdSectionHdr");
 				if (oNextFocusableElement) {
-					oNextFocusableElement.focus();
+					oNextFocusableElement.trigger("focus");
 				}
 			}
 		}
@@ -369,7 +378,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			if (oNextSection) {
 				var oNextFocusableElement = jQuery(oNextSection).find("div.sapUiAcdSectionHdr");
 				if (oNextFocusableElement) {
-					oNextFocusableElement.focus();
+					oNextFocusableElement.trigger("focus");
 				}
 			}
 		}
@@ -402,7 +411,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		if (oFocusableSection) {
 			var oNextFocusableElement = jQuery(oFocusableSection).find("div.sapUiAcdSectionHdr");
 			if (oNextFocusableElement) {
-				oNextFocusableElement.focus();
+				oNextFocusableElement.trigger("focus");
 			}
 		}
 
@@ -435,7 +444,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		if (oFocusableSection) {
 			var oNextFocusableElement = jQuery(oFocusableSection).find("div.sapUiAcdSectionHdr");
 			if (oNextFocusableElement) {
-				oNextFocusableElement.focus();
+				oNextFocusableElement.trigger("focus");
 			}
 		}
 
@@ -617,7 +626,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 *         Id of the section that is being opened
 	 * @type void
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) design time meta model
 	 */
 	Accordion.prototype.openSection = function(sSectionId){
 
@@ -648,7 +656,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 *         Id of the section that is being closed
 	 * @type void
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) design time meta model
 	 */
 	Accordion.prototype.closeSection = function(sSectionId){
 
@@ -747,6 +754,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 		this.aSectionTitles.push(oSection.getTitle());
 
+		return this;
 	};
 
 	/**
@@ -766,7 +774,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * Redefinition of the method to add additional handling
 	 *
 	 * @param {string} sOpenedSectionsId  New value for property openedSectionsId
-	 * @return {sap.ui.commons.Accordion} 'this' to allow method chaining
+	 * @return {this} 'this' to allow method chaining
 	 * @public
 	 */
 	Accordion.prototype.setOpenedSectionsId = function(sOpenedSectionsId) {
@@ -872,10 +880,21 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * @private
 	 */
 	Accordion.prototype.onAfterRendering = function() {
+		var core = sap.ui.getCore(),
+			that = this;
 
-		// Collect the dom references of the items
-		var oDomRef = this.getDomRef();
-		oDomRef.style.height = oDomRef.clientHeight - 7 + "px";
+		function adjustHeight() {
+			var oDomRef = that.getDomRef();
+			if (oDomRef) {
+				oDomRef.style.height = oDomRef.clientHeight - 7 + "px";
+			}
+		}
+
+		if (core.isThemeApplied()) {
+			adjustHeight();
+		} else {
+			core.attachThemeChanged(adjustHeight, this);
+		}
 
 		this.$().sortable({
 			handle: "> div.sapUiAcdSectionHdr > div",
@@ -886,4 +905,4 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 	return Accordion;
 
-}, /* bExport= */ true);
+});

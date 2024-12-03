@@ -3,17 +3,16 @@
  */
 
 // Provides class sap.ui.core.util.File
-sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
-	function(jQuery, Device) {
+sap.ui.define(["sap/ui/thirdparty/jquery"],
+	function(jQuery) {
 	'use strict';
 
 	/**
 	 * Utility class to handle files.
 	 *
-	 * @class Utility class to handle files
 	 * @author SAP SE
 	 * @version ${version}
-	 * @static
+	 * @namespace
 	 *
 	 * @public
 	 * @since 1.22.0
@@ -24,33 +23,27 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 		/**
 		 * <p>Triggers a download / save action of the given file.</p>
 		 *
-		 * <p>There are limitations for this feature in some browsers:<p>
-		 *
-		 * <p><b>Internet Explorer 8 / 9</b><br>
-		 * Some file extensions on some operating systems are not working due to a bug in IE.
-		 * Therefore 'txt' will be used as file extension if the problem is occurring.</p>
-		 *
-		 * <p><b>Safari (OS X / iOS)</b><br>
-		 * A new window/tab will be opened. In OS X the user has to manually save the file (CMD + S), choose "page source" and specify a filename.
-		 * In iOS the content can be opened in another app (Mail, Notes, ...) or copied to the clipboard.
-		 * In case the popup blocker prevents this action, an error will be thrown which can be used to notify the user to disable it.</p>
-		 *
-		 * <p><b>Android Browser</b><br>
-		 * Not supported</p>
-		 *
 		 * @param {string} sData file content
 		 * @param {string} sFileName file name
 		 * @param {string} sFileExtension file extension
 		 * @param {string} sMimeType file mime-type
 		 * @param {string} sCharset file charset
+		 * @param {boolean} [bByteOrderMark] Whether to prepend a unicode byte order mark (only applies for utf-8 charset).
+		 *                                   Default is <code>false</code> except when <code>sFileExtension</code> === 'csv' and <code>sCharset</code> === 'utf-8' it is <code>true</code> (compatibility reasons).
 		 *
 		 * @public
 		 */
-		save: function(sData, sFileName, sFileExtension, sMimeType, sCharset) {
+		save: function(sData, sFileName, sFileExtension, sMimeType, sCharset, bByteOrderMark) {
 			var sFullFileName = sFileName + '.' + sFileExtension;
 
-			// prepend utf-8 byte-order-mark (BOM) to prevent encoding issues in .csv files
-			if (sCharset === 'utf-8' && sFileExtension === 'csv') {
+			// Compatibility handling:
+			// Add Byte Order Mark by default for utf-8 / csv to not break existing scenarios
+			if (typeof bByteOrderMark === 'undefined' && sCharset === 'utf-8' && sFileExtension === 'csv') {
+				bByteOrderMark = true;
+			}
+
+			// Prepend UTF-8 Byte Order Mark (BOM)
+			if (bByteOrderMark === true && sCharset === 'utf-8') {
 				sData = '\ufeff' + sData;
 			}
 
@@ -82,52 +75,18 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 
 						$link.remove();
 					} else {
-						// remove utf-8 byte-order-mark (BOM) again to prevent an exception when using btoa
-						if (sData && sCharset === 'utf-8' && sFileExtension === 'csv') {
-							sData = sData.substr(1);
-						}
-						// Safari (user has to save the file manually)
-						var oWindow = window.open(sType + ";base64," + window.btoa(sData));
+						// Make sure to encode the data to be used in data-uri
+						sData = encodeURI(sData);
+
+						// macOS Safari < 10.1 / iOS Safari
+						// (user has to save the file manually)
+						var oWindow = window.open(sType + "," + sData);
+						oWindow.opener = null;
 						if (!oWindow) {
-							throw new Error("Could not download file. A popup blocker might be active.");
+							throw new Error("Could not download the file, please deactivate your pop-up blocker.");
 						}
 					}
 				}
-			} else if (Device.browser.internet_explorer && Device.browser.version === 9) {
-				// iframe fallback for IE9
-				var $body = jQuery(document.body);
-				var $iframe = jQuery('<iframe/>', {
-					style: 'display:none'
-				});
-				$body.append($iframe);
-				var oDocument = $iframe.get(0).contentWindow.document;
-				// open the document to be able to modify it
-				oDocument.open(sMimeType, 'replace');
-				// set charset (e.g. utf-8) if given
-				if (sCharset) {
-					oDocument.charset = sCharset;
-				}
-				// write content to iframe
-				oDocument.write(sData);
-				oDocument.close();
-
-				// open the file-save dialog
-				// measure the time that the execCommand takes to detect an
-				// IE bug with some file extensions on some OS (e.g. Windows Server 2008 E2 Enterprise SP1) in all IE versions:
-				// http://stackoverflow.com/questions/2515791/execcommandsaveas-null-file-csv-is-not-working-in-ie8
-				var oTime = new Date();
-				var bSuccess = oDocument.execCommand('SaveAs', false, sFullFileName);
-				if (!bSuccess && new Date() - oTime < 10) {
-					// execCommand returns false either when the user clicks on cancel or
-					// when the bug mentioned above is occurring, so the time is measured
-					// to detect the cancel action
-
-					// .txt as file extension will work on all systems
-					oDocument.execCommand('SaveAs', false, sFullFileName + '.txt');
-				}
-
-				// cleanup
-				$iframe.remove();
 			}
 		}
 	};

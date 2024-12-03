@@ -2,8 +2,12 @@
  * ${copyright}
  */
 
-sap.ui.define(["sap/m/semantic/ShareMenuPage", "sap/m/semantic/SemanticConfiguration", "sap/m/semantic/SemanticPageRenderer", "sap/m/PagingButton"], function(ShareMenuPage, SemanticConfiguration, SemanticPageRenderer, PagingButton) {
+sap.ui.define(["sap/m/semantic/ShareMenuPage", "sap/m/semantic/SemanticConfiguration", "sap/m/semantic/SemanticPageRenderer", "sap/m/library", "sap/ui/core/Lib"], function(ShareMenuPage, SemanticConfiguration, SemanticPageRenderer, library, Library) {
 	"use strict";
+
+
+	// shortcut for sap.m.semantic.SemanticRuleSetType
+	var SemanticRuleSetType = library.semantic.SemanticRuleSetType;
 
 
 	/**
@@ -46,7 +50,6 @@ sap.ui.define(["sap/m/semantic/ShareMenuPage", "sap/m/semantic/SemanticConfigura
 	 * @public
 	 * @since 1.30.0
 	 * @alias sap.m.semantic.DetailPage
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var DetailPage = ShareMenuPage.extend("sap.m.semantic.DetailPage", /** @lends sap.m.semantic.DetailPage.prototype */ {
 		metadata: {
@@ -200,15 +203,16 @@ sap.ui.define(["sap/m/semantic/ShareMenuPage", "sap/m/semantic/SemanticConfigura
 					multiple: false
 				}
 			},
-			designTime : true
+			dnd: { draggable: false, droppable: true },
+			designtime: "sap/m/designtime/semantic/DetailPage.designtime"
 		},
-		renderer: SemanticPageRenderer.render
+		renderer: SemanticPageRenderer
 	});
 
 	DetailPage.prototype.init = function () {
 
 		ShareMenuPage.prototype.init.call(this);
-		this._getPage().getLandmarkInfo().setRootLabel(sap.ui.getCore().getLibraryResourceBundle("sap.m").getText("SEMANTIC_DETAIL_PAGE_TITLE"));
+		this._getPage().getLandmarkInfo().setRootLabel(Library.getResourceBundleFor("sap.m").getText("SEMANTIC_DETAIL_PAGE_TITLE"));
 	};
 
 	/*
@@ -271,5 +275,9 @@ sap.ui.define(["sap/m/semantic/ShareMenuPage", "sap/m/semantic/SemanticConfigura
 		return ShareMenuPage.prototype.destroyAggregation.call(this, sAggregationName, bSuppressInvalidate);
 	};
 
+	DetailPage.prototype.getSemanticRuleSet = function() {
+		return SemanticRuleSetType.Classic; //this page should only use the Classic ruleset (no other rules are specified for this page for now)
+	};
+
 	return DetailPage;
-}, /* bExport= */ true);
+});

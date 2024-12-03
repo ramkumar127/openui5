@@ -2,27 +2,11 @@ sap.ui.define(['sap/ui/core/UIComponent'],
 	function(UIComponent) {
 	"use strict";
 
-	var Component = UIComponent.extend("sap.m.sample.ObjectHeader.Component", {
+	return UIComponent.extend("sap.m.sample.ObjectHeader.Component", {
 
 		metadata : {
-			rootView : "sap.m.sample.ObjectHeader.V",
-			dependencies : {
-				libs : [
-					"sap.m",
-					"sap.ui.layout"
-				]
-			},
-			config : {
-				sample : {
-					files : [
-						"V.view.xml",
-						"C.controller.js"
-					]
-				}
-			}
+			manifest: "json"
 		}
 	});
-
-	return Component;
 
 });

@@ -3,9 +3,38 @@
  */
 
 // Provides control sap.ui.ux3.Exact.
-sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Menu', 'sap/ui/commons/SearchField', 'sap/ui/commons/TextView', 'sap/ui/core/Control', './ExactArea', './ExactAttribute', './ExactBrowser', './library'],
-	function(jQuery, Button, Menu, SearchField, TextView, Control, ExactArea, ExactAttribute, ExactBrowser, library) {
+sap.ui.define([
+    'sap/ui/commons/Button',
+    'sap/ui/commons/Menu',
+    'sap/ui/commons/SearchField',
+    'sap/ui/commons/TextView',
+    'sap/ui/core/Control',
+    './ExactArea',
+    './ExactAttribute',
+    './ExactBrowser',
+    './library',
+    './ExactRenderer',
+    'sap/ui/commons/library'
+],
+	function(
+		Button,
+		Menu,
+		SearchField,
+		TextView,
+		Control,
+		ExactArea,
+		ExactAttribute,
+		ExactBrowser,
+		library,
+		ExactRenderer,
+		commonsLibrary
+	) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.commons.TextViewDesign
+	var TextViewDesign = commonsLibrary.TextViewDesign;
 
 
 
@@ -27,11 +56,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 	 * @public
 	 * @experimental Since version 1.2.
 	 * API is not yet finished and might change completely
+	 * @deprecated Since version 1.38.
 	 * @alias sap.ui.ux3.Exact
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Exact = Control.extend("sap.ui.ux3.Exact", /** @lends sap.ui.ux3.Exact.prototype */ { metadata : {
 
+		deprecated: true,
 		library : "sap.ui.ux3",
 		properties : {
 
@@ -46,12 +76,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 			/**
 			 * Defines the 'Settings' button in the browse section tool bar
 			 */
-			settingsMenu : {type : "sap.ui.commons.Menu", multiple : false},
+			settingsMenu : {type : "sap.ui.commons.Menu", multiple : false, forwarding: {idSuffix: "-browser", aggregation: "optionsMenu"}},
 
 			/**
 			 * The attributes which shall be available to refine the search
 			 */
-			attributes : {type : "sap.ui.ux3.ExactAttribute", multiple : true, singularName : "attribute"},
+			attributes : {type : "sap.ui.ux3.ExactAttribute", multiple : true, singularName : "attribute", forwarding: {idSuffix: "-browser", aggregation: "attributes"}},
 
 			/**
 			 * Controls managed by the Exact control
@@ -100,14 +130,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 
 
 
-
-
-
-
-
-
-	(function() {
-
 	/**
 	 * Does the setup when the Exact is created.
 	 * @private
@@ -140,7 +162,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 		this._resultArea = new ExactArea(this.getId() + "-resultArea");
 		this.addAggregation("controls", this._resultArea);
 
-		this._resultText = new TextView(this.getId() + "-resultAreaTitle", {design: sap.ui.commons.TextViewDesign.Bold});
+		this._resultText = new TextView(this.getId() + "-resultAreaTitle", {design: TextViewDesign.Bold});
 		this._resultText.addStyleClass("sapUiUx3ExactViewTitle");
 		this.addAggregation("controls", this._resultText);
 
@@ -149,24 +171,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 
 
 	//*** Overridden API functions ***
-
-
-	Exact.prototype.getSettingsMenu = function() {
-		return this._browser.getOptionsMenu();
-	};
-
-
-	Exact.prototype.setSettingsMenu = function(oSettingsMenu) {
-		this._browser.setOptionsMenu(oSettingsMenu);
-		return this;
-	};
-
-
-	Exact.prototype.destroySettingsMenu = function() {
-		this._browser.destroyOptionsMenu();
-		return this;
-	};
-
 
 	Exact.prototype.getResultText = function() {
 		return this._resultText.getText();
@@ -179,51 +183,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 	};
 
 
-	Exact.prototype.getAttributes = function() {
-		return this._browser.getAttributes();
-	};
-
-
-	Exact.prototype.insertAttribute = function(oAttribute, iIndex) {
-		this._browser.insertAttribute(oAttribute, iIndex);
-		return this;
-	};
-
-
-	Exact.prototype.addAttribute = function(oAttribute) {
-		this._browser.addAttribute(oAttribute);
-		return this;
-	};
-
-
-	Exact.prototype.removeAttribute = function(vElement) {
-		return this._browser.removeAttribute(vElement);
-	};
-
-
-	Exact.prototype.removeAllAttributes = function() {
-		return this._browser.removeAllAttributes();
-	};
-
-
-	Exact.prototype.indexOfAttribute = function(oAttribute) {
-		return this._browser.indexOfAttribute(oAttribute);
-	};
-
-
-	Exact.prototype.destroyAttributes = function() {
-		this._browser.destroyAttributes();
-		return this;
-	};
-
-
-
 	/**
 	 * Returns the ExactArea representing the result section. Arbitrary content can be added here.
 	 *
 	 * @type sap.ui.ux3.ExactArea
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	Exact.prototype.getResultArea = function() {
 		return this._resultArea;
@@ -235,7 +199,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 	 *
 	 * @type sap.ui.commons.SearchField
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	Exact.prototype.getSearchField = function() {
 		return this._search_input;
@@ -270,8 +233,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 	};
 
 
-	}());
-
 	return Exact;
 
-}, /* bExport= */ true);
+});

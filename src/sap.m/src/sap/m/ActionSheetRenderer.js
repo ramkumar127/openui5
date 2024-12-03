@@ -1,8 +1,8 @@
 /*!
  * ${copyright}
  */
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define(["sap/ui/Device", "sap/ui/core/ControlBehavior", "sap/ui/core/Lib"],
+	function(Device, ControlBehavior, Library) {
 	"use strict";
 
 
@@ -11,6 +11,7 @@ sap.ui.define(['jquery.sap.global'],
 	 * @namespace
 	 */
 	var ActionSheetRenderer = {
+		apiVersion: 2
 	};
 
 
@@ -18,47 +19,68 @@ sap.ui.define(['jquery.sap.global'],
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
 	 * @param {sap.ui.core.RenderManager} oRm the RenderManager that can be used for writing to the render output buffer
-	 * @param {sap.ui.core.Control} oControl an object representation of the control that should be rendered
+	 * @param {sap.m.ActionSheet} oControl an object representation of the control that should be rendered
 	 */
 	ActionSheetRenderer.render = function(oRm, oControl){
 		var aActionButtons = oControl._getAllButtons(),
-			i, bMixedButtons, oButton;
+			aInvisibleTexts = oControl.getAggregation("_invisibleAriaTexts"),
+			oResourceBundle = Library.getResourceBundleFor('sap.m'),
+			iButtonsCount = aActionButtons.length,
+			bAccessibilityOn = ControlBehavior.isAccessibilityEnabled(),
+			iVisibleButtonCount = aActionButtons.filter(function (oButton) { return oButton.getVisible(); }).length,
+			oCurInvisibleText, i, bMixedButtons, oButton, iVisibleButtonTempCount = 1,
+			fnGetRelatedInvisibleText = function (oBtn) {
+				return aInvisibleTexts.filter(function (oInvisibleText) {
+					return oInvisibleText.getId().indexOf(oBtn.getId()) > -1;
+				})[0];
+			};
 
-		for (i = 0 ; i < aActionButtons.length ; i++) {
+		for (i = 0; i < iButtonsCount; i++) {
 			oButton = aActionButtons[i];
-			oButton.removeStyleClass("sapMActionSheetButtonNoIcon");
 			if (oButton.getIcon() && oButton.getVisible()) {
 				bMixedButtons = true;
-			} else {
-				oButton.addStyleClass("sapMActionSheetButtonNoIcon");
 			}
 		}
-
 		// write the HTML into the render manager
-		oRm.write("<div");
-		oRm.writeControlData(oControl);
-		oRm.addClass("sapMActionSheet");
+		oRm.openStart("div", oControl);
+		oRm.class("sapMActionSheet");
+
 		if (bMixedButtons) {
-			oRm.addClass("sapMActionSheetMixedButtons");
+			oRm.class("sapMActionSheetMixedButtons");
 		}
-		oRm.writeClasses();
 
 		var sTooltip = oControl.getTooltip_AsString();
 		if (sTooltip) {
-			oRm.writeAttributeEscaped("title", sTooltip);
+			oRm.attr("title", sTooltip);
 		}
 
-		oRm.write(">");
+		// This is needed in order to prevent JAWS from announcing the ActionSheet content multiple times
+		bAccessibilityOn && oRm.attr("role", "presentation");
 
-		for (i = 0 ; i < aActionButtons.length ; i++) {
-			oRm.renderControl(aActionButtons[i].addStyleClass("sapMActionSheetButton"));
+		oRm.openEnd();
+
+		for (i = 0; i < iButtonsCount; i++) {
+			oButton = aActionButtons[i];
+			oRm.renderControl(aActionButtons[i]);
+
+			if (bAccessibilityOn && oButton.getVisible()) {
+
+				// It's not guaranteed that Button aggregation order is the same as InvisibleTexts aggregation order.
+				// So, just find the proper matching between Button & Text
+				oCurInvisibleText = fnGetRelatedInvisibleText(oButton);
+
+				if (oCurInvisibleText) {
+					oCurInvisibleText.setText(oResourceBundle.getText('ACTIONSHEET_BUTTON_INDEX', [iVisibleButtonTempCount, iVisibleButtonCount]));
+					oRm.renderControl(oCurInvisibleText);
+				}
+				iVisibleButtonTempCount++;
+			}
 		}
 
-		if (sap.ui.Device.system.phone && oControl.getShowCancelButton()) {
+		if (Device.system.phone && oControl.getShowCancelButton()) {
 			oRm.renderControl(oControl._getCancelButton());
 		}
-
-		oRm.write("</div>");
+		oRm.close("div");
 	};
 
 

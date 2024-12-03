@@ -5,21 +5,7 @@ sap.ui.define(['sap/ui/core/UIComponent'],
 	var Component = UIComponent.extend("sap.m.sample.PlanningCalendarMulti.Component", {
 
 		metadata : {
-			rootView : "sap.m.sample.PlanningCalendarMulti.Page",
-			dependencies : {
-				libs : [
-					"sap.m",
-					"sap.ui.unified"
-				]
-			},
-			config : {
-				sample : {
-					files : [
-						"Page.view.xml",
-						"Page.controller.js"
-					]
-				}
-			}
+			manifest: "json"
 		}
 	});
 

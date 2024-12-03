@@ -3,8 +3,8 @@
  */
 
 //Provides default renderer for control sap.ui.commons.Paginator
-sap.ui.define(['jquery.sap.global', 'jquery.sap.encoder'],
-	function(jQuery/* , jQuerySap */) {
+sap.ui.define(["sap/base/security/encodeXML", "sap/ui/thirdparty/jquery"],
+	function(encodeXML, jQuery) {
 	"use strict";
 
 
@@ -68,13 +68,13 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.encoder'],
 
 		// First page link must only appear when at least 5 pages are available
 		if (oPaginator.getNumberOfPages() > 5) {
-			oRm.write("<a id='" + paginatorId + "--firstPageLink' href='javascript:void(0);' title='");
+			oRm.write("<a id='" + paginatorId + "--firstPageLink' href='#;' title='");
 			oRm.writeEscaped(rb.getText("FIRST_PAGE"));
 			oRm.write("' class='sapUiPagBtn sapUiPagFirst " + linkClass + "' " + linkAcc + "><span class='sapUiPagText'>");
 			oRm.writeEscaped(rb.getText("PAGINATOR_OTHER_PAGE", [1]));
 			oRm.write("</span></a>");
 		}
-		oRm.write("<a id='" + paginatorId + "--backLink' href='javascript:void(0);' title='");
+		oRm.write("<a id='" + paginatorId + "--backLink' href='#' title='");
 		oRm.writeEscaped(rb.getText("PREVIOUS_PAGE"));
 		oRm.write("' class='sapUiPagBtn sapUiPagBack " + linkClass + "' " + linkAcc + "><span class='sapUiPagText'>");
 		oRm.writeEscaped(rb.getText("BACK"));
@@ -94,16 +94,16 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.encoder'],
 		/************************************************************************************
 		 * Render the forward link, forward arrow and last page link when necessary
 		 *************************************************************************************/
-		linkClass = (iCurrentPage == oPaginator.getNumberOfPages()) ? "sapUiLnkDsbl" : "sapUiLnk";
-		linkAcc = (iCurrentPage == 1) ? " aria-disabled='true'" : "";
+		linkClass = (iCurrentPage === oPaginator.getNumberOfPages()) ? "sapUiLnkDsbl" : "sapUiLnk";
+		linkAcc = (iCurrentPage === oPaginator.getNumberOfPages()) ? " aria-disabled='true'" : "";
 
-		oRm.write("<a id='" + paginatorId + "--forwardLink' href='javascript:void(0);' title='");
+		oRm.write("<a id='" + paginatorId + "--forwardLink' href='#' title='");
 		oRm.writeEscaped(rb.getText("NEXT_PAGE"));
 		oRm.write("' class='sapUiPagBtn sapUiPagForward " + linkClass + "' " + linkAcc + "><span class='sapUiPagText'>");
 		oRm.writeEscaped(rb.getText("FORWARD"));
 		oRm.write("</span></a>");
 		if (oPaginator.getNumberOfPages() > 5) {
-			oRm.write("<a id='" + paginatorId + "--lastPageLink' href='javascript:void(0);' title='");
+			oRm.write("<a id='" + paginatorId + "--lastPageLink' href='#' title='");
 			oRm.writeEscaped(rb.getText("LAST_PAGE"));
 			oRm.write("' class='sapUiPagBtn sapUiPagLast " + linkClass + "' " + linkAcc + "><span class='sapUiPagText'>");
 			oRm.writeEscaped(rb.getText("PAGINATOR_OTHER_PAGE", [oPaginator.getNumberOfPages()]));
@@ -126,11 +126,11 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.encoder'],
 			aHtml.push(">");
 			aHtml.push("<a id='" + sPaginatorId + "-a--" + i + "' title='");
 			if (i == iCurrent) {
-				aHtml.push(jQuery.sap.encodeHTML(rb.getText("PAGINATOR_CURRENT_PAGE", [i])));
+				aHtml.push(encodeXML(rb.getText("PAGINATOR_CURRENT_PAGE", [i])));
 			} else {
-				aHtml.push(jQuery.sap.encodeHTML(rb.getText("PAGINATOR_OTHER_PAGE", [i])));
+				aHtml.push(encodeXML(rb.getText("PAGINATOR_OTHER_PAGE", [i])));
 			}
-			aHtml.push("' href='javascript:void(0);'");
+			aHtml.push("' href='#'");
 			if (i == iCurrent) {
 				aHtml.push(" tabindex='0' class='sapUiLnkDsbl'");
 			} else {
@@ -155,10 +155,10 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.encoder'],
 		var isFirst = (page == 1);
 		var isLast = (page == oPaginator.getNumberOfPages());
 
-		var firstPage = jQuery.sap.byId(id + "--firstPageLink").toggleClass("sapUiLnk", !isFirst).toggleClass("sapUiLnkDsbl", isFirst);
-		var backLink = jQuery.sap.byId(id + "--backLink").toggleClass("sapUiLnk", !isFirst).toggleClass("sapUiLnkDsbl", isFirst);
-		var forwardLink = jQuery.sap.byId(id + "--forwardLink").toggleClass("sapUiLnk", !isLast).toggleClass("sapUiLnkDsbl", isLast);
-		var lastPage = jQuery.sap.byId(id + "--lastPageLink").toggleClass("sapUiLnk", !isLast).toggleClass("sapUiLnkDsbl", isLast);
+		var firstPage = jQuery(document.getElementById(id + "--firstPageLink")).toggleClass("sapUiLnk", !isFirst).toggleClass("sapUiLnkDsbl", isFirst);
+		var backLink = jQuery(document.getElementById(id + "--backLink")).toggleClass("sapUiLnk", !isFirst).toggleClass("sapUiLnkDsbl", isFirst);
+		var forwardLink = jQuery(document.getElementById(id + "--forwardLink")).toggleClass("sapUiLnk", !isLast).toggleClass("sapUiLnkDsbl", isLast);
+		var lastPage = jQuery(document.getElementById(id + "--lastPageLink")).toggleClass("sapUiLnk", !isLast).toggleClass("sapUiLnkDsbl", isLast);
 
 		if (isFirst) {
 			firstPage.attr("aria-disabled", "true");

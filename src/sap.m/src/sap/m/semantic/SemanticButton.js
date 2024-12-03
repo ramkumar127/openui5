@@ -2,7 +2,12 @@
  * ${copyright}
  */
 
-sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Button', 'sap/m/OverflowToolbarButton'], function(SemanticControl, Button, OverflowToolbarButton) {
+sap.ui.define([
+	'sap/m/semantic/SemanticControl',
+	'sap/m/Button',
+	'sap/m/semantic/SemanticOverflowToolbarButton',
+	"sap/ui/thirdparty/jquery"
+], function(SemanticControl, Button, SemanticOverflowToolbarButton, jQuery) {
 	"use strict";
 
 	/**
@@ -11,7 +16,7 @@ sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Button', 'sap/m/Overflow
 	 * @param {object} [mSettings] Initial settings for the new control
 	 *
 	 * @class
-	 * A semantic button is either a {@link sap.m.Button} or {@link sap.m.OverflowButton} ,
+	 * A semantic button is either a {@link sap.m.Button} or {@link sap.m.semantic.SemanticOverflowToolbarButton} ,
 	 * eligible for aggregation content of a {@link sap.m.semantic.SemanticPage}.
 	 *
 	 * @extends sap.m.semantic.SemanticControl
@@ -24,12 +29,12 @@ sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Button', 'sap/m/Overflow
 	 * @public
 	 * @since 1.30.0
 	 * @alias sap.m.semantic.SemanticButton
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 
 	var SemanticButton = SemanticControl.extend("sap.m.semantic.SemanticButton", /** @lends sap.m.semantic.SemanticButton.prototype */ {
 		metadata : {
 			library : "sap.m",
+			"abstract" : true,
 			properties : {
 
 				/**
@@ -43,29 +48,32 @@ sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Button', 'sap/m/Overflow
 			},
 			events : {
 				/**
-				* See {@link sap.m.Button#press}
+				* See {@link sap.m.Button#event:press}
 				*/
 				press : {}
 			}
 		}
 	});
 
-	/**
-	 * @Overwrites
-	 */
 	SemanticButton.prototype._getControl = function() {
+		var oControl,
+			oClass,
+			oNewInstance,
+			oConfig = this._getConfiguration();
 
-		var oControl = this.getAggregation('_control');
+		if (!oConfig) {
+			return null;
+		}
+
+		oControl = this.getAggregation('_control');
+
 		if (!oControl) {
+			oClass = this._getClass(oConfig);
+			oNewInstance = this._createInstance(oClass);
+			oNewInstance.applySettings(oConfig.getSettings());
 
-			var oClass = this._getConfiguration()
-				&& this._getConfiguration().constraints === "IconOnly" ? OverflowToolbarButton : Button;
-
-			var oNewInstance = this._createInstance(oClass);
-
-			oNewInstance.applySettings(this._getConfiguration().getSettings());
-			if (typeof this._getConfiguration().getEventDelegates === "function") {
-				oNewInstance.addEventDelegate(this._getConfiguration().getEventDelegates(oNewInstance));
+			if (typeof oConfig.getEventDelegates === "function") {
+				oNewInstance.addEventDelegate(oConfig.getEventDelegates(oNewInstance));
 			}
 
 			this.setAggregation('_control', oNewInstance, true); // don't invalidate - this is only called before/during rendering, where invalidation would lead to double rendering,  or when invalidation anyway happens
@@ -76,13 +84,16 @@ sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Button', 'sap/m/Overflow
 		return oControl;
 	};
 
-	SemanticButton.prototype._createInstance = function(oClass) {
+	SemanticButton.prototype._getClass = function(oConfig) {
+		return oConfig && oConfig.constraints === "IconOnly" ? SemanticOverflowToolbarButton : Button;
+	};
 
+	SemanticButton.prototype._createInstance = function(oClass) {
 		return new oClass({
-				id: this.getId() + "-button",
-				press: jQuery.proxy(this.firePress, this)
-			});
+			id: this.getId() + "-button",
+			press: jQuery.proxy(this.firePress, this)
+		});
 	};
 
 	return SemanticButton;
-}, /* bExport= */ true);
+});

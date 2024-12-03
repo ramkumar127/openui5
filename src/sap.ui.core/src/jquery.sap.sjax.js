@@ -41,13 +41,18 @@ sap.ui.define(['jquery.sap.global'],
 	 * Note that async=false is always enforced by this method.
 	 *
 	 * @param {string} oOrigSettings the ajax() settings
-	 * @return result, see above
+	 * @returns {object}, details see above
 	 *
 	 * @public
 	 * @since 0.9.0
+	 * @deprecated since 1.58. It is no longer recommended to use synchronous calls at all. There are
+	 *  alternatives like native <code>XMLHttpRequest</code> or <code>jQuery.ajax</code> but try to
+	 *  avoid the sync flag. There will be no replacement for <code>jQuery.sap.sjax</code>.
 	 * @SecSink {0|PATH} Parameter is used for future HTTP requests
 	 */
 	jQuery.sap.sjax = function sjax(oOrigSettings) {
+
+		var oResult;
 
 		var s = jQuery.extend(true, {}, jQuery.sap.sjaxSettings, oOrigSettings,
 
@@ -63,8 +68,6 @@ sap.ui.define(['jquery.sap.global'],
 				}
 			});
 
-		var oResult;
-
 		jQuery.ajax(s);
 
 		if (!s.complexResult) {
@@ -76,6 +79,8 @@ sap.ui.define(['jquery.sap.global'],
 
 	/**
 	 * Convenience wrapper that checks whether a given web resource could be accessed.
+	 * @returns {boolean} Whether the given web resource could be accessed.
+	 * @deprecated since 1.58 see {@link jQuery.sap.sjax}
 	 * @SecSink {0|PATH} Parameter is used for future HTTP requests
 	 * @SecSource {return} Returned value is under control of an external resource
 	 */
@@ -90,10 +95,11 @@ sap.ui.define(['jquery.sap.global'],
 	 * @param {string} sUrl the URL
 	 * @param {string|object} data request parameters in the format accepted by jQuery.ajax()
 	 * @param {string} [sDataType='text'] the type of data expected from the server, default is "text"
-	 * @return result @see jQuery.sap.sjax
+	 * @returns {object} See {@link jQuery.sap.sjax}
 	 *
 	 * @public
 	 * @since 0.9.0
+	 * @deprecated since 1.58 see {@link jQuery.sap.sjax}
 	 * @SecSink {0 1|PATH} Parameter is used for future HTTP requests
 	 * @SecSource {return} Returned value is under control of an external resource
 	 */
@@ -113,10 +119,11 @@ sap.ui.define(['jquery.sap.global'],
 	 * @param {string} sUrl the URL
 	 * @param {string|object} data request parameters in the format accepted by jQuery.ajax()
 	 * @param {string} [sDataType='text'] the type of data expected from the server, default is "text"
-	 * @return result @see jQuery.sap.sjax
+	 * @returns {object} See {@link jQuery.sap.sjax}
 	 *
 	 * @public
 	 * @since 0.9.0
+	 * @deprecated since 1.58 see {@link jQuery.sap.sjax}
 	 * @SecSink {0 1|PATH} Parameter is used for future HTTP requests
 	 * @SecSource {return} Returned value is under control of an external resource
 	 */
@@ -141,10 +148,11 @@ sap.ui.define(['jquery.sap.global'],
 	 * @param {string} sUrl the URL
 	 * @param {string|object} data request parameters in the format accepted by jQuery.ajax()
 	 * @param {string} [fallback] if set, only data is returned (and this fallback instead in case of errors); if unset, a result structure is returned
-	 * @return  result @see jQuery.sap.sjax
+	 * @returns {object} See {@link jQuery.sap.sjax}
 	 *
 	 * @public
 	 * @since 0.9.0
+	 * @deprecated since 1.58 see {@link jQuery.sap.sjax}
 	 * @SecSink {0 1|PATH} Parameter is used for future HTTP requests
 	 */
 	jQuery.sap.syncGetText = function syncGetText(sUrl, data, fallback) {
@@ -172,10 +180,11 @@ sap.ui.define(['jquery.sap.global'],
 	 * @param {string} sUrl the URL
 	 * @param {string|object} data request parameters in the format accepted by jQuery.ajax()
 	 * @param {object} [fallback] if set, only data is returned (and this fallback instead in case of errors); if unset, a result structure is returned
-	 * @return result @see jQuery.sap.sjax
+	 * @returns {object} See {@link jQuery.sap.sjax}
 	 *
 	 * @public
 	 * @since 0.9.0
+	 * @deprecated since 1.58 see {@link jQuery.sap.sjax}
 	 * @SecSink {0 1|PATH} Parameter is used for future HTTP requests
 	 */
 	jQuery.sap.syncGetJSON = function syncGetJSON(sUrl, data, fallback) {

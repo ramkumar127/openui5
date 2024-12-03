@@ -3,8 +3,11 @@
  */
 
 // Provides control sap.ui.core.Item.
-sap.ui.define(['sap/ui/core/Element', 'sap/ui/core/Control'],
-	function(Element, Control) {
+sap.ui.define(['sap/ui/core/Element',
+	'sap/ui/core/IconPool',
+	'./TabStripItem',
+	'sap/m/ImageHelper'],
+	function(Element, IconPool, TabStripItem, ImageHelper) {
 		"use strict";
 
 		/**
@@ -24,17 +27,34 @@ sap.ui.define(['sap/ui/core/Element', 'sap/ui/core/Control'],
 		 * @public
 		 * @since 1.34
 		 * @alias sap.m.TabContainerItem
-		 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 		 */
 		var TabContainerItem = Element.extend("sap.m.TabContainerItem", /** @lends sap.m.TabContainerItem.prototype */ { metadata : {
 
-			library : "sap.ui.core",
 			properties : {
 
 				/**
 				 * Determines the text to be displayed for the item.
 				 */
 				name : {type : "string", group : "Misc", defaultValue : ""},
+
+				/**
+				 * Determines additional text to be displayed for the item.
+				 * @since 1.63
+				 */
+				additionalText : {type : "string", group : "Misc", defaultValue : ""},
+
+				/**
+				 * Defines the icon to be displayed as graphical element within the <code>TabContainerItem</code>.
+				 * It can be an image or an icon from the icon font.
+				 * @since 1.63
+				 * */
+				icon : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : null},
+
+				/**
+				 * Determines the tooltip text of the <code>TabContainerItem</code>'s icon.
+				 * @since 1.63
+				 */
+				iconTooltip : {type : "string", group : "Accessibility", defaultValue : null},
 
 				/**
 				 * Determines the name of the item. Can be used as input for subsequent actions.
@@ -51,13 +71,27 @@ sap.ui.define(['sap/ui/core/Element', 'sap/ui/core/Control'],
 				/**
 				 * The content displayed for this item.
 				 */
-				content : {type : "sap.ui.core.Control", multiple : true, defaultValue : null}
+				content : {type : "sap.ui.core.Control", multiple : true, defaultValue : null},
+
+				/**
+				 *
+				 * Icon / Image for the <code>TabContainerItem</code> are managed in this aggregation.
+				 */
+				_image: {type: "sap.ui.core.Control", multiple: false, visibility: "hidden"}
+			},
+			associations : {
+				/**
+				 * Internal association for managing the tab strip item element.
+				 */
+				_tabStripItem : {type : "sap.ui.core.Control", multiple : false, visibility : "hidden"}
+
 			},
 			events : {
 
 				/**
 				 * Sends information that some of the properties have changed.
 				 * @private
+				 * @ui5-restricted sap.m.TabContainerItem
 				 */
 				itemPropertyChanged : {
 					parameters: {
@@ -75,26 +109,35 @@ sap.ui.define(['sap/ui/core/Element', 'sap/ui/core/Control'],
 						/**
 						 * The value of the property.
 						 */
-						propertyValue : {type : "mixed"}
+						propertyValue : {type : "any"}
 					}
 				}
-			}
+			},
+			dnd: { draggable: true, droppable: false }
 		}});
+
+		TabContainerItem.prototype.init = function() {
+			var oTabStripItem = new TabStripItem();
+			this.setAssociation("_tabStripItem", oTabStripItem, true);
+		};
+
+		TabContainerItem.prototype.exit = function() {
+			var oTabStripItem = this._getTabStripItem();
+			if (oTabStripItem) {
+				oTabStripItem.destroy();
+			}
+		};
 
 		/**
 		 * Overwrites the method in order to suppress invalidation for some properties.
 		 *
-		 * @param sName {string} Property name to be set
-		 * @param vValue {boolean | string | object} Property value to be set
-		 * @param bSuppressInvalidation {boolean} Whether invalidation to be suppressed
-		 * @return {sap.m.TabContainerItem} This instance for chaining
+		 * @param {string} sName Property name to be set
+		 * @param {boolean | string | object} vValue Property value to be set
+		 * @param {boolean} bSuppressInvalidation Whether invalidation to be suppressed
+		 * @return {this} This instance for chaining
 		 * @public
 		 */
 		TabContainerItem.prototype.setProperty = function(sName, vValue, bSuppressInvalidation) {
-			if (sName === "modified") {
-				bSuppressInvalidation = true;
-			}
-
 			this.fireItemPropertyChanged({
 				itemChanged : this,
 				propertyKey : sName,
@@ -104,6 +147,74 @@ sap.ui.define(['sap/ui/core/Element', 'sap/ui/core/Control'],
 			return Element.prototype.setProperty.call(this, sName, vValue, bSuppressInvalidation);
 		};
 
-		return TabContainerItem;
 
+		/**
+		 * Property setter for the icon
+		 *
+		 * @param {sap.ui.core.URI} sIcon new value of the Icon property
+		 * @return {this} <code>this</code> to allow method chaining
+		 * @public
+		 */
+		TabContainerItem.prototype.setIcon = function(sIcon, bSuppressRendering) {
+			var mProperties,
+				aCssClasses = ['sapMTabContIcon'],
+				oImage = this.getAggregation("_image"),
+				sImgId = this.getId() + "-img",
+				bDecorative = !!(this.getName() || this.getAdditionalText());
+
+			if (!sIcon) {
+				this.setProperty("icon", sIcon, bSuppressRendering);
+				if (oImage) {
+					this.destroyAggregation("_image");
+				}
+				return this;
+			}
+
+			if (this.getIcon() !== sIcon) {
+				this.setProperty("icon", sIcon, bSuppressRendering);
+
+				mProperties = {
+					src : sIcon,
+					id: sImgId,
+					decorative: bDecorative,
+					tooltip: this.getIconTooltip()
+				};
+
+				oImage = ImageHelper.getImageControl(sImgId, oImage, undefined, mProperties, aCssClasses);
+				this.setAggregation("_image", oImage, bSuppressRendering);
+			}
+			return this;
+		};
+
+		/**
+		 * Function is called when image control needs to be loaded.
+		 *
+		 * @return {sap.ui.core.Control} The image
+		 * @private
+		 */
+		TabContainerItem.prototype._getImage = function () {
+			return this.getAggregation("_image");
+		};
+
+		/**
+		 * Gets a reference to the instance of the TabStripItem.
+		 * @returns {sap.m.TabStripItem} The tab strip item instance.
+		 */
+		TabContainerItem.prototype._getTabStripItem = function () {
+			return Element.getElementById(this.getAssociation("_tabStripItem"));
+		};
+
+		// Override customData getters/setters to forward the customData added to TabContainerItem to the internal TabStripItem
+		["addCustomData", "getCustomData", "destroyCustomData", "indexOfCustomData",
+		 "insertCustomData", "removeAllCustomData", "removeCustomData", "data"].forEach(function(sName){
+			TabContainerItem.prototype[sName] = function() {
+				var oTabStripItem = this._getTabStripItem();
+				if (oTabStripItem && oTabStripItem[sName]) {
+					var res = oTabStripItem[sName].apply(oTabStripItem, arguments);
+					return res === oTabStripItem ? this : res;
+				}
+			};
+		});
+
+		return TabContainerItem;
 });

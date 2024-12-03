@@ -3,9 +3,17 @@
  */
 
 // Provides control sap.ui.commons.Panel.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
-	function(jQuery, library, Control) {
+sap.ui.define(['sap/ui/thirdparty/jquery', 'sap/base/assert', './library', 'sap/ui/core/Control', './PanelRenderer', 'sap/ui/core/ResizeHandler', 'sap/ui/core/Title', "sap/ui/core/Configuration", "sap/ui/dom/jquery/scrollLeftRTL" ], // jQuery Plugin "scrollLeftRTL"
+	function(jQuery, assert, library, Control, PanelRenderer, ResizeHandler, Title, Configuration) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.commons.enums.BorderDesign
+	var BorderDesign = library.enums.BorderDesign;
+
+	// shortcut for sap.ui.commons.enums.AreaDesign
+	var AreaDesign = library.enums.AreaDesign;
 
 
 
@@ -25,12 +33,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38. Instead, use the <code>sap.m.Panel</code> control.
 	 * @alias sap.ui.commons.Panel
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Panel = Control.extend("sap.ui.commons.Panel", /** @lends sap.ui.commons.Panel.prototype */ { metadata : {
 
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -77,13 +86,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 			 * Determines the background color.
 			 * Note that color settings are theme-dependent.
 			 */
-			areaDesign : {type : "sap.ui.commons.enums.AreaDesign", group : "Appearance", defaultValue : sap.ui.commons.enums.AreaDesign.Fill},
+			areaDesign : {type : "sap.ui.commons.enums.AreaDesign", group : "Appearance", defaultValue : AreaDesign.Fill},
 
 			/**
 			 * Determines if the Panel can have a box as border.
 			 * Note that displaying borders is theme-dependent.
 			 */
-			borderDesign : {type : "sap.ui.commons.enums.BorderDesign", group : "Appearance", defaultValue : sap.ui.commons.enums.BorderDesign.Box},
+			borderDesign : {type : "sap.ui.commons.enums.BorderDesign", group : "Appearance", defaultValue : BorderDesign.Box},
 
 			/**
 			 * Determines whether the Panel will have an icon for collapsing/expanding, or not.
@@ -159,10 +168,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 
 			// adapt sizes
 			this._initializeSizes(); // TODO: delay this for Safari?
-			if (!jQuery.support.flexBoxLayout ||
-					(Panel._isSizeSet(this.getHeight()) && (this._hasIcon() || (this.getButtons().length > 0)))) {
-				this._handleResizeNow();
-			}
 		}
 	};
 
@@ -174,7 +179,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	Panel.prototype.onBeforeRendering = function() {
 		// Deregister resize event before re-rendering
 		if (this.sResizeListenerId) {
-			sap.ui.core.ResizeHandler.deregister(this.sResizeListenerId);
+			ResizeHandler.deregister(this.sResizeListenerId);
 			this.sResizeListenerId = null;
 		}
 	};
@@ -185,25 +190,24 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * @private
 	 */
 	Panel.prototype.onAfterRendering = function () {
-		var id = this.getId();
-		this._oScrollDomRef = jQuery.sap.domById(id + "-cont");
+		this._oScrollDomRef = this.getDomRef("cont");
 		if (!this._oScrollDomRef) {
 			return;
 		} // BugFix for TwoGo where the DomRefs were not there after rendering
-		this._oHeaderDomRef = jQuery.sap.domById(id + "-hdr");
-		this._oTitleDomRef = jQuery.sap.domById(id + "-title");
-		this._oToolbarDomRef = jQuery.sap.domById(id + "-tb");
+		this._oHeaderDomRef = this.getDomRef("hdr");
+		this._oTitleDomRef = this.getDomRef("title");
+		this._oToolbarDomRef = this.getDomRef("tb");
 
 		// restore focus if required
 		if (this._bFocusCollapseIcon) {
 			this._bFocusCollapseIcon = false;
-			var $collArrow = jQuery.sap.byId(id + "-collArrow");
+			var $collArrow = this.$("collArrow");
 			if ($collArrow.is(":visible") && ($collArrow.css("visibility") == "visible" || $collArrow.css("visibility") == "inherit")) {
-				$collArrow.focus();
+				$collArrow.trigger("focus");
 			} else {
-				var $collIco = jQuery.sap.byId(id + "-collIco");
+				var $collIco = this.$("collIco");
 				if ($collIco.is(":visible") && ($collIco.css("visibility") == "visible" || $collIco.css("visibility") == "inherit")) {
-					$collIco.focus();
+					$collIco.trigger("focus");
 				}
 			}
 		}
@@ -211,16 +215,17 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 		this._initializeSizes(); // TODO: delay this for Safari?
 
 		// in browsers not supporting the FlexBoxLayout we need to listen to resizing
-		if (!jQuery.support.flexBoxLayout ||
-				(Panel._isSizeSet(this.getHeight()) && (this._hasIcon() || (this.getButtons().length > 0)))) {
+		if (Panel._isSizeSet(this.getHeight()) && (this._hasIcon() || (this.getButtons().length > 0))) {
 			this._handleResizeNow();
-			this.sResizeListenerId = sap.ui.core.ResizeHandler.register(this.getDomRef(), jQuery.proxy(this._handleResizeSoon, this));
+			this.sResizeListenerId = ResizeHandler.register(this.getDomRef(), jQuery.proxy(this._handleResizeSoon, this));
 		}
 	};
 
 
 	/**
+	 * Returns an object representing the serialized focus information.
 	 *
+	 * @returns {object} an object representing the serialized focus information
 	 * @protected
 	 */
 	Panel.prototype.getFocusInfo = function () {
@@ -229,11 +234,11 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 
 		// if collapse icon needs to be focused, find out which one - if any - is currently visible
 		if (this._bFocusCollapseIcon) {
-			var $collArrow = jQuery.sap.byId(id + "-collArrow");
+			var $collArrow = this.$("collArrow");
 			if ($collArrow.is(":visible") && ($collArrow.css("visibility") == "visible" || $collArrow.css("visibility") == "inherit")) {
 				collId = $collArrow[0].id;
 			} else {
-				var $collIco = jQuery.sap.byId(id + "-collIco");
+				var $collIco = this.$("collIco");
 				if ($collIco.is(":visible") && ($collIco.css("visibility") == "visible" || $collIco.css("visibility") == "inherit")) {
 					collId = $collIco[0].id;
 				}
@@ -252,8 +257,8 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 */
 	Panel.prototype.applyFocusInfo = function (oFocusInfo) {
 		var $DomRef;
-		if (oFocusInfo && oFocusInfo.id && ($DomRef = jQuery.sap.byId(oFocusInfo.id)) && ($DomRef.length > 0)) {
-			$DomRef.focus();
+		if (oFocusInfo && oFocusInfo.id && ($DomRef = jQuery(document.getElementById(oFocusInfo.id))) && ($DomRef.length > 0)) {
+			$DomRef.trigger("focus");
 		} else {
 			this.focus();
 		}
@@ -266,7 +271,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * @private
 	 */
 	Panel.prototype._initializeSizes = function() {
-		var bRtl = sap.ui.getCore().getConfiguration().getRTL();
+		var bRtl = Configuration.getRTL();
 
 		// maximum width of a toolbar item -> min toolbar width
 		var aButtons = this.getButtons();
@@ -359,13 +364,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 */
 	Panel.prototype._handleResizeSoon = function() {
 		if (this._resizeDelayTimer) {
-			jQuery.sap.clearDelayedCall(this._resizeDelayTimer);
+			clearTimeout(this._resizeDelayTimer);
 		}
 
-		this._resizeDelayTimer = jQuery.sap.delayedCall(200, this, function() {
+		this._resizeDelayTimer = setTimeout(function() {
 			this._handleResizeNow();
 			this._resizeDelayTimer = null;
-		});
+		}.bind(this), 200);
 	};
 
 
@@ -376,62 +381,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * @private
 	 */
 	Panel.prototype._handleResizeNow = function() {
-		// in IE8 (maybe also IE9) the sizes of the flexible items (title and toolbar) need to be adjusted
-		// whenever the Panel width changes
-		if (!jQuery.support.flexBoxLayout && this.getDomRef()) {
-			var bRtl = sap.ui.getCore().getConfiguration().getRTL();
-
-			/* Algorithm:
-			 * 1. calculate space available for the two elements
-			 * 2. if no toolbar is present, apply this width to the title, else:
-			 * 3.   reduce toolbar width until maxBtnSize is reached, then reduce title width until minimum (do not make either any smaller; the Panel has a min-width anyway)
-			 * 4.   apply these widths
-			 */
-
-			// begin of Panel to begin of Title
-			var beginBorderOfTitle = this._oTitleDomRef.offsetLeft; // displacement of the beginning of the title from the Panel border
-			var totalWidth = this.getDomRef().offsetWidth;
-			if (bRtl) {
-				beginBorderOfTitle = totalWidth - (beginBorderOfTitle + this._oTitleDomRef.offsetWidth); // RTL case
-			}
-
-			// begin of Panel to begin if "RightItems"
-			var beginBorderOfRightItems = 10000;
-			jQuery(this._oHeaderDomRef).children(".sapUiPanelHdrRightItem").each(function(){
-				var begin = this.offsetLeft;
-				if (bRtl) {
-					begin = totalWidth - (begin + this.offsetWidth); // RTL case
-				}
-				if ((begin < beginBorderOfRightItems) && (begin > 0)) {
-					beginBorderOfRightItems = begin;
-				}
-			});
-
-			var availableSpace = (beginBorderOfRightItems == 10000) ?
-						this.$().width() - beginBorderOfTitle - 20
-					: beginBorderOfRightItems - beginBorderOfTitle - 10;
-
-			var aButtons = this.getButtons();
-			if (aButtons && aButtons.length > 0) { // there are title and toolbar; calculate and set both sizes
-				// differentiate between two cases: 1. there is enough space for title plus minimum toolbar width
-				//                                  2. both need to be reduced in size
-				if ((availableSpace - this._iOptTitleWidth - this._iTitleMargin) > (this._iMaxTbBtnWidth - this._iTbMarginsAndBorders)) {
-					// if available width minus optimum title width is still more than the minimum toolbar width,
-					// give all remaining width to the toolbar
-					this._oToolbarDomRef.style.width = (availableSpace - this._iOptTitleWidth - this._iTitleMargin - this._iTbMarginsAndBorders) + "px";
-					this._oTitleDomRef.style.width = this._iOptTitleWidth + "px";
-				} else {
-					// both are affected => set toolbar to minimum and reduce title width, but not smaller than minimum
-					this._oToolbarDomRef.style.width = this._iMaxTbBtnWidth + "px";
-					this._oTitleDomRef.style.width = Math.max((availableSpace - this._iMaxTbBtnWidth - this._iTbMarginsAndBorders), this._iMinTitleWidth) + "px";
-				}
-
-			} else {
-				// no toolbar
-				this._oTitleDomRef.style.width = Math.max(availableSpace, this._iMinTitleWidth) + "px";
-			}
-		}
-
 		// in case the resizing caused button wrapping, adapt content height -- FOR ALL BROWSERS!
 		this._fixContentHeight();
 	};
@@ -451,7 +400,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Property setter for the "enabled" state
 	 *
 	 * @param {boolean} bEnabled Whether the Panel should be enabled or not.
-	 * @return {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @return {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setEnabled = function(bEnabled) {
@@ -466,7 +415,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Property setter for the padding
 	 *
 	 * @param {boolean} bPadding Whether the Panel should have padding.
-	 * @returns {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @returns {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setApplyContentPadding = function(bPadding) {
@@ -480,7 +429,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Property setter for the "collapsed" state
 	 *
 	 * @param {boolean} bCollapsed Whether the Panel should be collapsed or not.
-	 * @return {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @return {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setCollapsed = function(bCollapsed) {
@@ -493,14 +442,14 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	/**
 	 * Internal method for applying a (non-)"collapsed" state to the rendered HTML
 	 *
-	 * @param bCollapsed whether the Panel should be collapsed or not
+	 * @param {boolean} bCollapsed whether the Panel should be collapsed or not
 	 * @private
 	 */
 	Panel.prototype._setCollapsedState = function(bCollapsed) {
 		var oDomRef = this.getDomRef();
 		if (oDomRef) {
 			// after Panel has been rendered
-			var accessibility = sap.ui.getCore().getConfiguration().getAccessibility();
+			var accessibility = Configuration.getAccessibility();
 			if (bCollapsed) {
 				// collapsing
 				if (!this.getWidth()) {
@@ -552,7 +501,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Returns "true" for absolute and relative sizes, returns "false" if "null", "inherit" or "auto" is given.
 	 *
 	 * @static
-	 * @param sCssSize a css size string (must be a valid CSS size, or null)
+	 * @param {string} sCssSize a css size string (must be a valid CSS size, or null)
 	 * @private
 	 */
 	Panel._isSizeSet = function(sCssSize) {
@@ -563,7 +512,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Sets a Tille control that will be rendered in the Panel header.
 	 *
 	 * @param {sap.ui.core.Title} oTitle The Title to render in the header.
-	 * @return {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @return {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setTitle = function(oTitle) {
@@ -581,12 +530,12 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Sets the text that will be rendered in the Panel header.
 	 *
 	 * @param {string} sText The text to render in the header.
-	 * @return {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @return {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setText = function(sText) {
 		if (!this.getTitle()) {
-			this.setTitle(new sap.ui.core.Title(this.getId() + "-tit",{text:sText}));
+			this.setTitle(new Title(this.getId() + "-tit",{text:sText}));
 		} else {
 			this.getTitle().setText(sText);
 		}
@@ -620,12 +569,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	Panel.prototype.getScrollLeft = function () {
 		var scrollLeft = 0;
 		if (this._oScrollDomRef) {
-			if (sap.ui.getCore().getConfiguration().getRTL()) {
+			if (Configuration.getRTL()) {
+				// jQuery Plugin "scrollLeftRTL"
 				scrollLeft = jQuery(this._oScrollDomRef).scrollLeftRTL();
 			} else {
 				scrollLeft = jQuery(this._oScrollDomRef).scrollLeft();
 			}
-			jQuery.sap.assert(typeof scrollLeft == "number", "scrollLeft read from DOM should be a number");
+			assert(typeof scrollLeft == "number", "scrollLeft read from DOM should be a number");
 			this.setProperty("scrollLeft", scrollLeft, true);
 		}
 
@@ -637,13 +587,14 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Sets the scroll position of the panel in pixels from the left.
 	 *
 	 * @param {int} iPosition The position to scroll to.
-	 * @return {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @return {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setScrollLeft = function (iPosition) {
 		this.setProperty("scrollLeft", iPosition, true);
 		if (this._oScrollDomRef) {
-			if (sap.ui.getCore().getConfiguration().getRTL()) {
+			if (Configuration.getRTL()) {
+				// jQuery Plugin "scrollLeftRTL"
 				jQuery(this._oScrollDomRef).scrollLeftRTL(iPosition);
 			} else {
 				jQuery(this._oScrollDomRef).scrollLeft(iPosition);
@@ -664,7 +615,9 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	Panel.prototype.getScrollTop = function () {
 		var scrollTop = 0;
 		if (this._oScrollDomRef) {
-			scrollTop = this._oScrollDomRef.scrollTop;
+
+			// The scrollTop returns float number when the browser is zoomed and therefore we need to cast it.
+			scrollTop = Math.ceil(this._oScrollDomRef.scrollTop);
 			this.setProperty("scrollTop", scrollTop, true);
 		}
 
@@ -676,7 +629,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Sets the scrolls position of the panel in pixels from the top.
 	 *
 	 * @param {int} iPosition The position to scroll to.
-	 * @return {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @return {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setScrollTop = function (iPosition) {
@@ -693,11 +646,11 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 *
 	 * @param {sap.ui.core.CSSSize} sWidth The width of the panel as CSS size.
 	 * @param {sap.ui.core.CSSSize} sHeight The height of the panel as CSS size.
-	 * @return {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @return {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setDimensions = function (sWidth, sHeight) {
-		jQuery.sap.assert(typeof sWidth == "string" && typeof sHeight == "string", "sWidth and sHeight must be strings");
+		assert(typeof sWidth == "string" && typeof sHeight == "string", "sWidth and sHeight must be strings");
 		this.setWidth(sWidth); // does not rerender
 		this.setHeight(sHeight);
 		return this;
@@ -708,7 +661,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Sets the width of the panel.
 	 *
 	 * @param {sap.ui.core.CSSSize} sWidth The width of the panel as CSS size.
-	 * @return {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @return {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setWidth = function (sWidth) {
@@ -725,7 +678,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * Sets the height of the panel.
 	 *
 	 * @param {sap.ui.core.CSSSize} sHeight The height of the panel as CSS size.
-	 * @return {sap.ui.commons.Panel} <code>this</code> to allow method chaining.
+	 * @return {this} <code>this</code> to allow method chaining.
 	 * @public
 	 */
 	Panel.prototype.setHeight = function (sHeight) {
@@ -784,4 +737,4 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 
 	return Panel;
 
-}, /* bExport= */ true);
+});

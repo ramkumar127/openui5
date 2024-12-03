@@ -3,8 +3,13 @@
  */
 
 // Provides control sap.ui.unified.ShellHeadUserItem.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool', './library'],
-	function(jQuery, Element, IconPool, library) {
+sap.ui.define([
+	'sap/ui/core/Element',
+	'sap/ui/core/IconPool',
+	'./library',
+	"sap/base/security/encodeXML"
+],
+	function(Element, IconPool, library, encodeXML) {
 	"use strict";
 
 
@@ -26,11 +31,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 	 * @public
 	 * @since 1.22.0
 	 * @alias sap.ui.unified.ShellHeadUserItem
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
+	 * @deprecated As of version 1.44.0, the concept has been discarded.
 	 */
 	var ShellHeadUserItem = Element.extend("sap.ui.unified.ShellHeadUserItem", /** @lends sap.ui.unified.ShellHeadUserItem.prototype */ { metadata : {
 
 		library : "sap.ui.unified",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -46,7 +52,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 			showPopupIndicator : {type : "boolean", group : "Accessibility", defaultValue : true},
 
 			/**
-			 * An image of the user, normally an URI to a image but also an icon from the sap.ui.core.IconPool is possible.
+			 * An image of the user, normally a URI to an image but also an icon from the sap.ui.core.IconPool is possible.
 			 */
 			image : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : null}
 		},
@@ -65,7 +71,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 		}
 	}});
 
-	IconPool.getIconInfo("", ""); //Ensure Icon Font is loaded
+	IconPool.insertFontFaceStyle(); //Ensure Icon Font is loaded
 
 	ShellHeadUserItem.prototype.onclick = function(oEvent){
 		this.firePress();
@@ -76,6 +82,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 	};
 
 	ShellHeadUserItem.prototype.onsapspace = ShellHeadUserItem.prototype.onclick;
+	ShellHeadUserItem.prototype.onsapenter = ShellHeadUserItem.prototype.onclick;
 
 	ShellHeadUserItem.prototype.setImage = function(sImage){
 		this.setProperty("image", sImage, true);
@@ -89,17 +96,17 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 		var $Ico = this.$("img");
 		var sImage = this.getImage();
 		if (!sImage) {
-			$Ico.html("").css("style", "").css("display", "none");
+			$Ico.html("").attr("style", "").css("display", "none");
 		} else if (IconPool.isIconURI(sImage)) {
 			var oIconInfo = IconPool.getIconInfo(sImage);
-			$Ico.html("").css("style", "");
+			$Ico.html("").attr("style", "");
 			if (oIconInfo) {
 				$Ico.text(oIconInfo.content).attr("role", "presentation").attr("aria-label", oIconInfo.text || oIconInfo.name).css("font-family", "'" + oIconInfo.fontFamily + "'");
 			}
 		} else {
 			var $Image = this.$("img-inner");
 			if ($Image.length == 0 || $Image.attr("src") != sImage) {
-				$Ico.css("style", "").attr("aria-label", null).html("<img role='presentation' id='" + this.getId() + "-img-inner' src='" + jQuery.sap.encodeHTML(sImage) + "'></img>");
+				$Ico.attr("style", "").attr("aria-label", null).html("<img role='presentation' id='" + this.getId() + "-img-inner' src='" + encodeXML(sImage) + "'>");
 			}
 		}
 	};
@@ -127,4 +134,4 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 
 	return ShellHeadUserItem;
 
-}, /* bExport= */ true);
+});

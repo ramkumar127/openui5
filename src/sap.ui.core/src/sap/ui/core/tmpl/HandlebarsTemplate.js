@@ -2,8 +2,28 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/thirdparty/handlebars', 'sap/ui/base/ManagedObject'],
-	function(jQuery, Core, Template, Handlebars, ManagedObject) {
+sap.ui.define([
+	'./Template',
+	'./TemplateControl',
+	"sap/ui/core/RenderManager",
+	'sap/ui/thirdparty/handlebars',
+	'sap/ui/base/ManagedObject',
+	'sap/base/util/ObjectPath',
+	"sap/base/security/encodeXML",
+	"sap/base/util/isEmptyObject",
+	// provides sap.ui.getCore()
+	'sap/ui/core/Core'
+],
+	function(
+		Template,
+		TemplateControl,
+		RenderManager,
+		Handlebars,
+		ManagedObject,
+		ObjectPath,
+		encodeXML,
+		isEmptyObject
+	) {
 	"use strict";
 
 
@@ -29,11 +49,14 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 	 * @author SAP SE
 	 * @version ${version}
 	 * @alias sap.ui.core.tmpl.HandlebarsTemplate
-	 * @experimental Since 1.15.0. The Template concept is still under construction, so some implementation details can be changed in future.
+	 * @since 1.15
+	 * @deprecated as of version 1.56. Use an {@link sap.ui.core.mvc.XMLView XMLView} or a {@link topic:e6bb33d076dc4f23be50c082c271b9f0 Typed View} instead.
 	 */
 	var HandlebarsTemplate = Template.extend("sap.ui.core.tmpl.HandlebarsTemplate", /** @lends sap.ui.core.tmpl.HandlebarsTemplate.prototype */
 	{
-
+		metadata: {
+			library: "sap.ui.core"
+		},
 		constructor : function(sId, mSettings) {
 			Template.apply(this, arguments);
 		}
@@ -94,7 +117,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 			fnWith = Handlebars.helpers["with"],
 			fnIf = Handlebars.helpers["if"],
 			fnUnless = Handlebars.helpers["unless"],
-			oRenderManager = sap.ui.getCore().createRenderManager();
+			oRenderManager = new RenderManager().getInterface();
 
 		// this special RenderManager is used to write the controlData, classes
 		// and styles into the buffer and extract it later on via getHTML!
@@ -239,7 +262,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 				if (sPath) {
 					// bind and return the text
 					var oValue = oRootControl.bindProp(sPath);
-					return oValue && new Handlebars.SafeString(jQuery.sap.encodeHTML(oValue));
+					return oValue && new Handlebars.SafeString(encodeXML(oValue));
 				} else {
 					throw new Error("The expression \"text\" requires the option \"path\"!");
 				}
@@ -310,7 +333,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 					sParentPath = options.data.path,
 					mParentChildren = options.data.children,
 					sType = options.hash["sap-ui-type"],
-					oClass = jQuery.sap.getObject(sType),
+					oClass = ObjectPath.get(sType || ""),
 					oMetadata = oClass && oClass.getMetadata(),
 					sDefaultAggregation = options.hash["sap-ui-default-aggregation"] || oMetadata && oMetadata.getDefaultAggregationName(),
 					oView = options.data.view;
@@ -340,7 +363,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 
 				// remove the found nested children from the mSettings because they will
 				// be handled after the creation of the new control instance
-				var mSettings = jQuery.extend({}, options.hash),
+				var mSettings = Object.assign({}, options.hash),
 				    aStyleClasses;
 				for (var sKey in mSettings) {
 					//var oValue = mSettings[sKey];
@@ -361,7 +384,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 				// add the created children to current control instance either as template
 				// in case of a binding has been found or as aggregation in case of no
 				// binding was found
-				if (!jQuery.isEmptyObject(mChildren)) {
+				if (!isEmptyObject(mChildren)) {
 					mSettings = options.hash;
 					var oAllAggregation = oMetadata.getAllAggregations();
 					for (var sAggregationName in mChildren) {
@@ -441,7 +464,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 					//   {{control ...}}   <-- nested control
 					// {{/aggregation}}
 					if (options.fn) {
-						var oData = jQuery.extend({}, options.data, {
+						var oData = Object.assign({}, options.data, {
 							defaultAggregation: sAggregationName
 						});
 						options.fn({}, {
@@ -519,8 +542,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 		// identify the control metadata: properties, aggregations, ...
 		// the template will be executed with specific options
 		var oMetadata = {},
-			mJSONKeys = sap.ui.core.tmpl.TemplateControl.getMetadata().getAllSettings(),
-			mPrivateAggregations = sap.ui.core.tmpl.TemplateControl.getMetadata().getAllPrivateAggregations();
+			mJSONKeys = TemplateControl.getMetadata().getAllSettings(),
+			mPrivateAggregations = TemplateControl.getMetadata().getAllPrivateAggregations();
 
 		// the options to identify the properties, aggregations, events, ...
 		var oHelpers = {
@@ -532,7 +555,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 				var sName = options.hash.name;
 				if (sName && sName !== "id" && !mJSONKeys[sName]) {
 					oMetadata.properties = oMetadata.properties || {};
-					oMetadata.properties[sName] = jQuery.extend({}, {type: "string"}, options.hash);
+					oMetadata.properties[sName] = Object.assign({}, {type: "string"}, options.hash);
 				} else {
 					throw new Error("The property name \"" + sName + "\" is reserved.");
 				}
@@ -546,7 +569,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 				if (sName && !mJSONKeys[sName] && !mPrivateAggregations[sName]) {
 					options.hash.multiple = options.hash.multiple == "true"; // type correction
 					oMetadata.aggregations = oMetadata.aggregations || {};
-					oMetadata.aggregations[sName] = jQuery.extend({}, options.hash);
+					oMetadata.aggregations[sName] = Object.assign({}, options.hash);
 				} else {
 					throw new Error("The aggregation name \"" + sName + "\" is reserved.");
 				}
@@ -561,7 +584,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Core', './Template', 'sap/ui/th
 		};
 
 		// ignore the following block helper
-		jQuery.each(["each", "if", "unless", "with"], function(iIndex, sValue) {
+		["each", "if", "unless", "with"].forEach(function(sValue) {
 			oHelpers[sValue] = function() {};
 		});
 

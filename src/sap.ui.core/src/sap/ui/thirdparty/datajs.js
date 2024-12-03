@@ -24,6 +24,9 @@
     if (typeof define === 'function' && define.amd) {
         define('datajs', datajs);
         define('OData', odata);
+        // ##### BEGIN: MODIFIED BY SAP
+        define('sap/ui/thirdparty/datajs', odata);
+        // ##### END: MODIFIED BY SAP
     } else {
         window.datajs = datajs;
         window.OData = odata;
@@ -1987,7 +1990,10 @@
         "accept": "Accept",
         "content-type": "Content-Type",
         "dataserviceversion": "DataServiceVersion",
-        "maxdataserviceversion": "MaxDataServiceVersion"
+        "maxdataserviceversion": "MaxDataServiceVersion",
+        // ##### BEGIN: MODIFIED BY SAP
+        "last-modified": "Last-Modified"
+        // ##### END: MODIFIED BY SAP
     };
 
     var normalizeHeaders = function (headers) {
@@ -2419,10 +2425,8 @@
         if (!responseHeaders){
             var contentType = xhr.getResponseHeader("Content-Type");
             var contentLength = xhr.getResponseHeader("Content-Length");
-            if (contentType)
-            	headers["Content-Type"] = contentType;
-            if (contentLength)
-            	headers["Content-Length"] = contentLength;
+            if (contentType){headers["Content-Type"] = contentType;}
+            if (contentLength){headers["Content-Length"] = contentLength;}
         } else {
         // ##### END: MODIFIED BY SAP
         	responseHeaders = responseHeaders.split(/\r?\n/);
@@ -2523,6 +2527,13 @@
                     var headers = [];
                     readResponseHeaders(xhr, headers);
 
+                    // ##### BEGIN: MODIFIED BY SAP
+                    var xml = null;
+                    if (datajs._sap && xhr.responseXML) {
+                    	xml = xhr.responseXML;
+                    }
+                   	// ##### END: MODIFIED BY SAP
+
                     var response = { requestUri: url, statusCode: statusCode, statusText: statusText, headers: headers, body: xhr.responseText };
 
                     done = true;
@@ -2530,12 +2541,22 @@
                     if (statusCode >= 200 && statusCode <= 299) {
                         success(response);
                     } else {
-                    		// ##### BEGIN: MODIFIED BY SAP
-                    		// normalize response headers here which is also done in the success function call above
+                    	// ##### BEGIN: MODIFIED BY SAP
+                    	// normalize response headers here which is also done in the success function call above
                       	normalizeHeaders(response.headers);
                       	// ##### END: MODIFIED BY SAP
                         error({ message: "HTTP request failed", request: request, response: response });
                     }
+                    // ##### BEGIN: MODIFIED BY SAP
+                    if (datajs._sap && response.requestUri.indexOf("$metadata") > -1) {
+
+                    	var mSettings = {
+                      	   supportXML: xml,
+                      	   response: response
+                      	};
+                    	datajs._sap._supportInfo({context: xml, env: {caller:'datajs', settings: mSettings, type:"metadata"}});
+                    }
+                    // ##### END: MODIFIED BY SAP
                 };
 
                 // ##### BEGIN: MODIFIED BY SAP
@@ -7936,7 +7957,7 @@
             return invokeRequest(request, success, error, handler, httpClient, context);
         } catch (err) {
         	// ##### BEGIN: MODIFIED BY SAP
-            // errors in success handler for sync requests are catched here and result in error handler calls.
+            // errors in success handler for sync requests are caught here and result in error handler calls.
         	// So here we fix this and throw that error further.
         	if (err.bIsSuccessHandlerError) {
         		throw err;

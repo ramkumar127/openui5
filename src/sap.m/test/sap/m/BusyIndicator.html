@@ -1,7 +1,6 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
 		<title>sap.m.BusyIndicator - Playground</title>
 
@@ -14,19 +13,19 @@
 		<!-- Set the status bar style on Apple devices -->
 		<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
+		<script src="shared-config.js"></script>
 		<script src="../../../resources/sap-ui-core.js"
-			type="text/javascript"
 			id="sap-ui-bootstrap"
-			data-sap-ui-libs="sap.m"
-			data-sap-ui-theme="sap_bluecrystal">
+			data-sap-ui-libs="sap.m">
 		</script>
 		<style>
 			#content .sapMBusyIndicator {
 				width: 100%;
-				margin: 1.5rem;
+				margin: 1.5rem 0 1.5rem 0;
 			}
 
 			#content .sapMPageHeader .sapMBusyIndicator {
+				padding-left: 2px;
 				margin: 0;
 			}
 		</style>
@@ -40,7 +39,7 @@
 			});
 
 			var busyCSSText = new sap.m.BusyIndicator({
-				text:'default sized busy indicator ...',
+				text:'default sized busy indicator ...'
 			});
 
 			var busyCSSSize1 = new sap.m.BusyIndicator({
@@ -67,10 +66,7 @@
 				size:'90px',
 				text:'90px sized busy indicator ...'
 			});
-
-			var busyCSS = new sap.m.BusyIndicator({
-				size: '30px'
-			});
+			var busyCSS = new sap.m.BusyIndicator(); // no value for "size" - we are using ths default one (16px)
 
 			var busyDialog1 = (busyDialog3) ? busyDialog3 : new sap.m.BusyDialog('busy1',{customIcon: 'images/synchronise_48.png'});
 
@@ -79,28 +75,28 @@
 			var busyDialog3 = busyDialog3 ? busyDialog3 : new sap.m.BusyDialog('busy3',{text:'i am a busy screen with a loooooooong long long long text and a cancel button',
 				title: 'LOADING',
 				showCancelButton: true, // IMPORTANT: the "Cancel" button text of this dialog may not be set, it should be the default text (tested in translation tests)
-				close: function(oEvent){console.log(oEvent, 'closed')}
+				close: function(oEvent){console.log(oEvent, 'closed');}
 			});
 
 			var busyDialog4 = (busyDialog4) ? busyDialog4 : new sap.m.BusyDialog('busy4',{text:'Fetching JSON Data', title: 'Loading'});
 
 			var syncLoad = function() {
-				busyDialog4.open()
+				busyDialog4.open();	
 				jQuery.ajax({
 					url: "http://itunes.apple.com/search?term=yelp&country=us&entity=software",
 					dataType: 'jsonp',
 					async:false,
 					type: 'GET',
 					success:function(jsonData) {
-						console.log(jsonData)
-						busyDialog4.close()
-						},
+						console.log(jsonData);
+						busyDialog4.close();
+					},
 					error:function(jqXHR, exception) {
-						console.log(textStatus)
-						busyDialog4.close()
+						console.log(jqXHR.status);
+						busyDialog4.close();
 					}
-				})
-			}
+				});
+			};
 
 			var openBusyScreenBtn1 = new sap.m.Button({
 				text: 'open BusyDialog',
@@ -108,7 +104,7 @@
 					busyDialog1.open();
 					setTimeout(function() {
 						busyDialog1.close();
-					},2000)
+					},2000);
 				}
 			}).addStyleClass('BusyButton');
 			var openBusyScreenBtn2 = new sap.m.Button({
@@ -117,7 +113,7 @@
 					busyDialog2.open();
 					setTimeout(function() {
 						busyDialog2.close();
-					},2000)
+					},2000);
 				}
 			}).addStyleClass('BusyButton');
 			var openBusyScreenBtn3 = new sap.m.Button({

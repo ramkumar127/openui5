@@ -1,8 +1,8 @@
-sap.ui.define(['sap/ui/core/mvc/Controller', 'sap/ui/model/json/JSONModel', 'sap/m/MessageToast', 'sap/m/Dialog', 'sap/m/Button', 'sap/m/MessageBox',],
-	function (Controller, JSONModel, MessageToast, Dialog, Button, MessageBox) {
+sap.ui.define(['sap/ui/core/mvc/Controller', 'sap/ui/model/json/JSONModel', 'sap/m/MessageToast', 'sap/m/TabContainerItem', 'sap/m/MessageBox'],
+	function (Controller, JSONModel, MessageToast, TabContainerItem, MessageBox) {
 		"use strict";
 
-		var TCController = Controller.extend("sap.m.sample.TabContainer.TabContainer", {
+		return Controller.extend("sap.m.sample.TabContainer.TabContainer", {
 			onInit: function () {
 				var oModel = new JSONModel();
 				oModel.setData({
@@ -42,13 +42,13 @@ sap.ui.define(['sap/ui/core/mvc/Controller', 'sap/ui/model/json/JSONModel', 'sap
 					'Item ' + oItem.getName() + " was selected"
 				);
 			},
-			addNewButtonPressHandler : function(oEvent) {
-				var newEmployee = new sap.m.TabContainerItem({
+			addNewButtonPressHandler : function() {
+				var newEmployee = new TabContainerItem({
 					name: "New employee",
 					modified: false
 				});
 
-				var tabContainer = this.getView().byId("myTabContainer");
+				var tabContainer = this.byId("myTabContainer");
 
 				tabContainer.addItem(
 					newEmployee
@@ -62,20 +62,19 @@ sap.ui.define(['sap/ui/core/mvc/Controller', 'sap/ui/model/json/JSONModel', 'sap
 				// prevent the tab being closed by default
 				oEvent.preventDefault();
 
-				var oTabContainer = this.getView().byId("myTabContainer");
+				var oTabContainer = this.byId("myTabContainer");
 				var oItemToClose = oEvent.getParameter('item');
 
-				sap.m.MessageBox.confirm("Do you want to close the tab '" + oItemToClose.getName() + "'?", {
+				MessageBox.confirm("Do you want to close the tab '" + oItemToClose.getName() + "'?", {
 					onClose: function (oAction) {
-						if (oAction === sap.m.MessageBox.Action.OK) {
+						if (oAction === MessageBox.Action.OK) {
 							oTabContainer.removeItem(oItemToClose);
-							sap.m.MessageToast.show("Item closed: " + oItemToClose.getName(), {duration: 500});
+							MessageToast.show("Item closed: " + oItemToClose.getName(), {duration: 500});
 						} else {
-							sap.m.MessageToast.show("Item close canceled: " + oItemToClose.getName(), {duration: 500});
+							MessageToast.show("Item close canceled: " + oItemToClose.getName(), {duration: 500});
 						}
 					}
 				});
 			}
 		});
-		return TCController;
 	});

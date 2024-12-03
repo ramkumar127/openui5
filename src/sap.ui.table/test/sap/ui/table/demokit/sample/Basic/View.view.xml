@@ -4,7 +4,8 @@
 	xmlns:mvc="sap.ui.core.mvc"
 	xmlns:u="sap.ui.unified"
 	xmlns:c="sap.ui.core"
-	xmlns:m="sap.m">
+	xmlns:m="sap.m"
+    height="100%">
 	<m:Page
 		showHeader="false"
 		enableScrolling="false"
@@ -12,14 +13,19 @@
 		<m:content>
 			<Table
 				rows="{/ProductCollection}"
-				title="Products"
 				selectionMode="MultiToggle"
-				visibleRowCount="7">
+				paste="onPaste"
+				ariaLabelledBy="title">
+				<extension>
+					<m:OverflowToolbar style="Clear">
+						<m:Title id="title" text="Products"/>
+					</m:OverflowToolbar>
+				</extension>
 				<columns>
 					<Column width="11rem">
 						<m:Label text="Product Name" />
 						<template>
-							<m:Text text="{Name}"/>
+							<m:Text text="{Name}" wrapping="false" />
 						</template>
 					</Column>
 					<Column width="11rem">
@@ -39,7 +45,7 @@
 						<template>
 							<m:ObjectStatus text="{Status}" state="{
 								path: 'Available',
-								formatter: 'sap.ui.table.sample.TableExampleUtils.formatAvailableToObjectState'
+								formatter: '.formatAvailableToObjectState'
 							}"/>
 						</template>
 					</Column>
@@ -79,11 +85,33 @@
 						</template>
 					</Column>
 					<Column width="12rem">
-						<m:Label text="Category" />
+						<m:Label text="Main Category" />
 						<template>
 							<m:Select selectedKey="{Category}" items="{/Categories}">
 								<c:Item text="{Name}" key="{Name}"/>
 							</m:Select>
+						</template>
+					</Column>
+					<Column width="12rem">
+						<m:Label text="Additional Categories" />
+						<template>
+							<m:MultiInput
+								tokenUpdate="updateMultipleSelection"
+								value="{AdditionalCategory}"
+								tokens="{AdditionalCategoriesSelection}"
+								suggestionItems="{
+									path: '/Categories',
+									sorter: { path: 'Name' }
+								}"
+								showValueHelp="false"
+								>
+								<m:tokens>
+									<m:Token key="{Key}" text="{Name}"/>
+								</m:tokens>
+								<m:suggestionItems>
+									<c:Item key="{ProductId}" text="{Name}" />
+								</m:suggestionItems>
+							</m:MultiInput>
 						</template>
 					</Column>
 					<Column width="6rem" hAlign="Center">
@@ -91,7 +119,7 @@
 						<template>
 							<c:Icon src="{
 								path: 'Available',
-								formatter: 'sap.ui.table.sample.TableExampleUtils.formatAvailableToIcon'
+								formatter: '.formatAvailableToIcon'
 							}"/>
 						</template>
 					</Column>

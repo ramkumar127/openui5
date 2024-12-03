@@ -2,9 +2,8 @@
  * ${copyright}
  */
 
-// Provides control sap.m.MessagePopoverItem.
-sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Item"],
-	function(jQuery, library, Item) {
+sap.ui.define(["./library", "./MessageItem"],
+	function(library, MessageItem) {
 		"use strict";
 
 		/**
@@ -15,7 +14,7 @@ sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Item"],
 		 *
 		 * @class
 		 * Items provide information about Error Messages in the page.
-		 * @extends sap.ui.core.Element
+		 * @extends sap.m.MessageItem
 		 *
 		 * @author SAP SE
 		 * @version ${version}
@@ -23,56 +22,15 @@ sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Item"],
 		 * @constructor
 		 * @public
 		 * @since 1.28
+		 * @deprecated Since version 1.46, use MessageItem instead
 		 * @alias sap.m.MessagePopoverItem
-		 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 		 */
-		var MessagePopoverItem = Item.extend("sap.m.MessagePopoverItem", /** @lends sap.m.MessagePopoverItem.prototype */ {
-				metadata: {
-					library: "sap.m",
-					properties: {
-						/**
-						 * Specifies the type of the message
-						 */
-						type: { type: "sap.ui.core.MessageType", group: "Appearance", defaultValue: sap.ui.core.MessageType.Error },
 
-						/**
-						 * Specifies the title of the message
-						 */
-						title: { type: "string", group: "Appearance", defaultValue: "" },
-
-						/**
-						 * Specifies detailed description of the message
-						 */
-						description: { type: "string", group: "Appearance", defaultValue: "" },
-
-						/**
-						 * Specifies if description should be interpreted as markup
-						 */
-						markupDescription: { type: "boolean", group: "Appearance", defaultValue: false },
-
-						/**
-						 * Specifies long text description location URL
-						 */
-						longtextUrl: { type: "sap.ui.core.URI", group: "Behavior", defaultValue: null }
-					}
-				}
-			});
-
-		MessagePopoverItem.prototype.setDescription = function(sDescription) {
-			// Avoid showing result of '' + undefined
-			if (typeof sDescription === 'undefined') {
-				sDescription = '';
+		var MessagePopoverItem = MessageItem.extend("sap.m.MessagePopoverItem", /** @lends sap.m.MessagePopoverItem.prototype */ {
+			metadata: {
+				deprecated: true
 			}
-
-			if (this.getMarkupDescription()) {
-				sDescription = jQuery.sap._sanitizeHTML(sDescription);
-			}
-
-			this.setProperty("description", sDescription, true);
-
-			return this;
-		};
+		});
 
 		return MessagePopoverItem;
-
-	}, /* bExport= */true);
+	});

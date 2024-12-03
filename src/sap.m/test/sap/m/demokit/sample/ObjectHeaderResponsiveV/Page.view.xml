@@ -2,7 +2,6 @@
 	height="100%"
 	controllerName="sap.m.sample.ObjectHeaderResponsiveV.Page"
 	xmlns:mvc="sap.ui.core.mvc"
-	xmlns:l="sap.ui.layout"
 	xmlns="sap.m">
 	<ObjectHeader
 		id="oh1"
@@ -12,18 +11,18 @@
 		iconAlt="{Name}"
 		intro="{Description}"
 		title="{Name}"
-		showMarkers="false"
-		markFlagged="true"
-		markFavorite="true"
-		backgroundDesign="Translucent">
-		<attributes>
-			<ObjectAttribute
-				title="Manufacturer"
-				text="{SupplierName}"/>
-			<ObjectAttribute
-				title="Dimension per unit"
-				text="{Width} x {Depth} x {Height} {DimUnit}"/>
-		</attributes>
+		backgroundDesign="Translucent"
+		class="sapUiResponsivePadding--header" >
+		<ObjectAttribute
+			title="Manufacturer"
+			text="{SupplierName}"/>
+		<ObjectAttribute
+			title="Dimension per unit"
+			text="{Width} x {Depth} x {Height} {DimUnit}"/>
+		<markers>
+			<ObjectMarker type="Favorite"/>
+			<ObjectMarker type="Flagged"/>
+		</markers>
 		<statuses>
 			<ObjectStatus
 				title="Approval"

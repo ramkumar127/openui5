@@ -2,8 +2,8 @@
  * ${copyright}
  */
 sap.ui.define([
-		'jquery.sap.global'
-	], function (jQuery) {
+	"sap/ui/model/odata/AnnotationHelper"
+], function (AnnotationHelper) {
 	"use strict";
 
 	// @see sap.ui.core.ID.type: [A-Za-z_][-A-Za-z0-9_.:]*
@@ -36,8 +36,8 @@ sap.ui.define([
 		 * @returns {string}
 		 */
 		function formatLabelValue(oInterface, vRawValue0) {
-			var sResult = sap.ui.model.odata.AnnotationHelper.format(oInterface, vRawValue0);
-			return jQuery.sap.endsWith(oInterface.getPath(), "/Label")
+			var sResult = AnnotationHelper.format(oInterface, vRawValue0);
+			return oInterface.getPath().endsWith("/Label")
 				? "[" + sResult + "]"
 				: sResult;
 		}
@@ -81,8 +81,8 @@ sap.ui.define([
 		} else {
 			aResult = [];
 			// "probe for the smallest non-negative integer"
-			for (i = 0; sPath = oInterface.getPath(i); i += 1) {
-				aResult.push(sPath.replace(rBadIdChars, "."));
+			for (i = 0; oInterface.getPath(i); i += 1) {
+				aResult.push(oInterface.getPath(i).replace(rBadIdChars, "."));
 			}
 			return aResult.join("::");
 		}

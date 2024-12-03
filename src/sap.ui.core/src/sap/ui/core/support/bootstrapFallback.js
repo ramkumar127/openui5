@@ -4,7 +4,7 @@
 
 /*global console */
 
-// This file provides a fallback to load UI5 in support.html / msiebridge.html
+// This file provides a fallback to load UI5 in support.html
 (function() {
 	'use strict';
 
@@ -15,7 +15,8 @@
 	}
 
 	// do nothing if UI5 is already loaded
-	if (window.sap && window.sap.ui) {
+	// ui5lint-disable-next-line no-globals
+	if (globalThis.sap?.ui) {
 		return;
 	}
 

@@ -2,11 +2,11 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', './Matcher'], function ($, Matcher) {
+sap.ui.define(['sap/ui/test/matchers/Matcher'], function (Matcher) {
 	"use strict";
 
 	/**
-	 * @class Visible - check if a controls domref is visible
+	 * @class Checks if a controls domref is visible.
 	 * @private
 	 * @extends sap.ui.test.matchers.Matcher
 	 * @name sap.ui.test.matchers.Visible
@@ -14,19 +14,22 @@ sap.ui.define(['jquery.sap.global', './Matcher'], function ($, Matcher) {
 	 * @since 1.34
 	 */
 	return Matcher.extend("sap.ui.test.matchers.Visible", /** @lends sap.ui.test.matchers.Visible.prototype */ {
-		isMatching:  function(oControl) {
-			if (!oControl.getDomRef()) {
-				$.sap.log.debug("The control " + oControl + " is not rendered", this._sLogPrefix);
-				return false;
-			}
+		isMatching: function (oControl) {
+			var oDomRef = oControl.$();
+			var bVisible = false;
 
-			var bVisible = oControl.$().is(":visible");
-			if (!bVisible) {
-				$.sap.log.debug("The control " + oControl + " is not visible", this._sLogPrefix);
+			if (oDomRef.length) {
+				if (oDomRef.is(":hidden") || oDomRef.css("visibility") === "hidden") {
+					this._oLogger.debug("Control '" + oControl + "' is not visible");
+				} else {
+					bVisible = true;
+				}
+			} else {
+				this._oLogger.debug("Control '" + oControl + "'' is not rendered");
 			}
 
 			return bVisible;
 		}
 	});
 
-}, /* bExport= */ true);
+});

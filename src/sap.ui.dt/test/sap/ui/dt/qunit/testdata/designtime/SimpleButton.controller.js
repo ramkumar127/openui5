@@ -1,7 +1,10 @@
-sap.ui.controller("dt.view.SimpleButton", {
+sap.ui.define([
+	"sap/ui/core/mvc/Controller"
+], function(Controller) {
+	"use strict";
 
-	onInit : function () {
-
-	}
-
+	return Controller.extend("dt.view.SimpleButton", {
+		onInit() {
+		}
+	});
 });

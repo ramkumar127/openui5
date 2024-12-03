@@ -3,9 +3,22 @@
  */
 
 // Provides control sap.ui.ux3.QuickView.
-sap.ui.define(['jquery.sap.global', 'sap/ui/commons/CalloutBase', 'sap/ui/core/delegate/ItemNavigation', './ActionBar', './library'],
-	function(jQuery, CalloutBase, ItemNavigation, ActionBar, library) {
+sap.ui.define([
+    'sap/ui/thirdparty/jquery',
+    'sap/ui/commons/CalloutBase',
+    'sap/ui/core/delegate/ItemNavigation',
+    './ActionBar',
+    './library',
+    './QuickViewRenderer',
+    'sap/ui/core/TooltipBase'
+],
+	function(jQuery, CalloutBase, ItemNavigation, ActionBar, library, QuickViewRenderer, TooltipBase) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.ux3.FollowActionState
+	var FollowActionState = library.FollowActionState;
 
 
 
@@ -25,11 +38,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/CalloutBase', 'sap/ui/core/d
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38. Instead, use the <code>sap.m.QuickView</code> control.
 	 * @alias sap.ui.ux3.QuickView
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var QuickView = CalloutBase.extend("sap.ui.ux3.QuickView", /** @lends sap.ui.ux3.QuickView.prototype */ { metadata : {
 
+		deprecated: true,
 		library : "sap.ui.ux3",
 		properties : {
 
@@ -71,7 +85,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/CalloutBase', 'sap/ui/core/d
 			/**
 			 * Follow State of a Thing
 			 */
-			followState : {type : "sap.ui.ux3.FollowActionState", group : "Misc", defaultValue : sap.ui.ux3.FollowActionState.Default},
+			followState : {type : "sap.ui.ux3.FollowActionState", group : "Misc", defaultValue : FollowActionState.Default},
 
 			/**
 			 * State of Flag Action
@@ -179,10 +193,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/CalloutBase', 'sap/ui/core/d
 		}
 	}});
 
-	///**
-	// * This file defines behavior for the QuickView control,
-	// */
-
 
 	/**
 	 * Initialization of the QuickView control.
@@ -220,7 +230,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/CalloutBase', 'sap/ui/core/d
 
 	/**
 	* Handle the mouseover event
-	* @param {jQuery.EventObject} oEvent The event that occurred on the QuickView link
+	* @param {jQuery.Event} oEvent The event that occurred on the QuickView link
 	* @private
 	 */
 	QuickView.prototype.onmouseover = function(oEvent) {
@@ -229,13 +239,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/CalloutBase', 'sap/ui/core/d
 		// do not close my pop-up if it was opened already
 		if (oPopup.isOpen() && oPopup.getContent() == this) {
 			if (this.sCloseNowTimeout) {
-				jQuery.sap.clearDelayedCall(this.sCloseNowTimeout);
+				clearTimeout(this.sCloseNowTimeout);
 				this.sCloseNowTimeout = null;
 			}
 			return;
 		}
 
-		sap.ui.core.TooltipBase.prototype.onmouseover.call(this, oEvent);
+		TooltipBase.prototype.onmouseover.call(this, oEvent);
 	};
 
 	/**
@@ -514,4 +524,4 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/CalloutBase', 'sap/ui/core/d
 
 	return QuickView;
 
-}, /* bExport= */ true);
+});

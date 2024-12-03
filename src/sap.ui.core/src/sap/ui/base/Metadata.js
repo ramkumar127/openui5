@@ -3,19 +3,29 @@
  */
 
 // Provides class sap.ui.base.Metadata
-sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
-	function(jQuery/* , jQuerySap */) {
+sap.ui.define([
+	'sap/base/util/ObjectPath',
+	"sap/base/assert",
+	"sap/base/Log",
+	"sap/base/util/array/uniqueSort"
+],
+	function(ObjectPath, assert, Log, uniqueSort) {
 	"use strict";
 
+	function isFunction(obj) {
+		return typeof obj === "function";
+	}
 
 	/**
 	 * Creates a new metadata object from the given static infos.
 	 *
-	 * Note: throughout this class documentation, the described subclass of Object
+	 * <b>Note:</b> Throughout this class documentation, the described subclass of Object
 	 * is referenced as <i>the described class</i>.
 	 *
-	 * @param {string} sClassName fully qualified name of the described class
-	 * @param {object} oClassInfo info to construct the class and its metadata from
+	 * @param {string} sClassName Fully qualified name of the described class
+	 * @param {object} oClassInfo Info to construct the class and its metadata from
+	 * @param {sap.ui.base.Object.MetadataOptions} [oClassInfo.metadata]
+	 *  The metadata object describing the class
 	 *
 	 * @class Metadata for a class.
 	 * @author Frank Weigel
@@ -26,20 +36,25 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 	 */
 	var Metadata = function(sClassName, oClassInfo) {
 
-		jQuery.sap.assert(typeof sClassName === "string" && sClassName, "Metadata: sClassName must be a non-empty string");
-		jQuery.sap.assert(typeof oClassInfo === "object", "Metadata: oClassInfo must be empty or an object");
+		assert(typeof sClassName === "string" && sClassName, "Metadata: sClassName must be a non-empty string");
+		assert(typeof oClassInfo === "object", "Metadata: oClassInfo must be empty or an object");
 
-		// support for old usage of Metadata
+		/**
+		 * Support for old usage of Metadata.
+		 * @deprecated Since 1.3.1
+		 */
 		if ( !oClassInfo || typeof oClassInfo.metadata !== "object" ) {
 			oClassInfo = {
 				metadata : oClassInfo || {},
 				// retrieve class by its name. Using a lookup costs time but avoids the need for redundant arguments to this function
-				constructor : jQuery.sap.getObject(sClassName)
+				constructor : ObjectPath.get(sClassName) // legacy-relevant, code path not used by extend call
 			};
 			oClassInfo.metadata.__version = 1.0;
 		}
+
+		oClassInfo.metadata ??= {};
 		oClassInfo.metadata.__version = oClassInfo.metadata.__version || 2.0;
-		if ( typeof oClassInfo.constructor !== "function" ) {
+		if ( !isFunction(oClassInfo.constructor) ) {
 			throw Error("constructor for class " + sClassName + " must have been declared before creating metadata for it");
 		}
 
@@ -65,21 +80,37 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 	Metadata.prototype.applySettings = function(oClassInfo) {
 
 		var that = this,
-		  oStaticInfo = oClassInfo.metadata,
+			oStaticInfo = oClassInfo.metadata,
 			oPrototype;
 
 		if ( oStaticInfo.baseType ) {
-			// lookup base class by its name - same reasoning as above
-			var oParentClass = jQuery.sap.getObject(oStaticInfo.baseType);
-			if ( typeof oParentClass !== "function" ) {
-				jQuery.sap.log.fatal("base class '" + oStaticInfo.baseType + "' does not exist");
+			var oParentClass,
+				bValidBaseType = isFunction(oStaticInfo.baseType);
+
+			if ( bValidBaseType ) {
+				oParentClass = oStaticInfo.baseType;
+				if ( !isFunction(oParentClass.getMetadata) ) {
+					throw new TypeError("baseType must be a UI5 class with a static getMetadata function");
+				}
 			}
+
+			/**
+			 * @deprecated
+			 */
+			if ( !bValidBaseType ) {
+				// lookup base class by its name - same reasoning as above
+				oParentClass = ObjectPath.get(oStaticInfo.baseType); // legacy-relevant, code path not used by extend call
+				if ( !isFunction(oParentClass) ) {
+					Log.fatal("base class '" + oStaticInfo.baseType + "' does not exist");
+				}
+			}
+
 			// link metadata with base metadata
 			if ( oParentClass.getMetadata ) {
 				this._oParent = oParentClass.getMetadata();
-				jQuery.sap.assert(oParentClass === oParentClass.getMetadata().getClass(), "Metadata: oParentClass must match the class in the parent metadata");
+				assert(oParentClass === oParentClass.getMetadata().getClass(), "Metadata: oParentClass must match the class in the parent metadata");
 			} else {
-				// fallback, if base class has no metadata
+				// fallback, if base class has no metadata - can only happen if baseType is a string
 				this._oParent = new Metadata(oStaticInfo.baseType, {});
 			}
 		} else {
@@ -102,16 +133,15 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 
 		// enrich prototype
 		oPrototype = this._oClass.prototype;
-		jQuery.sap.forIn(oClassInfo, function(n, v) {
-			if ( n !== "metadata" && n !== "constructor" ) {
-				oPrototype[n] = v;
-				if ( !n.match(/^_|^on|^init$|^exit$/) ) {
+		for ( var n in oClassInfo ) {
+			if ( n !== "metadata" && n !== "constructor") {
+				oPrototype[n] = oClassInfo[n];
+				if ( !n.match(/^_|^on|^init$|^exit$/)) {
 					// TODO hard coded knowledge about event handlers ("on") and about init/exit hooks is not nice....
 					that._aPublicMethods.push(n);
 				}
 			}
-		});
-
+		}
 	};
 
 	/**
@@ -125,11 +155,9 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 	Metadata.prototype.afterApplySettings = function() {
 		// create the flattened "all" view
 		if ( this._oParent ) {
-			//this._aAllInterfaces = jQuery.sap.unique(this._oParent._aAllInterfaces.concat(this._aInterfaces));
 			this._aAllPublicMethods = this._oParent._aAllPublicMethods.concat(this._aPublicMethods);
 			this._bInterfacesUnique = false;
 		} else {
-			//this._aAllInterfaces = this._aInterfaces;
 			this._aAllPublicMethods = this._aPublicMethods;
 		}
 
@@ -137,7 +165,9 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 
 	/**
 	 * Stereotype of the described class.
-	 * @experimental might be enhanced to a set of stereotypes
+	 *
+	 * @private
+	 * @ui5-restricted
 	 */
 	Metadata.prototype.getStereotype = function() {
 		return this._sStereotype;
@@ -154,7 +184,7 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 
 	/**
 	 * Returns the (constructor of the) described class
-	 * @return {function} class described by this metadata
+	 * @return {function(new:sap.ui.base.Object)} class described by this metadata
 	 * @public
 	 */
 	Metadata.prototype.getClass = function() {
@@ -163,9 +193,9 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 
 	/**
 	 * Returns the metadata object of the base class of the described class
-	 * or null if the class has no (documented) base class.
+	 * or undefined if the class has no (documented) base class.
 	 *
-	 * @return {sap.ui.base.Metadata} metadata of the base class
+	 * @return {sap.ui.base.Metadata | undefined} metadata of the base class
 	 * @public
 	 */
 	Metadata.prototype.getParent = function() {
@@ -179,17 +209,26 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 	 */
 	Metadata.prototype._dedupInterfaces = function () {
 		if (!this._bInterfacesUnique) {
-			jQuery.sap.unique(this._aInterfaces);
-			jQuery.sap.unique(this._aPublicMethods);
-			jQuery.sap.unique(this._aAllPublicMethods);
+			uniqueSort(this._aInterfaces);
+			uniqueSort(this._aPublicMethods);
+			uniqueSort(this._aAllPublicMethods);
 			this._bInterfacesUnique = true;
 		}
 	};
 
 	/**
-	 * Returns an array with the names of the public methods declared by the described class.
+	 * Returns an array with the names of the public methods declared by the described class, methods of
+	 * ancestors are not listed.
 	 *
 	 * @return {string[]} array with names of public methods declared by the described class
+	 * @deprecated As of 1.58, this method should not be used for productive code. The accuracy of the returned
+	 *       information highly depends on the concrete class and is not actively monitored. There might be
+	 *       more public methods or some of the returned methods might not really be intended for public use.
+	 *       In general, pure visibility information should not be exposed in runtime metadata but be part of the
+	 *       documentation.
+	 *       Subclasses of <code>sap.ui.base.Object</code> might decide to provide runtime metadata describing
+	 *       their public API, but this then should not be backed by this method.
+	 *       See {@link sap.ui.core.mvc.ControllerMetadata#getAllMethods} for an example.
 	 * @public
 	 */
 	Metadata.prototype.getPublicMethods = function() {
@@ -199,9 +238,17 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 
 	/**
 	 * Returns an array with the names of all public methods declared by the described class
-	 * and its ancestors.
+	 * and all its ancestors classes.
 	 *
 	 * @return {string[]} array with names of all public methods provided by the described class and its ancestors
+	 * @deprecated As of 1.58, this method should not be used for productive code. The accuracy of the returned
+	 *       information highly depends on the concrete class and is not actively monitored. There might be
+	 *       more public methods or some of the returned methods might not really be intended for public use.
+	 *       In general, pure visibility information should not be exposed in runtime metadata but be part of the
+	 *       documentation.
+	 *       Subclasses of <code>sap.ui.base.Object</code> might decide to provide runtime metadata describing
+	 *       their public API, but this then should not be backed by this method.
+	 *       See {@link sap.ui.core.mvc.ControllerMetadata#getAllMethods} for an example.
 	 * @public
 	 */
 	Metadata.prototype.getAllPublicMethods = function() {
@@ -246,6 +293,92 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 		return false;
 	};
 
+	/*
+	 * Lazy calculation of the set of implemented types.
+	 *
+	 * A calculation function is configured as getter for the <code>_mImplementedTypes</code>
+	 * on the prototype object. On first call for a metadata instance, it collects
+	 * the implemented types (classes, interfaces) from the described class and
+	 * any base classes and writes it to the property <code>_mImplementedTypes</code> of the
+	 * current instance of metadata. Future read access to the property will immediately
+	 * return the instance property and not call the calculation function again.
+	 */
+	Object.defineProperty(Metadata.prototype, "_mImplementedTypes", {
+		get: function() {
+
+			if ( this === Metadata.prototype ) {
+				throw new Error("sap.ui.base.Metadata: The '_mImplementedTypes' property must not be accessed on the prototype");
+			}
+
+			// create map of types, including inherited types
+			// Note: to save processing time and memory, the inherited types are merged via the prototype chain of 'result'
+			var result = Object.create(this._oParent ? this._oParent._mImplementedTypes : null);
+			/*
+			 * Flat alternative:
+			 * var result = Object.create(null);
+			 * if ( this._oParent ) {
+			 *   Object.assign(result, this._oParent._mImplementedTypes);
+			 * }
+			 */
+
+			// add own class
+			result[this._sClassName] = true;
+
+			// additionally collect interfaces
+			var aInterfaces = this._aInterfaces,
+				i = aInterfaces.length;
+			while ( i-- > 0 ) {
+				if ( !result[aInterfaces[i]] ) {
+					// take care to write property only if it hasn't been set already
+					result[aInterfaces[i]] = true;
+				}
+			}
+
+			// write instance property, hiding the getter on the prototype
+			Object.defineProperty(this, "_mImplementedTypes", {
+				value: Object.freeze(result),
+				writable: false,
+				configurable: false
+			});
+
+			return result;
+		},
+		configurable: true
+	});
+
+	/**
+	 * Checks whether the class described by this metadata object is of the named type.
+	 *
+	 * This check is solely based on the type names as declared in the class metadata.
+	 * It compares the given <code>vTypeName</code> with the name of this class, with the
+	 * names of any base class of this class and with the names of all interfaces
+	 * implemented by any of the aforementioned classes.
+	 *
+	 * Instead of a single type name, an array of type names can be given and the method
+	 * will check if this class is of any of the listed types (logical or).
+	 *
+	 * Should the UI5 class system in future implement additional means of associating classes
+	 * with type names (e.g. by introducing mixins), then this method might detect matches
+	 * for those names as well.
+	 *
+	 * @param {string|string[]} vTypeName Type or types to check for
+	 * @returns {boolean} Whether this class is of the given type or of any of the given types
+	 * @public
+	 * @since 1.56
+	 */
+	Metadata.prototype.isA = function(vTypeName) {
+		var mTypes = this._mImplementedTypes;
+		if ( Array.isArray(vTypeName) ) {
+			for ( var i = 0; i < vTypeName.length; i++ ) {
+				if ( vTypeName[i] in mTypes ) {
+					return true;
+				}
+			}
+			return false;
+		}
+		// Note: the check with 'in' also finds inherited types via the prototype chain of mTypes
+		return vTypeName in mTypes;
+	};
 
 	/**
 	 * Returns whether the described class is abstract
@@ -295,6 +428,24 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 	};
 
 	/**
+	 * Traverse up through the parent chain to find the static property on the class.
+	 *
+	 * @param {string} sStaticName The name of the static property
+	 * @returns {any} If found, returns the static property
+	 * @private
+	 * @ui5-restricted sap.ui.core
+	 */
+	Metadata.prototype.getStaticProperty = function(sStaticName) {
+		let oMetadata = this;
+		while (oMetadata && !(sStaticName in oMetadata.getClass())) {
+			oMetadata = oMetadata.getParent();
+		}
+		const oClass = oMetadata?.getClass();
+
+		return oClass?.[sStaticName];
+	};
+
+	/**
 	 * @since 1.3.1
 	 * @private
 	 */
@@ -307,14 +458,20 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 			fnBaseClass = null;
 		}
 
-		jQuery.sap.assert(!fnBaseClass || typeof fnBaseClass === "function");
-		jQuery.sap.assert(typeof sClassName === "string" && !!sClassName);
-		jQuery.sap.assert(!oClassInfo || typeof oClassInfo === "object");
-		jQuery.sap.assert(!FNMetaImpl || typeof FNMetaImpl === "function");
+		assert(!fnBaseClass || isFunction(fnBaseClass));
+		assert(typeof sClassName === "string" && !!sClassName);
+		assert(!oClassInfo || typeof oClassInfo === "object");
+		assert(!FNMetaImpl || isFunction(FNMetaImpl));
 
-		// allow metadata class to preprocess
 		FNMetaImpl = FNMetaImpl || Metadata;
-		if ( typeof FNMetaImpl.preprocessClassInfo === "function" ) {
+
+		/**
+		 * allow metadata class to preprocess
+		 * Component- and UIComponentMetadata uses this to derive if "component.json"
+		 * must be loaded synchronously.
+		 * @deprecated
+		 */
+		if ( isFunction(FNMetaImpl.preprocessClassInfo) ) {
 			oClassInfo = FNMetaImpl.preprocessClassInfo(oClassInfo);
 		}
 
@@ -326,7 +483,7 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 		}
 
 		var fnClass = oClassInfo.constructor;
-		jQuery.sap.assert(!fnClass || typeof fnClass === "function");
+		assert(!fnClass || isFunction(fnClass));
 
 		// ensure defaults
 		if ( fnBaseClass ) {
@@ -335,7 +492,7 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 				if ( oClassInfo.metadata.deprecated ) {
 				  // create default factory with deprecation warning
 					fnClass = function() {
-						jQuery.sap.log.warning("Usage of deprecated class: " + sClassName);
+						Log.warning("Usage of deprecated class: " + sClassName);
 						fnBaseClass.apply(this, arguments);
 					};
 				} else {
@@ -346,10 +503,10 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 				}
 			}
 			// create prototype chain
-			fnClass.prototype = jQuery.sap.newObject(fnBaseClass.prototype);
+			fnClass.prototype = Object.create(fnBaseClass.prototype);
 			fnClass.prototype.constructor = fnClass;
 			// enforce correct baseType
-			oClassInfo.metadata.baseType = fnBaseClass.getMetadata().getName();
+			oClassInfo.metadata.baseType = fnBaseClass;
 		} else {
 			// default constructor does nothing
 			fnClass = fnClass || function() { };
@@ -358,12 +515,17 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 		}
 		oClassInfo.constructor = fnClass;
 
-		// make the class visible as JS Object
-		jQuery.sap.setObject(sClassName, fnClass);
+		/**
+		 * make the class visible as JS Object
+		 * @deprecated
+		 */
+		ObjectPath.set(sClassName, fnClass);
 
 		// add metadata
 		var oMetadata = new FNMetaImpl(sClassName, oClassInfo);
-		fnClass.getMetadata = fnClass.prototype.getMetadata = jQuery.sap.getter(oMetadata);
+		fnClass.getMetadata = fnClass.prototype.getMetadata = function() {
+			return oMetadata;
+		};
 
 		// enrich function
 		if ( !fnClass.getMetadata().isFinal() ) {
@@ -374,8 +536,6 @@ sap.ui.define(['jquery.sap.global', 'jquery.sap.script'],
 
 		return fnClass;
 	};
-
-
 
 	return Metadata;
 

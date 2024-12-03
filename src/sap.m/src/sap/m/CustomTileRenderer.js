@@ -1,48 +1,54 @@
 /*!
  * ${copyright}
  */
-sap.ui.define(['jquery.sap.global', './TileRenderer'],
-	function(jQuery, TileRenderer) {
+sap.ui.define(['./TileRenderer', 'sap/ui/core/Renderer'],
+	function(TileRenderer, Renderer) {
 	"use strict";
 
 /**
 	 * CustomTile renderer.
 	 * @namespace
 	 */
-	var CustomTileRenderer = sap.ui.core.Renderer.extend(TileRenderer);
+	var CustomTileRenderer = Renderer.extend(TileRenderer);
+
+	CustomTileRenderer.apiVersion = 2;
 
 	/**
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
 	 * @param {sap.ui.core.RenderManager}
-	 *                oRm The RenderManager that can be used for writing to the render output buffer
-	 * @param {sap.ui.core.Control}
+	 *                rm The RenderManager that can be used for writing to the render output buffer
+	 * @param {sap.m.CustomTile}
 	 *                oControl An object representation of the control that should be rendered
 	 */
 	 CustomTileRenderer.render = function(rm, oControl) {
-		rm.write("<div tabindex=\"0\"");
-		rm.writeControlData(oControl);
-		rm.addClass("sapMCustomTile");
-		rm.writeClasses();
+		var oTileContainer,
+			aVisibleTiles;
+
+		rm.openStart("div", oControl).attr("tabindex", "0");
+		rm.class("sapMCustomTile");
 		if (oControl._invisible) {
-			rm.addStyle("visibility", "hidden");
-			rm.writeStyles();
+			rm.style("visibility", "hidden");
 		}
 
 		/* WAI ARIA if in TileContainer context */
-		if (oControl.getParent() instanceof sap.m.TileContainer) {
-			rm.writeAccessibilityState({
+		if (oControl.getParent() && oControl.getParent().isA("sap.m.TileContainer")) {
+			// @ui5-non-local-rendering
+			oTileContainer = oControl.getParent();
+			aVisibleTiles = oTileContainer._getVisibleTiles();
+
+			rm.accessibilityState(oControl, {
 				role: "option",
-				posinset: oControl._getTileIndex(),
-				setsize: oControl._getTilesCount()
+				posinset: oTileContainer._indexOfVisibleTile(oControl, aVisibleTiles) + 1,
+				setsize: aVisibleTiles.length
 			});
 		}
 
-		rm.write(">");
-		rm.write("<div id=\"" + oControl.getId() + "-remove\" class=\"sapMTCRemove\"></div>");
-		rm.write("<div class=\"sapMCustomTileContent\">");
-		this._renderContent(rm,oControl);
-		rm.write("</div></div>");
+		rm.openEnd();
+		rm.openStart("div", oControl.getId() + "-remove").class("sapMTCRemove").openEnd().close("div");
+		rm.openStart("div").class("sapMCustomTileContent").openEnd();
+		this._renderContent(rm, oControl);
+		rm.close("div").close("div");
 	};
 
 	CustomTileRenderer._renderContent = function (rm, oTile) {

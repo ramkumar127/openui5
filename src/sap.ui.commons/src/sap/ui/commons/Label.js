@@ -3,9 +3,26 @@
  */
 
 // Provides control sap.ui.commons.Label.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/core/Popup', 'sap/ui/core/LabelEnablement'],
-	function(jQuery, library, Control, Popup, LabelEnablement) {
+sap.ui.define([
+    './library',
+    'sap/ui/core/Control',
+    'sap/ui/core/LabelEnablement',
+    './LabelRenderer',
+    'sap/ui/core/library'
+],
+	function(library, Control, LabelEnablement, LabelRenderer, coreLibrary) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.core.TextAlign
+	var TextAlign = coreLibrary.TextAlign;
+
+	// shortcut for sap.ui.core.TextDirection
+	var TextDirection = coreLibrary.TextDirection;
+
+	// shortcut for sap.ui.commons.LabelDesign
+	var LabelDesign = library.LabelDesign;
 
 
 
@@ -26,8 +43,8 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38. Instead, use the <code>sap.m.Label</code> control.
 	 * @alias sap.ui.commons.Label
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Label = Control.extend("sap.ui.commons.Label", /** @lends sap.ui.commons.Label.prototype */ { metadata : {
 
@@ -36,18 +53,19 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			"sap.ui.core.Label"
 		],
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
 			 *
 			 * Defines whether the labels are in bold format.
 			 */
-			design : {type : "sap.ui.commons.LabelDesign", group : "Appearance", defaultValue : sap.ui.commons.LabelDesign.Standard},
+			design : {type : "sap.ui.commons.LabelDesign", group : "Appearance", defaultValue : LabelDesign.Standard},
 
 			/**
 			 * Determines the text direction - right-to-left (RTL) and left-to-right (LTR).
 			 */
-			textDirection : {type : "sap.ui.core.TextDirection", group : "Appearance", defaultValue : sap.ui.core.TextDirection.Inherit},
+			textDirection : {type : "sap.ui.core.TextDirection", group : "Appearance", defaultValue : TextDirection.Inherit},
 
 			/**
 			 * Specifies whether a line wrapping width shall be displayed when the text value is longer than the width is.
@@ -66,14 +84,14 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 			/**
 			 * Determines the icon to be displayed in the control.
-			 * This can be an URI to an image or an icon font URI.
+			 * This can be a URI to an image or an icon font URI.
 			 */
 			icon : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : null},
 
 			/**
 			 * Determines the alignment of the text. Available options are <code>Begin</code>, <code>Center</code>, <code>End</code>, <code>Left</code>, and <code>Right</code>.
 			 */
-			textAlign : {type : "sap.ui.core.TextAlign", group : "Appearance", defaultValue : sap.ui.core.TextAlign.Begin},
+			textAlign : {type : "sap.ui.core.TextAlign", group : "Appearance", defaultValue : TextAlign.Begin},
 
 			/**
 			 * Allows to enforce the required indicator even when the associated control doesn't have a getRequired method (a required property) or when the flag is not set.
@@ -112,8 +130,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 				}
 			}
 
-			// attach to change of required flag of labeled control
-			oFor.attachEvent("requiredChanged",this._handleRequiredChanged, this);
 			this._oFor = oFor;
 		}
 	};
@@ -126,7 +142,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		}
 
 		if (this._oFor) {
-			this._oFor.detachEvent("requiredChanged",this._handleRequiredChanged, this);
 			this._oFor = undefined;
 		}
 	};
@@ -138,32 +153,8 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		}
 
 		if (this._oFor) {
-			this._oFor.detachEvent("requiredChanged",this._handleRequiredChanged, this);
 			this._oFor = undefined;
 		}
-	};
-
-	/**
-	 * Checks whether the Label itself or the associated control is marked as required (they are mutually exclusive).
-	 *
-	 * @protected
-	 * @returns {Boolean} Returns if the Label or the labelled control are required
-	 */
-	Label.prototype.isRequired = function(){
-		// the value of the local required flag is ORed with the result of a "getRequired"
-		// method of the associated "labelFor" control. If the associated control doesn't
-		// have a getRequired method, this is treated like a return value of "false".
-		var oFor = this._getLabeledControl();
-		return this.getRequired() || (oFor && oFor.getRequired && oFor.getRequired() === true);
-
-	};
-
-	/**
-	 * If required flag of labeled control changes after Label is rendered, the Label must be rendered again.
-	 * @private
-	 */
-	Label.prototype._handleRequiredChanged = function(){
-		this.invalidate();
 	};
 
 	/**
@@ -173,8 +164,8 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * old name are added so that existing applications will still run.
 	 *
 	 * @deprecated
-	 * @param {Boolean} bReqiuredAtBegin new value for property requiredAtBegin.
-	 * @returns {Object} Result of function execution.
+	 * @param {boolean} bReqiuredAtBegin new value for property requiredAtBegin.
+	 * @returns {this} Result of function execution.
 	 */
 	Label.prototype.setReqiuredAtBegin = function(bReqiuredAtBegin){
 		return this.setRequiredAtBegin(bReqiuredAtBegin);
@@ -187,7 +178,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * old name are added so that existing applications will still run.
 	 *
 	 * @deprecated
-	 * @returns {Object} Result of function execution.
+	 * @returns {boolean} Result of function execution.
 	 */
 	Label.prototype.getReqiuredAtBegin = function(){
 		return this.getRequiredAtBegin();
@@ -207,9 +198,18 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		return sap.ui.getCore().byId(sId);
 	};
 
+	/**
+	 * @see sap.ui.core.Control#getAccessibilityInfo
+	 * @returns {sap.ui.core.AccessibilityInfo} The accessibility info
+	 * @protected
+	 */
+	Label.prototype.getAccessibilityInfo = function() {
+		return {description: this.getText()};
+	};
+
 	//Enrich Label functionality
 	LabelEnablement.enrich(Label.prototype);
 
 	return Label;
 
-}, /* bExport= */ true);
+});

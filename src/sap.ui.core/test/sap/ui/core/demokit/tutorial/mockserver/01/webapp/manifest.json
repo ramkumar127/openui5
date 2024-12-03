@@ -1,10 +1,15 @@
 {
-	"_version": "1.1.0",
+	"_version": "1.21.0",
 	"sap.app": {
-		"_version": "1.1.0",
 		"id": "sap.ui.demo.MockServer",
 		"type": "application",
-		"i18n": "i18n/i18n.properties",
+		"i18n": {
+			"bundleUrl": "i18n/i18n.properties",
+			"supportedLocales": [
+				""
+			],
+			"fallbackLocale": ""
+		},
 		"applicationVersion": {
 			"version": "1.0.0"
 		},
@@ -29,7 +34,6 @@
 	},
 
 	"sap.ui": {
-		"_version": "1.1.0",
 		"technology": "UI5",
 		"icons": {
 			"icon": "",
@@ -43,24 +47,20 @@
 			"desktop": true,
 			"tablet": true,
 			"phone": true
-		},
-		"supportedThemes": [
-			"sap_hcb",
-			"sap_bluecrystal"
-		]
+		}
 	},
 
 	"sap.ui5": {
-		"_version": "1.1.0",
 		"rootView": {
 			"viewName": "sap.ui.demo.MockServer.view.App",
-			"type": "XML"
+			"type": "XML",
+			"id": "app"
 		},
 		"dependencies": {
-			"minUI5Version": "1.30.0",
+			"minUI5Version": "1.77.0",
 			"libs": {
-				"sap.ui.core": {},
 				"sap.m": {},
+				"sap.ui.core": {},
 				"sap.ui.layout": {}
 			}
 		},
@@ -72,7 +72,11 @@
 			"i18n": {
 				"type": "sap.ui.model.resource.ResourceModel",
 				"settings": {
-					"bundleName": "sap.ui.demo.MockServer.i18n.i18n"
+					"bundleName": "sap.ui.demo.MockServer.i18n.i18n",
+					"supportedLocales": [
+						""
+					],
+					"fallbackLocale": ""
 				}
 			},
 			"": {

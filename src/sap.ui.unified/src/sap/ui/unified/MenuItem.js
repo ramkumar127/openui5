@@ -3,11 +3,24 @@
  */
 
 // Provides control sap.ui.unified.MenuItem.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/IconPool', './MenuItemBase', './library'],
-	function(jQuery, IconPool, MenuItemBase, library) {
+sap.ui.define([
+	'sap/ui/core/Element',
+	'sap/ui/core/IconPool',
+	'./MenuItemBase',
+	'./library',
+	'sap/ui/core/library'
+], function(
+	Element,
+	IconPool,
+	MenuItemBase,
+	library,
+	coreLibrary
+) {
+
 	"use strict";
 
-
+	// shortcut for sap.ui.core.ItemSelectionMode
+	var ItemSelectionMode = coreLibrary.ItemSelectionMode;
 
 	/**
 	 * Constructor for a new MenuItem element.
@@ -19,6 +32,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/IconPool', './MenuItemBase', '.
 	 * Standard item to be used inside a menu. A menu item represents an action which can be selected by the user in the menu or
 	 * it can provide a submenu to organize the actions hierarchically.
 	 * @extends sap.ui.unified.MenuItemBase
+	 * @implements sap.ui.unified.IMenuItem
 	 *
 	 * @author SAP SE
 	 * @version ${version}
@@ -27,10 +41,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/IconPool', './MenuItemBase', '.
 	 * @constructor
 	 * @public
 	 * @alias sap.ui.unified.MenuItem
-	 * @ui5-metamodel This control/element will also be described in the UI5 (legacy) design time meta model
 	 */
 	var MenuItem = MenuItemBase.extend("sap.ui.unified.MenuItem", /** @lends sap.ui.unified.MenuItem.prototype */ { metadata : {
 
+		interfaces: [
+			"sap.ui.unified.IMenuItem"
+		],
 		library : "sap.ui.unified",
 		properties : {
 
@@ -42,86 +58,228 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/IconPool', './MenuItemBase', '.
 			/**
 			 * Defines the icon of the {@link sap.ui.core.IconPool sap.ui.core.IconPool} or an image which should be displayed on the item.
 			 */
-			icon : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : ''}
+			icon : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : ''},
+
+			/**
+			 * Determines whether the <code>MenuItem</code> is selected (default is set to <code>false</code>).
+			 * A selected <code>MenuItem</code> has a check mark rendered at its end.
+			 * <b>Note: </b> selection functionality works only if the menu item is a member of <code>MenuItemGroup</code> with
+			 * <code>itemSelectionMode</code> set to {@link sap.ui.core.ItemSelectionMode.SingleSelect} or {@link sap.ui.unified.ItemSelectionMode.MultiSelect}.
+			 * @since 1.127.0
+			 */
+			selected : {type : "boolean", group : "Behavior", defaultValue : false},
+
+			/**
+			 * Defines the shortcut text that should be displayed on the menu item on non-mobile devices.
+			 * <b>Note:</b> The text is only displayed and set as а value of the <code>aria-keyshortcuts</code> attribute.
+			 * There is no built-in functionality that selects the item when the corresponding shortcut is pressed.
+			 * This should be implemented by the application developer.
+			 */
+			shortcutText : {type : "string", group : "Appearance", defaultValue : ''}
+
+		},
+		aggregations: {
+			/**
+			 * Defines the content that is displayed at the end of a menu item. This aggregation allows for the addition of custom elements, such as icons and buttons.
+			 * @experimental
+	 		 * @since 1.131
+			 */
+			endContent: {type: "sap.ui.core.Control", multiple : true, singularName : "endContent"}
+		},
+		associations : {
+
+			/**
+			 * Association to controls / IDs which label this control (see WAI-ARIA attribute aria-labelledby).
+			 */
+			ariaLabelledBy : {type : "sap.ui.core.Control", multiple : true, singularName : "ariaLabelledBy"},
+
+			/**
+			 * MenuItemGroup associated with this item.
+			 */
+			_group : {type : "sap.ui.unified.MenuItemGroup",  group : "Behavior", visibility : "hidden"}
+
 		}
+
 	}});
 
-	IconPool.getIconInfo("", ""); //Ensure Icon Font is loaded
+	IconPool.insertFontFaceStyle(); //Ensure Icon Font is loaded
 
 	MenuItem.prototype.render = function(oRenderManager, oItem, oMenu, oInfo){
-		var rm = oRenderManager;
-		var oSubMenu = oItem.getSubmenu();
-		rm.write("<li ");
+		var rm = oRenderManager,
+			oSubMenu = oItem.getSubmenu(),
+			bIsEnabled = oItem.getEnabled(),
+			bIsSelected = oItem.getSelected() && oItem._getItemSelectionMode() !== ItemSelectionMode.None,
+			aEndContent = oItem.getEndContent(),
+			sShortcutText = oItem.getShortcutText(),
+			sRole,
+			oIcon;
 
-		var sClass = "sapUiMnuItm";
+		rm.openStart("li", oItem);
+
+		if (!oSubMenu && sShortcutText) {
+			rm.attr("aria-keyshortcuts", sShortcutText);
+		}
+
+		if (oItem.getVisible()) {
+			rm.attr("tabindex", "0");
+		}
+
+		rm.class("sapUiMnuItm");
 		if (oInfo.iItemNo == 1) {
-			sClass += " sapUiMnuItmFirst";
+			rm.class("sapUiMnuItmFirst");
 		} else if (oInfo.iItemNo == oInfo.iTotalItems) {
-			sClass += " sapUiMnuItmLast";
+			rm.class("sapUiMnuItmLast");
 		}
 		if (!oMenu.checkEnabled(oItem)) {
-			sClass += " sapUiMnuItmDsbl";
+			rm.class("sapUiMnuItmDsbl");
 		}
 		if (oItem.getStartsSection()) {
-			sClass += " sapUiMnuItmSepBefore";
+			rm.class("sapUiMnuItmSepBefore");
 		}
 
-		rm.writeAttribute("class", sClass);
 		if (oItem.getTooltip_AsString()) {
-			rm.writeAttributeEscaped("title", oItem.getTooltip_AsString());
+			rm.attr("title", oItem.getTooltip_AsString());
 		}
-		rm.writeElementData(oItem);
 
 		// ARIA
 		if (oInfo.bAccessible) {
-			rm.writeAccessibilityState(oItem, {
-				role: "menuitem",
-				disabled: !oMenu.checkEnabled(oItem),
+
+			switch (oItem._getItemSelectionMode()) {
+				case ItemSelectionMode.SingleSelect:
+					sRole = "menuitemradio";
+					break;
+				case ItemSelectionMode.MultiSelect:
+					sRole = "menuitemcheckbox";
+					break;
+				default:
+					sRole = "menuitem";
+			}
+
+			rm.accessibilityState(oItem, {
+				role: sRole,
+				disabled: !bIsEnabled,
 				posinset: oInfo.iItemNo,
 				setsize: oInfo.iTotalItems,
-				labelledby: {value: /*oMenu.getId() + "-label " + */this.getId() + "-txt " + this.getId() + "-scuttxt", append: true}
+				selected: null,
+				checked: bIsSelected ? true : undefined,
+				labelledby: { value: this.getId() + "-txt", append: true }
 			});
 			if (oSubMenu) {
-				rm.writeAttribute("aria-haspopup", true);
-				rm.writeAttribute("aria-owns", oSubMenu.getId());
+				rm.attr("aria-haspopup", coreLibrary.aria.HasPopup.Menu.toLowerCase());
+				rm.attr("aria-owns", oSubMenu.getId());
 			}
 		}
 
-		// Left border
-		rm.write("><div class=\"sapUiMnuItmL\"></div>");
+		rm.openEnd();
 
-		// icon/check column
-		rm.write("<div class=\"sapUiMnuItmIco\">");
+		rm.openStart("div");
+		rm.class("sapUiMnuItmIco");
+		rm.openEnd();
+
 		if (oItem.getIcon()) {
-			rm.writeIcon(oItem.getIcon(), null, {title: null});
+			oIcon = oItem._getIcon();
+			rm.renderControl(oIcon);
 		}
-		rm.write("</div>");
+		rm.close("div");
 
 		// Text column
-		rm.write("<div id=\"" + this.getId() + "-txt\" class=\"sapUiMnuItmTxt\">");
-		rm.writeEscaped(oItem.getText());
-		rm.write("</div>");
+		rm.openStart("div", this.getId() + "-txt");
+		rm.class("sapUiMnuItmTxt");
+		rm.openEnd();
+		rm.text(oItem.getText());
+		rm.close("div");
 
 		// Shortcut column
-		rm.write("<div id=\"" + this.getId() + "-scuttxt\" class=\"sapUiMnuItmSCut\"></div>");
-
-		// Submenu column
-		rm.write("<div class=\"sapUiMnuItmSbMnu\">");
-		if (oSubMenu) {
-			rm.write("<div class=\"sapUiIconMirrorInRTL\"></div>");
+		rm.openStart("div", this.getId() + "-scuttxt");
+		rm.class("sapUiMnuItmSCut");
+		rm.openEnd();
+		if (!oSubMenu && sShortcutText) {
+			rm.text(sShortcutText);
 		}
-		rm.write("</div>");
+		rm.close("div");
 
-		// Right border
-		rm.write("<div class=\"sapUiMnuItmR\"></div>");
+		if (oSubMenu) {
+			// Submenu column
+			rm.openStart("div");
+			rm.class("sapUiMnuItmSbMnu");
+			rm.openEnd();
+			rm.openStart("div");
+			rm.class("sapUiIconMirrorInRTL");
+			rm.openEnd();
+			rm.close("div");
+			rm.close("div");
+		} else if (bIsSelected || aEndContent.length) {
+			if (aEndContent.length) {
+				rm.openStart("div", this.getId() + "-endContent");
+				rm.class("sapUiMnuEndContent");
+				rm.openEnd();
+				aEndContent.forEach((oEndContent) => rm.renderControl(oEndContent));
+				rm.close("div");
+			}
+			if (bIsSelected){
+				// Selection column
+				rm.openStart("div", this.getId() + "-sel");
+				rm.class("sapUiMnuItmSel");
+				rm.openEnd();
+				rm.close("div");
+			}
+		}
 
-		rm.write("</li>");
+		rm.close("li");
 	};
 
 	MenuItem.prototype.hover = function(bHovered, oMenu){
 		this.$().toggleClass("sapUiMnuItmHov", bHovered);
 	};
 
+	MenuItem.prototype.focus = function(oMenu){
+		if (this.getVisible()) {
+			this.$().trigger("focus");
+		} else {
+			oMenu.focus();
+		}
+	};
+
+	MenuItem.prototype._getItemSelectionMode = function() {
+		var sGroup = this.getAssociation("_group");
+
+		return sGroup ? Element.getElementById(sGroup).getItemSelectionMode() : ItemSelectionMode.None;
+	};
+
+	/**
+	 * Sets the <code>selected</code> state of the <code>MenuItem</code> and deselect other selected <code>MenuItem</code> controls
+	 * if selection mode is <code>SingleSelect</code>.
+	 *
+	 * @since 1.127.0
+	 * @public
+	 * @override
+	 * @param {boolean} bState Whether the state is selected or not
+	 * @returns {this} Returns <code>this</code> to allow method chaining
+	 */
+	MenuItem.prototype.setSelected = function(bState) {
+		var oGroup = Element.getElementById(this.getAssociation("_group"));
+
+		// in case of single selection, clear selected state of all other items in the group to ensure that only one item is selected
+		if (bState && oGroup && oGroup.getItemSelectionMode() === ItemSelectionMode.SingleSelect) {
+			oGroup._clearSelectedItems();
+		}
+
+		this.setProperty("selected", bState);
+
+		return this;
+	};
+
+	/**
+	 * @since 1.127.0
+	 * @public
+	 * @override
+	 * @returns {boolean} Returns <code>true</code> if the <code>MenuItem</code> is selected and is part of group
+	 * with single or multi selection mode, <code>false</code> otherwise.
+	 */
+	MenuItem.prototype.getSelected = function() {
+		return this.getProperty("selected") && this._getItemSelectionMode() !== ItemSelectionMode.None;
+	};
+
 	return MenuItem;
 
-}, /* bExport= */ true);
+});

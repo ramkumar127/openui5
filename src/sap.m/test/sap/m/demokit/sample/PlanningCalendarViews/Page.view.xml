@@ -2,6 +2,7 @@
 	controllerName="sap.m.sample.PlanningCalendarViews.Page"
 	xmlns:mvc="sap.ui.core.mvc"
 	xmlns:unified="sap.ui.unified"
+	xmlns:core="sap.ui.core"
 	xmlns="sap.m">
 	<VBox class="sapUiSmallMargin">
 		<PlanningCalendar
@@ -9,10 +10,18 @@
 			startDate="{path: '/startDate'}"
 			viewKey="D"
 			rows="{path: '/people'}"
+			appointmentsVisualization="Filled"
 			appointmentSelect="handleAppointmentSelect"
-			intervalSelect="handleIntervalSelect">
+			intervalSelect="handleIntervalSelect"
+			showEmptyIntervalHeaders="false"
+			viewChange = "handleViewChange">
 			<toolbarContent>
 				<Title text="Title" titleStyle="H4"/>
+				<Label id="label" text="Select a date from the interval to mark/unmark it as a non-working day."/>
+				<Select id="select" tooltip="Group appointments mode" change="handleGroupModeChange">
+					<core:Item key="Collapsed" text="Collapsed"/>
+					<core:Item key="Expanded" text="Expanded"/>
+				</Select>
 			</toolbarContent>
 			<views>
 				<PlanningCalendarView
@@ -42,6 +51,14 @@
 					intervalsL="3"
 					showSubIntervals="true">
 				</PlanningCalendarView>
+				<PlanningCalendarView
+					key="nonWorking"
+					intervalType="Day"
+					description="days with non-working dates"
+					intervalsS="1"
+					intervalsM="5"
+					intervalsL="9">
+				</PlanningCalendarView>
 			</views>
 			<rows>
 				<PlanningCalendarRow
@@ -50,8 +67,8 @@
 					text="{role}"
 					nonWorkingDays="{freeDays}"
 					nonWorkingHours= "{freeHours}"
-					appointments="{appointments}"
-					intervalHeaders="{headers}">
+					appointments="{path : 'appointments', templateShareable: false}"
+					intervalHeaders="{path: 'headers', templateShareable: false}">
 					<appointments>
 						<unified:CalendarAppointment
 							startDate="{start}"
@@ -75,5 +92,18 @@
 				</PlanningCalendarRow>
 			</rows>
 		</PlanningCalendar>
+		<Label text="Add available built-in views to the example:"/>
+		<MultiComboBox
+				selectionFinish="handleSelectionFinish"
+				width="230px"
+				placeholder="Choose built-in views">
+			<core:Item key="Hour" text="Hour" />
+			<core:Item key="Day" text="Day" />
+			<core:Item key="Month" text="Month" />
+			<core:Item key="Week" text="1 week" />
+			<core:Item key="One Month" text="1 month" />
+		</MultiComboBox>
+		<Label text="Add or remove custom views:"/>
+		<ToggleButton text="Toggle custom views" press="onPress" />
 	</VBox>
 </mvc:View>

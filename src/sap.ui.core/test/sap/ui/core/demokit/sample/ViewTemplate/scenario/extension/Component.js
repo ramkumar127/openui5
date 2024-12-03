@@ -7,8 +7,8 @@
  * @version @version@
  */
 sap.ui.define([
-		'sap/ui/core/sample/ViewTemplate/scenario/Component'
-	], function (BaseComponent) {
+	"sap/ui/core/sample/ViewTemplate/scenario/Component"
+], function (BaseComponent) {
 	"use strict";
 
 	function fragment(sFileName) {
@@ -25,7 +25,7 @@ sap.ui.define([
 				metadata : {
 					config : {
 						sample : {
-							files : [ //TODO how can we override the list of files here?
+							files : [
 								"AnnotationPath.fragment.xml",
 								"Component.js",
 								"HeaderInfo.fragment.xml",

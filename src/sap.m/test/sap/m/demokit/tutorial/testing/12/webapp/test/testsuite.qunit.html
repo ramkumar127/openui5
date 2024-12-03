@@ -1,24 +1,14 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html>
 <head>
-	<title>QUnit TestSuite for Bulletin Board</title>
-	<script src="../../../../../../../../../resources/sap/ui/qunit/qunit-redirect.js"></script>
-	<script>
-
-		/**
-		 * Add test pages to this test suite function.
-		 *
-		 */
-		function suite() {
-			var oSuite = new parent.jsUnitTestSuite(),
-					sContextPath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf("/") + 1);
-
-			oSuite.addTestPage(sContextPath + "unit/unitTests.qunit.html");
-			oSuite.addTestPage(sContextPath + "integration/opaTests.qunit.html");
-
-			return oSuite;
-		}
-	</script>
+	<meta charset="utf-8">
+	<script
+		src="../../../../../../../../../resources/sap/ui/test/starter/createSuite.js"
+		data-sap-ui-testsuite="test-resources/sap/ui/demo/bulletinboard/testsuite.qunit"
+		data-sap-ui-resource-roots='{
+			"test-resources.sap.ui.demo.bulletinboard": "./"
+		}'
+	></script>
 </head>
 <body>
 </body>

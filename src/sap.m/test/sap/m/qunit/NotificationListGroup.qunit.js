@@ -1,392 +1,448 @@
-(function() {
-    'use strict';
-
-    jQuery.sap.require('sap.ui.qunit.qunit-css');
-    jQuery.sap.require('sap.ui.qunit.QUnitUtils');
-    jQuery.sap.require('sap.ui.thirdparty.qunit');
-    jQuery.sap.require('sap.ui.thirdparty.sinon');
-    jQuery.sap.require('sap.ui.thirdparty.sinon-qunit');
-    sinon.config.useFakeTimers = false;
-
-    if(!(sap.ui.Device.browser.internet_explorer && sap.ui.Device.browser.version <= 8)) {
-        jQuery.sap.require("sap.ui.qunit.qunit-coverage");
-    }
-
-    var classNameHeader = '.sapMNLG-Header';
-    var classNameDatetime = '.sapMNLI-Datetime';
-    var classNameFooterToolbar = '.sapMTB';
-    var classNameCloseButton = '.sapMNLB-CloseButton';
-
-    var RENDER_LOCATION = 'qunit-fixture';
-
-    //================================================================================
-    // Notification List Group API
-    //================================================================================
-    QUnit.module('API', {
-        setup: function() {
-            this.NotificationListGroup = new sap.m.NotificationListGroup();
-
-            this.NotificationListGroup.placeAt(RENDER_LOCATION);
-            sap.ui.getCore().applyChanges();
-        },
-        teardown: function() {
-            this.NotificationListGroup.destroy();
-        }
-    });
-
-    QUnit.test('Initialization', function(assert) {
-        // arrange
-        var id = this.NotificationListGroup.getId();
-        this.NotificationListGroup.setTitle('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque commodo consequat vulputate. Aliquam a mi imperdiet erat lobortis tempor.');
-        this.NotificationListGroup.setDatetime('3 hours');
-        for (var index = 0; index < 5; index++) {
-            this.NotificationListGroup.addAggregation('items', new sap.m.NotificationListItem({title: index}));
-        }
-
-        this.NotificationListGroup.addAggregation('buttons', new sap.m.Button({text : 'Accept', type: sap.m.ButtonType.Accept}));
-        this.NotificationListGroup.addAggregation('buttons', new sap.m.Button({text : 'Reject', type: sap.m.ButtonType.Reject}));
-
-        this.NotificationListGroup.getItems()[0].setPriority(sap.ui.core.Priority.High);
-        this.NotificationListGroup.getItems()[0].setUnread(true);
-        sap.ui.getCore().applyChanges();
-
-        // assert
-        assert.ok(this.NotificationListGroup, 'NotificationListItem should be rendered');
-
-        assert.strictEqual(this.NotificationListGroup.getDomRef('closeButton').hidden, false, 'Group Close Button should be rendered');
-        assert.strictEqual(this.NotificationListGroup.getDomRef('title').hidden, false, 'Title should be rendered');
-
-        assert.strictEqual(this.NotificationListGroup.getDomRef('datetime').innerHTML, '3 hours', 'DateTime should be rendered');
-
-        sap.ui.getCore().applyChanges();
-
-    });
-
-    QUnit.test('Default values', function(assert) {
-        // arrange
-        var notification = new sap.m.NotificationListItem({
-            priority: sap.ui.core.Priority.Medium,
-            unread: true
-        });
-
-        this.NotificationListGroup.addItem(notification);
-
-        sap.ui.getCore().applyChanges();
-
-        // assert
-        assert.strictEqual(this.NotificationListGroup.getTitle(), '', 'Title should be empty');
-        assert.strictEqual(this.NotificationListGroup.getDatetime(), '', 'The datetime property should be empty.');
-        assert.strictEqual(this.NotificationListGroup.getShowButtons(), true, 'Notification group should be set to show buttons by default');
-        assert.strictEqual(this.NotificationListGroup.getShowCloseButton(), true, 'Notification List Item should be set to show the close by default');
-        assert.strictEqual(this.NotificationListGroup.getAutoPriority(), true, 'The auto calculations should be turned on by default.');
-        assert.strictEqual(this.NotificationListGroup.getCollapsed(), false, 'The notification group should be expanded by default.');
-        assert.strictEqual(this.NotificationListGroup.getPriority(), sap.ui.core.Priority.Medium, 'The group should have high priority.');
-        assert.strictEqual(this.NotificationListGroup.getUnread(), true, 'The group should be unread.');
-
-        // act
-        this.NotificationListGroup.setAutoPriority(false);
-        this.NotificationListGroup.setPriority(sap.ui.core.Priority.None);
-
-        // assert
-        assert.strictEqual(this.NotificationListGroup.getPriority(), sap.ui.core.Priority.None, 'The group should have high priority.');
-    });
-
-    QUnit.test('Setting datetime', function(assert) {
-        // arrange
-        var threeHoursConst = '3 hours';
-        var fiveMinsConst = 'Five minutes';
-
-        // act
-        this.NotificationListGroup.setDatetime(threeHoursConst);
-        sap.ui.getCore().applyChanges();
-
-        // assert
-        assert.strictEqual(jQuery(classNameDatetime).text(), threeHoursConst, 'Datetime should be ' + threeHoursConst);
-
-        // act
-        this.NotificationListGroup.setDatetime(fiveMinsConst);
-        sap.ui.getCore().applyChanges();
-
-        // assert
-        assert.strictEqual(jQuery(classNameDatetime).text(), fiveMinsConst, 'Datetime should be ' + fiveMinsConst);
-    });
-
-    QUnit.test('Setting title', function(assert) {
-        // arrange
-        var title = 'Notification list item title';
-        // act
-        this.NotificationListGroup.setTitle(title);
-
-        // assert
-        assert.strictEqual(this.NotificationListGroup.getTitle(), title, 'The title should be set to ' + title);
-        assert.strictEqual(this.NotificationListGroup._getHeaderTitle().getText(), title, 'The description in the title aggregation should be set to ' + title);
-
-        // arrange
-        var newTitle = 'New Notification list item title';
-        // act
-        this.NotificationListGroup.setTitle(newTitle);
-
-        // assert
-        assert.strictEqual(this.NotificationListGroup.getTitle(), newTitle, 'The title should be set to ' + newTitle);
-        assert.strictEqual(this.NotificationListGroup._getHeaderTitle().getText(), newTitle, 'The title should be set to ' + newTitle);
-    });
-
-    QUnit.test('Cloning a NotificationListGroup', function(assert) {
-        // arrange
-        var firstButton = new sap.m.Button({text: 'First Button'});
-        var secondButton = new sap.m.Button({text: 'Second Button'});
-        var secondGroup;
-
-        // act
-        this.NotificationListGroup.addAggregation('buttons', firstButton);
-        this.NotificationListGroup.addAggregation('buttons', secondButton);
-
-        secondGroup = this.NotificationListGroup.clone();
-
-        // assert
-        assert.ok(
-            secondGroup.getAggregation('_overflowToolbar'),
-            'The cloned notification shoould have the hidden aggregations as well');
-    });
-
-    QUnit.test('Pressing the collapse button should expand a collapsed group', function(assert) {
-        // arrange
-        this.NotificationListGroup.setCollapsed(true);
-        var firstNotification = new sap.m.NotificationListItem({title: 'First Notification'});
-        var secondNotification = new sap.m.NotificationListItem({title: 'Second Notification'});
-        var fnEventSpy = sinon.spy(this.NotificationListGroup, 'setCollapsed');
-
-        this.NotificationListGroup.addItem(firstNotification);
-        this.NotificationListGroup.addItem(secondNotification);
-        sap.ui.getCore().applyChanges();
-
-        // act
-        this.NotificationListGroup._collapseButton.firePress();
-        sap.ui.getCore().applyChanges();
-
-        // assert
-        assert.strictEqual(fnEventSpy.callCount, 1, 'Pressing the button should trigger collapse/expand of the group.');
-        assert.strictEqual(this.NotificationListGroup.getCollapsed(), false, 'Pressing the button should expand the collapsed group.');
-    });
-
-    QUnit.test('Priority must be set to the highest if there are more than two notifications', function(assert) {
-        // arrange
-        this.NotificationListGroup.setAutoPriority(true);
-
-        // act
-        var firstNotification = new sap.m.NotificationListItem({priority: sap.ui.core.Priority.None});
-        var secondNotification = new sap.m.NotificationListItem({priority: sap.ui.core.Priority.Medium});
-        var thirdNotification = new sap.m.NotificationListItem({priority: sap.ui.core.Priority.Low});
-
-        this.NotificationListGroup.addItem(firstNotification);
-        this.NotificationListGroup.addItem(secondNotification);
-        this.NotificationListGroup.addItem(thirdNotification);
-        sap.ui.getCore().applyChanges();
-
-        // assert
-        assert.strictEqual(this.NotificationListGroup.getPriority(), sap.ui.core.Priority.Medium, 'The priority should be set to "Medium".');
-    });
-
-    QUnit.test('Priority must be set accordingly', function(assert) {
-        // arrange
-        this.NotificationListGroup.setAutoPriority(true);
-
-        // act
-        var firstNotification = new sap.m.NotificationListItem({priority: sap.ui.core.Priority.None});
-        var secondNotification = new sap.m.NotificationListItem({priority: sap.ui.core.Priority.Low});
-
-        this.NotificationListGroup.addItem(firstNotification);
-        this.NotificationListGroup.addItem(secondNotification);
-        sap.ui.getCore().applyChanges();
-
-        // assert
-        assert.strictEqual(this.NotificationListGroup.getPriority(), sap.ui.core.Priority.Low, 'The priority should be set to "Low".');
-
-        // act
-        firstNotification.setPriority(sap.ui.core.Priority.Low);
-        secondNotification.setPriority(sap.ui.core.Priority.Medium);
-
-        // assert
-        assert.strictEqual(this.NotificationListGroup.getPriority(), sap.ui.core.Priority.Medium, 'The priority should be set to "Medium".');
-
-        // act
-        firstNotification.setPriority(sap.ui.core.Priority.Medium);
-        secondNotification.setPriority(sap.ui.core.Priority.High);
-
-        // assert
-        assert.strictEqual(this.NotificationListGroup.getPriority(), sap.ui.core.Priority.High, 'The priority should be set to "High".');
-
-        // act
-        firstNotification.setPriority(sap.ui.core.Priority.None);
-        secondNotification.setPriority(sap.ui.core.Priority.None);
-
-        // assert
-        assert.strictEqual(this.NotificationListGroup.getPriority(), sap.ui.core.Priority.None, 'The priority should be set to "None".');
-    });
-
-    //================================================================================
-    // Notification List Group rendering methods
-    //================================================================================
-
-    QUnit.module('Rendering', {
-        setup: function() {
-            this.NotificationListGroup = new sap.m.NotificationListGroup();
-
-            this.NotificationListGroup.placeAt(RENDER_LOCATION);
-            sap.ui.getCore().applyChanges();
-        },
-        teardown: function() {
-            this.NotificationListGroup.destroy();
-        }
-    });
-
-    QUnit.test('Control has basic class for the keyboard navigation', function(assert) {
-        // assert
-        assert.strictEqual(this.NotificationListGroup.$().hasClass('sapMLIB'), true, 'The notification list has has the base class of ListItemBase');
-    });
-
-    QUnit.test('Render action buttons', function(assert) {
-        // arrange
-        var that = this;
-        var buttonsInFooter = 2;
-
-        this.NotificationListGroup.addAggregation('buttons',
-            new sap.m.Button({
-                text: 'Accept',
-                tap: function () {
-                    new sap.m.MessageToast('Accept button pressed');
-                }
-            })
-        );
-        this.NotificationListGroup.addAggregation('buttons',
-            new sap.m.Button({
-                text: 'Cancel',
-                tap: function () {
-                    that.NotificationListGroup.close();
-                }
-            })
-        );
-        sap.ui.getCore().applyChanges();
-
-
-        // assert
-        assert.strictEqual(jQuery(classNameFooterToolbar).children('button').length, buttonsInFooter, 'Buttons should be rendered');
-    });
-
-    QUnit.test('Changing the title', function(assert) {
-        // arrange
-        var title = 'Notification list group title';
-        var fnSpy = sinon.spy(this.NotificationListGroup, 'invalidate');
-
-        // act
-        this.NotificationListGroup.setTitle(title);
-        sap.ui.getCore().applyChanges();
-
-        // assert
-        assert.strictEqual(fnSpy.callCount, 0, 'Changing the title should not invalidate the control');
-        assert.strictEqual(this.NotificationListGroup.getDomRef('title').textContent, title, 'The description in the title aggregation should be set to ' + title);
-    });
-
-    QUnit.test('Changing the datetime', function(assert) {
-        // arrange
-        var datetime = '2 hours';
-        var fnSpy = sinon.spy(this.NotificationListGroup, 'invalidate');
-
-        // act
-        this.NotificationListGroup.setDatetime(datetime);
-        sap.ui.getCore().applyChanges();
-
-        // assert
-        assert.strictEqual(fnSpy.callCount, 0, 'Changing the datetime should not invalidate the control');
-        assert.strictEqual(jQuery(classNameDatetime).text(), datetime, 'The datetime in the title aggregation should be set to ' + datetime);
-    });
-
-    QUnit.test('Collapsing and expanding the group', function(assert) {
-        // arrange
-        var groupBody;
-        var firstNotification = new sap.m.NotificationListItem({title: 'First Notification'});
-        var secondNotification = new sap.m.NotificationListItem({title: 'Second Notification'});
-
-        this.NotificationListGroup.addItem(firstNotification);
-        this.NotificationListGroup.addItem(secondNotification);
-
-        // act
-        this.NotificationListGroup.setCollapsed(true);
-        sap.ui.getCore().applyChanges();
-        groupBody = this.NotificationListGroup.getDomRef().querySelector('.sapMNLG-Body');
-
-        // assert
-        assert.strictEqual(groupBody.offsetHeight, 0, 'When collapsed the body must be hidden.');
-
-        // act
-        this.NotificationListGroup.setCollapsed(false);
-        sap.ui.getCore().applyChanges();
-        groupBody = this.NotificationListGroup.getDomRef().querySelector('.sapMNLG-Body');
-
-        // assert
-        assert.notEqual(groupBody.offsetHeight, 0, 'When expanded the body must be shown.');
-    });
-
-    //================================================================================
-    // Notification List Group events
-    //================================================================================
-
-    QUnit.module('Events', {
-        setup: function() {
-            this.NotificationListGroup = new sap.m.NotificationListGroup();
-
-            this.NotificationListGroup.placeAt(RENDER_LOCATION);
-            sap.ui.getCore().applyChanges();
-        },
-        teardown: function() {
-            this.NotificationListGroup.destroy();
-        }
-    });
-
-    QUnit.test('Closing the Notification Group from itself', function(assert) {
-        // arrange
-        var fnEventSpy = sinon.spy(this.NotificationListGroup, 'fireClose');
-
-        // act
-        this.NotificationListGroup.close();
-
-        // assert
-        assert.strictEqual(fnEventSpy.callCount, 1, 'Firing the event should call the close function');
-        assert.equal(this.NotificationListGroup.getDomRef(), null, 'Notification List Group should be destroyed');
-    });
-
-    QUnit.test('Pressing the close button', function(assert) {
-        // arrange
-        var fnEventSpy = sinon.spy(this.NotificationListGroup, 'fireClose');
-
-        // act
-        this.NotificationListGroup._closeButton.firePress();
-
-        // assert
-        assert.strictEqual(fnEventSpy.callCount, 1, 'Pressing the close button should fire the  close event');
-    });
-
-    QUnit.test('Pressing an action button to close the notification list group', function(assert) {
-        // arrange
-        var fnCloseSpy = sinon.spy(this.NotificationListGroup, 'close');
-        var fnFireCloseSpy = sinon.spy(this.NotificationListGroup, 'fireClose');
-
-        var that = this;
-        this.NotificationListGroup.addAggregation('buttons',
-            new sap.m.Button('closeButton',{
-                text: 'Cancel',
-                tap: function () {
-                    that.NotificationListGroup.close();
-                }
-            })
-        );
-        sap.ui.getCore().applyChanges();
-
-        // act
-        sap.ui.getCore().byId('closeButton').fireTap();
-
-        // assert
-        assert.strictEqual(fnCloseSpy.callCount, 1, 'close() should be triggered');
-        assert.strictEqual(fnFireCloseSpy.callCount, 1, 'fireClose() should be triggered');
-    });
-})();
+/*global QUnit, sinon */
+
+sap.ui.define([
+	"sap/ui/qunit/QUnitUtils",
+	"sap/m/ScrollContainer",
+	"sap/m/NotificationList",
+	"sap/m/NotificationListGroup",
+	"sap/m/NotificationListItem",
+	"sap/m/Button",
+	"sap/ui/core/Lib",
+	"sap/ui/events/KeyCodes",
+	"sap/ui/core/Core",
+	"sap/ui/core/Element",
+	"sap/ui/core/library",
+	"sap/m/library"
+], function(
+	QUnitUtils,
+	ScrollContainer,
+	NotificationList,
+	NotificationListGroup,
+	NotificationListItem,
+	Button,
+	Library,
+	KeyCodes,
+	Core,
+	Element,
+	coreLibrary,
+	mLibrary
+) {
+	'use strict';
+
+	var RENDER_LOCATION = 'qunit-fixture';
+	var Priority = coreLibrary.Priority;
+
+	// shortcut for sap.m.OverflowToolbarPriority
+	var OverflowToolbarPriority = mLibrary.OverflowToolbarPriority;
+
+	var  oResourceBundleM = Library.getResourceBundleFor("sap.m");
+
+	function createNotificationListGroup() {
+		return new NotificationListGroup({
+			unread : true,
+			autoPriority: false,
+			title: 'Notification List Group Title',
+			showCloseButton : true,
+			showButtons: true,
+
+			buttons: [
+				new Button({
+					text: 'Accept'
+				}),
+				new Button({
+					text: 'Cancel'
+				})
+			],
+
+			items: [
+				new NotificationListItem({
+					title: 'Item 1',
+					description: 'Item 1 Description',
+					buttons: [new Button({ text: "Button" }), new Button({ text: "Button" }), new Button({ text: "Button" })]
+				}),
+				new NotificationListItem({
+					title: 'Item 2',
+					description: 'Item 2 Description'
+				})
+			]
+		});
+	}
+
+	QUnit.module('Rendering', {
+		beforeEach: function() {
+			this.notificationListGroup = createNotificationListGroup();
+
+			this.notificationListGroup.placeAt(RENDER_LOCATION);
+			Core.applyChanges();
+		},
+		afterEach: function() {
+			this.notificationListGroup.destroy();
+		}
+	});
+
+	QUnit.test('initial rendering', function(assert) {
+		var $item = this.notificationListGroup.$();
+
+		assert.ok(this.notificationListGroup.getDomRef(), 'Group is rendered');
+
+		assert.ok($item.hasClass('sapMNLGroupUnread'), 'unread class is set');
+		assert.strictEqual($item.find('.sapMNLGroupTitle').text(), 'Notification List Group Title (2)', 'title is rendered');
+		assert.strictEqual($item.find('.sapMNLGroupCollapseButton button').attr('title'), oResourceBundleM.getText("NOTIFICATION_LIST_GROUP_COLLAPSE"), 'collapse button is rendered');
+		assert.strictEqual($item.find('.sapMNLIItem.sapMNLICloseBtn button').attr('title'), oResourceBundleM.getText("NOTIFICATION_LIST_GROUP_CLOSE"), 'close button is rendered');
+		assert.ok(this.notificationListGroup.$('overflowToolbar'), 'overflow toolbar is rendered');
+
+		assert.strictEqual($item.find('.sapMNLGroupChildren li').length, 2, 'group has 2 items');
+
+		assert.strictEqual($item.attr('role'), 'listitem', 'acc role is correct');
+		assert.strictEqual($item.find("ul").attr('role'), 'list', 'acc group role is correct');
+	});
+
+	QUnit.test('priority', function(assert) {
+		this.notificationListGroup.setPriority(Priority.High);
+		Core.applyChanges();
+
+		var $item = this.notificationListGroup.$();
+		assert.ok($item.find('.sapMNLIBPriorityHigh span'), 'priority High is rendered');
+
+		this.notificationListGroup.setPriority(Priority.Medium);
+		Core.applyChanges();
+
+		$item = this.notificationListGroup.$();
+		assert.ok($item.find('.sapMNLIBPriorityMedium span'), 'priority Medium is rendered');
+
+		this.notificationListGroup.setPriority(Priority.Low);
+		Core.applyChanges();
+
+		$item = this.notificationListGroup.$();
+		assert.ok($item.find('.sapMNLIBPriorityLow span'), 'priority Low is rendered');
+	});
+
+	QUnit.test('auto priority', function(assert) {
+		this.notificationListGroup.setAutoPriority(true);
+		Core.applyChanges();
+
+		var $item = this.notificationListGroup.$();
+		assert.strictEqual($item.find('.sapMNLIBPriority').length, 0, 'priority is not rendered');
+	});
+
+	QUnit.module('Interaction', {
+		beforeEach: function() {
+			this.notificationListGroup = createNotificationListGroup();
+
+			this.notificationListGroup.placeAt(RENDER_LOCATION);
+			Core.applyChanges();
+		},
+		afterEach: function() {
+			this.notificationListGroup.destroy();
+		}
+	});
+
+	QUnit.test('collapse/expand', function(assert) {
+
+		var fnSpy = sinon.spy(this.notificationListGroup, 'fireOnCollapse'),
+			$item = this.notificationListGroup.$(),
+			collapseButton = Element.closestTo($item.find('.sapMNLGroupCollapseButton button')[0]);
+
+		collapseButton.firePress();
+		Core.applyChanges();
+
+		assert.strictEqual(fnSpy.callCount, 1, 'onCollapse should be called.');
+		assert.strictEqual(collapseButton.getTooltip(), oResourceBundleM.getText("NOTIFICATION_LIST_GROUP_EXPAND"), 'collapse button tooltip is correct');
+
+		$item = this.notificationListGroup.$();
+		assert.ok($item.hasClass('sapMNLGroupCollapsed'), 'sapMNLGroupCollapsed class is set');
+
+		collapseButton.firePress();
+		Core.applyChanges();
+
+		assert.strictEqual(fnSpy.callCount, 2, 'onCollapse should be called.');
+		assert.strictEqual(collapseButton.getTooltip(), oResourceBundleM.getText("NOTIFICATION_LIST_GROUP_COLLAPSE"), 'collapse button tooltip is correct');
+
+		$item = this.notificationListGroup.$();
+		assert.notOk($item.hasClass('sapMNLGroupCollapsed'), 'sapMNLGroupCollapsed class is not set');
+	});
+
+	QUnit.test("collapse button retains focus when pressed after a child notification item's overflow menu closes", function (assert) {
+		var done = assert.async(),
+			$NLG = this.notificationListGroup.$(),
+			oNLGCollapseButton = Element.closestTo($NLG.find('.sapMNLGroupCollapseButton button')[0]),
+			oNLIOverflowToolbar = this.notificationListGroup.getItems()[0]._getOverflowToolbar(),
+			oNLIOverflowToolbarButton = oNLIOverflowToolbar._getOverflowButton();
+
+		// arrange
+		oNLIOverflowToolbarButton.$().tap();
+		Core.applyChanges();
+		assert.strictEqual(oNLIOverflowToolbar._getPopover().isOpen(), true, "Notification's OverflowToolbar's Popover is open");
+
+		// act
+		oNLGCollapseButton.$().tap();
+		Core.applyChanges();
+
+		setTimeout(function () {
+			assert.ok($NLG.hasClass('sapMNLGroupCollapsed'), 'sapMNLGroupCollapsed class is set');
+			assert.strictEqual(document.activeElement.id, oNLGCollapseButton.getId(), "collapse button is focused after being pressed");
+			done();
+		}, 200);
+	});
+
+	QUnit.test('close button', function(assert) {
+
+		var fnSpy = sinon.spy(this.notificationListGroup, 'fireClose'),
+			$item = this.notificationListGroup.$(),
+			closeButton = Element.closestTo($item.find('.sapMNLIItem.sapMNLICloseBtn button')[0]);
+
+		closeButton.firePress();
+
+		assert.strictEqual(fnSpy.callCount, 1, 'fireClose() should be called.');
+	});
+
+	QUnit.module('Accessibility', {
+		beforeEach: function() {
+			this.notificationListGroup = createNotificationListGroup();
+
+			this.notificationListGroup.placeAt(RENDER_LOCATION);
+			Core.applyChanges();
+		},
+		afterEach: function() {
+			this.notificationListGroup.destroy();
+		}
+	});
+
+	QUnit.test('ARIA - Accessibility Text', function (assert) {
+		var ariallabledBy = this.notificationListGroup.$().attr('aria-labelledby');
+		assert.ok(ariallabledBy.indexOf('-groupTitle') > 0, "title is labeled to notification group");
+		assert.ok(ariallabledBy.indexOf('-invisibleGroupTitleText') > 0, "invisibleText is labeled to notification group");
+
+		var sInvisibleACCTextRendered = this.notificationListGroup.getDomRef().getElementsByClassName("sapUiInvisibleText")[3].innerText;
+		var sInvisibleACCText = oResourceBundleM.getText("NOTIFICATION_LIST_GROUP_UNREAD") + " "  + oResourceBundleM.getText("LIST_ITEM_COUNTER", [this.notificationListGroup._getVisibleItemsCount()]);
+		assert.strictEqual(sInvisibleACCTextRendered, sInvisibleACCText, "ACC text is the correct one");
+		// ACC  text result: "Notification group unread. Counter 2"
+
+		this.notificationListGroup.setPriority("High");
+		Core.applyChanges();
+		sInvisibleACCTextRendered = this.notificationListGroup.getDomRef().getElementsByClassName("sapUiInvisibleText")[3].innerText;
+		sInvisibleACCText = oResourceBundleM.getText("NOTIFICATION_LIST_GROUP_UNREAD") + " "  + oResourceBundleM.getText("NOTIFICATION_LIST_GROUP_PRIORITY", [this.notificationListGroup.getPriority()]) + " " + oResourceBundleM.getText("LIST_ITEM_COUNTER", [this.notificationListGroup._getVisibleItemsCount()]);
+		assert.strictEqual(sInvisibleACCTextRendered, sInvisibleACCText, "ACC text is the correct one when we set priority");
+		// ACC  text result: "Notification group unread. High Priority. Counter 2"
+	});
+
+	QUnit.module('Action and close buttons - M size', {
+		beforeEach: function() {
+			this.notificationListGroup = createNotificationListGroup();
+			this.notificationListGroup.placeAt(RENDER_LOCATION);
+			Core.applyChanges();
+		},
+		afterEach: function() {
+			this.notificationListGroup.destroy();
+		}
+	});
+
+	QUnit.test('action buttons', function(assert) {
+		var $notificationListGroup = this.notificationListGroup.$();
+		var buttons = this.notificationListGroup.getButtons();
+
+		assert.notEqual($notificationListGroup.find('.sapMNLIItem.sapMNLIActions')[0].style.display, 'none', "overflow toolbar is visible");
+		assert.strictEqual(buttons[0].getLayoutData().getPriority(), OverflowToolbarPriority.AlwaysOverflow, 'button overflow priority is ok');
+		assert.strictEqual(buttons[0].getLayoutData().getPriority(), OverflowToolbarPriority.AlwaysOverflow, 'button overflow priority is ok');
+
+		this.notificationListGroup.setCollapsed(true);
+		Core.applyChanges();
+
+		assert.ok($notificationListGroup.find('.sapMNLIItem.sapMNLIActions')[0].classList.contains("sapMNLIActionsHidden"), "overflow toolbar is hideen");
+	});
+
+	QUnit.test('Close button destruction', function(assert) {
+		var notificationListGroup = createNotificationListGroup();
+		notificationListGroup.placeAt(RENDER_LOCATION);
+		Core.applyChanges();
+		var closeButton = notificationListGroup._getCloseButton();
+		var closeButtonId = closeButton.sId;
+
+		notificationListGroup.destroy();
+		assert.strictEqual(Element.getElementById(closeButtonId), undefined, "close button is destroyed");
+	});
+
+	QUnit.module('Action and close buttons - S Size', {
+		beforeEach: function() {
+			this.notificationListGroup = createNotificationListGroup();
+			this.scrollContainer = new ScrollContainer({
+				width: "500px",
+				vertical: false,
+				content: this.notificationListGroup
+			});
+
+			this.scrollContainer.placeAt(RENDER_LOCATION);
+			Core.applyChanges();
+		},
+		afterEach: function() {
+			this.scrollContainer.destroy();
+		}
+	});
+
+	QUnit.test('action and close buttons', function(assert) {
+		var buttons = this.notificationListGroup.getButtons(),
+			closeButton = this.notificationListGroup._getCloseButton(),
+			toolbarSeparator = this.notificationListGroup._getToolbarSeparator();
+
+		assert.strictEqual(buttons[0].getLayoutData().getPriority(), OverflowToolbarPriority.AlwaysOverflow, 'button overflow priority is ok');
+		assert.strictEqual(buttons[1].getLayoutData().getPriority(), OverflowToolbarPriority.AlwaysOverflow, 'button overflow priority is ok');
+
+		assert.notOk(buttons[0].hasStyleClass('sapMNLIBHiddenButton'), 'button is visible');
+		assert.notOk(buttons[1].hasStyleClass('sapMNLIBHiddenButton'), 'button is visible');
+
+		assert.strictEqual(closeButton.getLayoutData().getPriority(), OverflowToolbarPriority.AlwaysOverflow, 'close button overflow priority is ok');
+		assert.ok(toolbarSeparator.getVisible(), 'toolbar separator is visible');
+
+		this.notificationListGroup.setCollapsed(true);
+		Core.applyChanges();
+
+		assert.strictEqual(buttons[0].getLayoutData().getPriority(), OverflowToolbarPriority.NeverOverflow, 'button overflow priority is ok');
+		assert.strictEqual(buttons[1].getLayoutData().getPriority(), OverflowToolbarPriority.NeverOverflow, 'button overflow priority is ok');
+
+		assert.ok(buttons[0].hasStyleClass('sapMNLIBHiddenButton'), 'button is hidden');
+		assert.ok(buttons[1].hasStyleClass('sapMNLIBHiddenButton'), 'button is hidden');
+
+		closeButton = this.notificationListGroup._getCloseButton();
+		toolbarSeparator = this.notificationListGroup._getToolbarSeparator();
+
+		assert.strictEqual(closeButton.getLayoutData().getPriority(), OverflowToolbarPriority.NeverOverflow, 'close button overflow priority is ok');
+		assert.notOk(toolbarSeparator.getVisible(), 'toolbar separator is not visible');
+	});
+
+	QUnit.module('Keyboard Navigation', {
+		beforeEach: function() {
+			this.notificationList = new NotificationList({
+				items: [
+					new NotificationListGroup({
+						title: 'Notification List Group Title',
+						items: [
+							new NotificationListItem({
+								title: 'Item 1',
+								description: 'Item 1 Description'
+							}),
+							new NotificationListItem({
+								title: 'Item 2',
+								description: 'Item 2 Description'
+							})
+						]
+					}),
+					new NotificationListGroup({
+						collapsed: true,
+						title: 'Notification List Group Title',
+						items: [
+							new NotificationListItem({
+								title: 'Item 1',
+								description: 'Item 1 Description'
+							}),
+							new NotificationListItem({
+								title: 'Item 2',
+								description: 'Item 2 Description'
+							})
+						]
+					}),
+					new NotificationListGroup({
+						title: 'Notification List Group Title',
+						items: [
+							new NotificationListItem({
+								title: 'Item 1',
+								description: 'Item 1 Description'
+							}),
+							new NotificationListItem({
+								title: 'Item 2',
+								description: 'Item 2 Description'
+							})
+						]
+					}),
+					new NotificationListGroup({
+						title: 'Notification List Group Title',
+						items: [
+							new NotificationListItem({
+								title: 'Item 1',
+								description: 'Item 1 Description'
+							}),
+							new NotificationListItem({
+								title: 'Item 2',
+								description: 'Item 2 Description'
+							})
+						]
+					})
+				]
+			});
+
+			this.notificationList.placeAt(RENDER_LOCATION);
+			Core.applyChanges();
+		},
+		afterEach: function() {
+			this.notificationList.destroy();
+		}
+	});
+
+	QUnit.test('items navigation', function(assert) {
+		var groupItems = this.notificationList.getItems();
+
+		groupItems[0].focus();
+		assert.strictEqual(groupItems[0].getDomRef(), document.activeElement, 'first item is focused');
+
+		groupItems[0].onkeydown({
+			target: groupItems[0].getDomRef(),
+			which: KeyCodes.ARROW_DOWN,
+			stopPropagation: function () {
+			},
+			preventDefault: function () {
+			}
+		});
+		assert.strictEqual(groupItems[0].getItems()[0].getDomRef(), document.activeElement, 'second item is focused');
+
+		groupItems[0].getItems()[0].onkeydown({
+			target: groupItems[0].getItems()[0].getDomRef(),
+			which: KeyCodes.ARROW_UP,
+			stopPropagation: function () {
+			},
+			preventDefault: function () {
+			}
+		});
+		assert.strictEqual(groupItems[0].getDomRef(), document.activeElement, 'first item is focused');
+	});
+
+	QUnit.test('F2 navigation', function(assert) {
+		var groupItem1 = this.notificationList.getItems()[0];
+
+		groupItem1.focus();
+		assert.strictEqual(groupItem1.getDomRef(), document.activeElement, 'first item is focused');
+
+		QUnitUtils.triggerEvent("keydown", document.activeElement, {code: "F2"});
+
+		assert.strictEqual(groupItem1._getCollapseButton().getDomRef(), document.activeElement, 'collapse button is focused');
+
+		QUnitUtils.triggerEvent("keydown", document.activeElement, {code: "F2"});
+
+		assert.strictEqual(groupItem1.getDomRef(), document.activeElement, 'first item is focused');
+	});
+
+	QUnit.test('navigation between "collapse" buttons', function(assert) {
+		var groupItems = this.notificationList.getItems();
+
+		groupItems[1].focus();
+		groupItems[1]._getCollapseButton().focus();
+
+		groupItems[1].onkeydown({
+			target: groupItems[1]._getCollapseButton().getDomRef(),
+			which: KeyCodes.ARROW_DOWN,
+			stopPropagation: function () {
+			},
+			preventDefault: function () {
+			}
+		});
+		assert.strictEqual(groupItems[2]._getCollapseButton().getDomRef(), document.activeElement, '"collapse" button is focused');
+
+		groupItems[2].onkeydown({
+			target: groupItems[2]._getCollapseButton().getDomRef(),
+			which: KeyCodes.ARROW_DOWN,
+			stopPropagation: function () {
+			},
+			preventDefault: function () {
+			}
+		});
+		assert.strictEqual(groupItems[2].getItems()[0].getDomRef(), document.activeElement, 'inner navigation item is focused');
+	});
+});

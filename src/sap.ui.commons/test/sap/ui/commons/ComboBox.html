@@ -1,21 +1,20 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
 		<title>ComboBox - sap.ui.commons</title>
 		<link rel="shortcut icon" type="image/x-icon" href="images/controls/sap.ui.commons.ComboBox.gif">
 
+		<script src="shared-config.js"></script>
 		<script id="sap-ui-bootstrap"
-			data-sap-ui-theme="sap_goldreflection"
+			data-sap-ui-theme="sap_bluecrystal"
 			data-sap-ui-trace="false"
-			type="text/javascript"
 			data-sap-ui-libs="sap.ui.commons"
 			src="../../../../resources/sap-ui-core.js"
 			>
 		</script>
 
-		<script type="text/javascript">
+		<script>
 			var bACCOn = sap.ui.getCore().getConfiguration().getAccessibility();
 			if(bACCOn){
 				document.title += " - Accessibility-Mode ON";
@@ -183,10 +182,6 @@
 				imageSrc: "images/ui5_small.png",
 				text: "This is a ComboBox with no ListBox assigned from the outside."
 			}));
-//			oCombo5.attachChange(function(oEvent){
-//				var oItem = oEvent.getParameter("selectedItem");
-//				debugger;
-//			});
 			populateComboWithEntries(oCombo5, 2, ["x","y","z"]);
 			oCombo5.setValue("xy");
 			oCombo5.placeAt("target5");

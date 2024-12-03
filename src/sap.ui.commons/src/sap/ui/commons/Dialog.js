@@ -3,9 +3,37 @@
  */
 
 // Provides control sap.ui.commons.Dialog.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/core/Popup', 'sap/ui/core/RenderManager'],
-	function (jQuery, library, Control, Popup, RenderManager) {
+sap.ui.define([
+    'sap/ui/thirdparty/jquery',
+    'sap/base/Log',
+    'sap/ui/dom/containsOrEquals',
+    './library',
+    'sap/ui/core/Control',
+    'sap/ui/core/Popup',
+    'sap/ui/core/RenderManager',
+    './DialogRenderer',
+    'sap/ui/core/library',
+    'sap/ui/core/ResizeHandler',
+    "sap/ui/core/Configuration",
+    // jQuery Plugin "rect"
+    "sap/ui/dom/jquery/rect",
+    // jQuery.fn.control
+    'sap/ui/dom/jquery/control',
+    // sapTabbable
+    'sap/ui/dom/jquery/Selectors'
+],
+	function(jQuery, Log, containsOrEquals, library, Control, Popup, RenderManager, DialogRenderer, coreLibrary, ResizeHandler, Configuration) {
 		"use strict";
+
+
+		// shortcut for sap.ui.core.OpenState
+		var OpenState = coreLibrary.OpenState;
+
+		// shortcut for sap.ui.core.AccessibleRole
+		var AccessibleRole = coreLibrary.AccessibleRole;
+
+		// shortcut for sap.ui.commons.enums.BorderDesign
+		var BorderDesign = library.enums.BorderDesign;
 
 
 		/**
@@ -25,8 +53,8 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		 *
 		 * @constructor
 		 * @public
+		 * @deprecated Since version 1.38. Instead, use the <code>sap.m.Dialog</code> control.
 		 * @alias sap.ui.commons.Dialog
-		 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 		 */
 		var Dialog = Control.extend("sap.ui.commons.Dialog", /** @lends sap.ui.commons.Dialog.prototype */ {
 			metadata: {
@@ -35,6 +63,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 					"sap.ui.core.PopupInterface"
 				],
 				library: "sap.ui.commons",
+				deprecated: true,
 				properties: {
 
 					/**
@@ -151,7 +180,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 					contentBorderDesign: {
 						type: "sap.ui.commons.enums.BorderDesign",
 						group: "Appearance",
-						defaultValue: sap.ui.commons.enums.BorderDesign.None
+						defaultValue: BorderDesign.None
 					},
 
 					/**
@@ -169,7 +198,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 					accessibleRole: {
 						type: "sap.ui.core.AccessibleRole",
 						group: "Accessibility",
-						defaultValue: sap.ui.core.AccessibleRole.Dialog
+						defaultValue: AccessibleRole.Dialog
 					},
 
 					/**
@@ -284,8 +313,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		Dialog.prototype.init = function () {
 
 			this.oPopup = new Popup(this, true, true);
-			var eDock = Popup.Dock;
-			this.oPopup.setPosition(eDock.CenterCenter, eDock.CenterCenter, window);
 
 			// the technical minWidth, not the one set via API; will be calculated after rendering
 			this._minWidth = 64;
@@ -298,6 +325,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			this._mParameters.that = this;
 			this._mParameters.firstFocusable = this.getId() + "-fhfe";
 			this._mParameters.lastFocusable = this.getId() + "-fhee";
+			this._fnOnResizeRecenter = jQuery.proxy(this._onResize, this);
 		};
 
 		Dialog.prototype.setInitialFocus = function (sId) {
@@ -306,6 +334,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			}
 			this.oPopup.setInitialFocusId(sId);
 			this.setAssociation("initialFocus", sId, /* suppress invalidate */ true);
+			return this;
 		};
 
 		/**
@@ -316,9 +345,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		Dialog.prototype.onAfterRendering = function () {
 
 			var $content = this.$("cont");
-			var bIsIE9Or10 = !!sap.ui.Device.browser.internet_explorer &&
-				(sap.ui.Device.browser.version == 9 || sap.ui.Device.browser.version == 10);
-			var bIsRTLOn = sap.ui.getCore().getConfiguration().getRTL();
 
 			var _minSize = this.getMinSize();
 			this._minWidth = _minSize.width;
@@ -327,7 +353,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			// if content has 100% width, but Dialog has no width, set content width to auto
 			if (!this._isSizeSet(this.getWidth()) && !this._isSizeSet(this.getMaxWidth())) {
 				$content.children().each(function (index, element) {
-					if (jQuery.trim(this.style.width) == "100%") {
+					if (this.style.width.trim() == "100%") {
 						this.style.width = "auto";
 					}
 				});
@@ -351,40 +377,19 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 					this.$().removeClass("sapUiDlgFlexHeight");
 				} // else normal case: Dialog content pushes its height to or beyond its minimum height - this works fine with "sapUiDlgFlexHeight"
 			}
-
-			// IE9+10 fix where subpixel font rendering may lead to rounding errors in RTL mode when the content has a width of "xyz.5px"
-			if (bIsIE9Or10 && $content.length > 0 && bIsRTLOn && !this._isSizeSet(this.getWidth())) {
-				var element = $content[0];
-				var hasGetComputedStyle = element.ownerDocument &&
-					element.ownerDocument.defaultView &&
-					element.ownerDocument.defaultView.getComputedStyle;
-
-				if (!hasGetComputedStyle) {
-					return;
-				}
-
-				var width = element.ownerDocument.defaultView.getComputedStyle(element).getPropertyValue("width");
-				if (width) {
-					var fWidth = parseFloat(width, 10);
-					if (fWidth % 1 == 0.5) {
-						// if all these conditions are fulfilled, the Dialog must be a LITTLE bit wider to avoid rounding errors
-						element.style.width = (fWidth + 0.01) + "px";
-					}
-				}
-			}
 		};
 
 		/**
 		 * Handle the click event happening on the dialog instance.
 		 *
-		 * @param {jQuery.EventObject} oEvent The event object
+		 * @param {jQuery.Event} oEvent The event object
 		 * @private
 		 */
 		Dialog.prototype.onclick = function (oEvent) {
 			var sCloseBtnId = this.getId() + "-close";
 			if (oEvent.target.id === sCloseBtnId) {
 				this.close();
-				oEvent.preventDefault(); // avoid onbeforeunload event which happens at least in IE9 because of the javascript:void(0); link target
+				oEvent.preventDefault(); // avoid changing the URL fragment which happens because of the "#" link target on the close button
 			}
 			return false;
 		};
@@ -392,22 +397,24 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		/**
 		 * Opens the dialog control instance.
 		 *
-		 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 		 * @public
 		 */
 		Dialog.prototype.open = function () {
 			if (!this.oPopup) {
-				jQuery.sap.log.fatal("This dialog instance has been destroyed already");
+				Log.fatal("This dialog instance has been destroyed already");
 			} else if (!this._bOpen) {
 				// Save current focused element to restore the focus after closing the dialog
 				this._oPreviousFocus = Popup.getCurrentFocusInfo();
 
 				this.oPopup.attachEvent("opened", this.handleOpened, this);
 				this.oPopup.attachEvent("closed", this.handleClosed, this);
+
 				this.oPopup.setModal(this.getModal());
 				this.oPopup.setAutoClose(this.getAutoClose());
 				this.oPopup.open(400);
+				this._onResize();
 				this._bOpen = true;
+				this._registerContentResizeHandler();
 			}
 		};
 
@@ -450,8 +457,10 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			} else {
 				// if there is something in the content but isn't tabbable then
 				// use the first fake element to focus
-				var oFakeDomRef = jQuery.sap.domById(this._mParameters.firstFocusable);
-				jQuery.sap.focus(oFakeDomRef);
+				var oFakeDomRef = document.getElementById(this._mParameters.firstFocusable);
+				if ( oFakeDomRef ) {
+					oFakeDomRef.focus();
+				}
 			}
 		};
 
@@ -468,7 +477,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		/**
 		 * Closes the dialog control instance.
 		 *
-		 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 		 * @public
 		 */
 		Dialog.prototype.close = function () {
@@ -477,6 +485,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 				return;
 			}
 
+			// jQuery Plugin "rect"
 			var oRect = this.$().rect();
 
 			this._bOpen = false;
@@ -486,10 +495,12 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			}
 
 			// do this delayed or it possibly won't work because of popup closing animations
-			jQuery.sap.delayedCall(400, this, "restorePreviousFocus");
+			setTimeout(function() {
+				this.restorePreviousFocus();
+			}.bind(this), 400);
 
 			jQuery.each(oRect, function (key, val) {
-				oRect[key] = parseInt(val, 10);
+				oRect[key] = parseInt(val);
 			});
 
 			this._oRect = oRect;
@@ -502,6 +513,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		 */
 		Dialog.prototype.handleClosed = function () {
 			this.oPopup.detachEvent("closed", this.handleClosed, this);
+			this._deregisterContentResizeHandler();
 
 			this.fireClosed(this._oRect);
 			this.close();
@@ -533,15 +545,9 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 
 		Dialog.prototype.setTitle = function (sText) {
-			if (this.oPopup.getOpenState() === sap.ui.core.OpenState.OPENING) {
-				// if the title is changed while the dialog opens a re-rendering
-				// has to be triggered to apply the position of the dialog's popup
-				// properly
-				this.setProperty("title", sText, /*bSuppressInvalidate*/ false);
-			} else {
-				this.setProperty("title", sText, /*bSuppressInvalidate*/ true);
-				this.$("lbl").text(sText);
-			}
+
+			this.setProperty("title", sText, true); // last parameter avoids invalidation
+			this.$("lbl").text(sText);
 
 			return this;
 		};
@@ -559,6 +565,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			// just to ensure that any attached event is being detached
 			this.oPopup.detachEvent("opened", this.handleOpened, this);
 			this.oPopup.detachEvent("closed", this.handleClosed, this);
+			this._deregisterContentResizeHandler();
 
 			this.oPopup.destroy();
 			if (bWasOpen) {
@@ -566,9 +573,10 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			}
 
 			this.oPopup = null;
-			jQuery.sap.clearDelayedCall(this._sDelayedCall);
+			clearTimeout(this._sDelayedCall);
 			this._sDelayedCall = null;
 			delete this._mParameters;
+			this._fnOnResizeRecenter = null;
 		};
 
 		/**
@@ -585,7 +593,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		/**
 		 * Handles the sapescape event, triggers closing of the window.
 		 *
-		 * @param {jQuery.EventObject} oEvent The event object
+		 * @param {jQuery.Event} oEvent The event object
 		 * @private
 		 */
 		Dialog.prototype.onsapescape = function (oEvent) {
@@ -598,7 +606,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		/**
 		 * Handles the sapenter event, triggers the default button of the dialog.
 		 *
-		 * @param {jQuery.EventObject} oEvent The event object
+		 * @param {jQuery.Event} oEvent The event object
 		 * @private
 		 */
 		Dialog.prototype.onsapenter = function (oEvent) {
@@ -623,14 +631,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		 * Event handler for the focusin event.
 		 *
 		 * If it occurs on the focus handler elements at the beginning of the dialog, the focus is set to the end, and vice versa.
-		 * @param {jQuery.EventObject} oEvent The event object
+		 * @param {jQuery.Event} oEvent The event object
 		 * @private
 		 */
 		Dialog.prototype.onfocusin = function (oEvent) {
 			this.sLastRelevantNavigation = null;
 
 			if (!this._bInitialFocusSet) {
-				// since IE9 calls first "onfocusin" it has to be checked if the initial focus was set already
 				return;
 			}
 
@@ -644,7 +651,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		/**
 		 * Restores the focus to the dialog after it has been moved or resized.
 		 *
-		 * @param {jQuery.EventObject} oEvent The event object
 		 * @private
 		 */
 		Dialog.prototype.restoreFocus = function () {
@@ -659,11 +665,11 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		/**
 		 * Handles or cancels the selectstart event when occuring in parts of the dialog.
 		 *
-		 * @param {jQuery.EventObject} oEvent The event object
+		 * @param {jQuery.Event} oEvent The event object
 		 * @private
 		 */
 		Dialog.prototype.onselectstart = function (oEvent) {
-			if (!jQuery.sap.containsOrEquals(this.getDomRef("cont"), oEvent.target)) {
+			if (!containsOrEquals(this.getDomRef("cont"), oEvent.target)) {
 				oEvent.preventDefault();
 				oEvent.stopPropagation();
 			}
@@ -678,9 +684,9 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		Dialog.prototype.getMinSize = function () {
 
 			var ADDITIONAL_HEIGHT_IF_NO_FOOTER = 36;
-			var $oDialog = jQuery.sap.byId(this.sId);
-			var	$oTitle = jQuery.sap.byId(this.sId + "-hdr");
-			var $oFooter = jQuery.sap.byId(this.sId + "-footer");
+			var $oDialog = this.$();
+			var	$oTitle = this.$("hdr");
+			var $oFooter = this.$("footer");
 			var oFooterBtns = $oFooter.children("DIV").get(0);
 			var widthFooter = oFooterBtns ? oFooterBtns.offsetWidth : 0;
 			var bFooterIsVisible = $oFooter.css('display') !== 'none';
@@ -731,7 +737,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		 * Indicates whether the Dialog is open (this includes opening and closing animations).
 		 * For more detailed information about the current state check Dialog.getOpenState().
 		 *
-		 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 		 * @returns {boolean}
 		 * @public
 		 */
@@ -744,7 +749,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		/**
 		 * Indicates whether the Dialog is currently open, closed, or transitioning between these states.
 		 *
-		 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 		 * @returns {sap.ui.core.OpenState}
 		 * @public
 		 */
@@ -782,7 +786,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			// TODO the check for state OPENING is a compromise. Without that, the content of the dialog will render
 			// in disabled state but will be enabled. As an alternative, the dialog could render again after OPEN is reached
 			// and after switching to CLOSING (to properly reflect the changed enabled state in the descendants)
-			return eState === sap.ui.core.OpenState.OPENING || eState === sap.ui.core.OpenState.OPEN;
+			return eState === OpenState.OPENING || eState === OpenState.OPEN;
 		};
 
 		// **************************************************
@@ -793,7 +797,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		 * Handles the dragstart event.
 		 * In case of resize currently ongoing, this cancels the dragstart.
 		 *
-		 * @param {sap.ui.core.BrowserEvent} oEvent The forwarded browser event
+		 * @param {jQuery.Event} oEvent The forwarded browser event
 		 * @private
 		 */
 		Dialog.prototype.ondragstart = function (oEvent) {
@@ -806,7 +810,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		/**
 		 * Initializes drag and move capabilities.
 		 *
-		 * @param {jQuery.EventObject} oEvent The event object
+		 * @param {jQuery.Event} oEvent The event object
 		 * @private
 		 */
 		Dialog.prototype.onmousedown = function (oEvent) {
@@ -814,9 +818,9 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			var oSource = oEvent.target,
 				sId = this.getId();
 
-			this._bRtlMode = sap.ui.getCore().getConfiguration().getRTL(); // remember the RTL mode for the starting resize operation
+			this._bRtlMode = Configuration.getRTL(); // remember the RTL mode for the starting resize operation
 			var oDomRef = this.getDomRef();
-			if (jQuery.sap.containsOrEquals(this.getDomRef("hdr"), oSource)) {
+			if (containsOrEquals(this.getDomRef("hdr"), oSource)) {
 				if (oSource.id != (sId + "-close")) {
 					this.sDragMode = "move";
 					this._RootWidth = oDomRef.offsetWidth;
@@ -843,7 +847,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			// save current focused control for restoring later in restore focus
 			var oActElement = document.activeElement;
 			if (oActElement && oActElement.id) {
-				var oCtrl = jQuery.sap.byId(oActElement.id).control(0);
+				var oCtrl = jQuery(oActElement).control(0);
 				if (oCtrl) {
 					this.oRestoreFocusInfo = {
 						sFocusId: oCtrl.getId(),
@@ -856,6 +860,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			this.startDragX = oEvent.screenX;
 			this.startDragY = oEvent.screenY;
 
+			// jQuery Plugin "rect"
 			this.originalRectangle = this.$().rect();
 
 			jQuery(window.document).on("selectstart", jQuery.proxy(this.ondragstart, this));
@@ -901,7 +906,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		 * Handles the move event taking the current dragMode into account.
 		 * Also stops propagation of the event.
 		 *
-		 * @param {DOMEvent} event The event raised by the browser.
+		 * @param {jQuery.Event} event The event raised by the browser.
 		 * @returns {boolean}
 		 * @private
 		 */
@@ -912,9 +917,9 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			}
 
 			event = event || window.event;
+			this._deregisterContentResizeHandler();
 
 			if (this.sDragMode == "resize") {
-
 				var deltaX = event.screenX - this.startDragX || 0;
 				var deltaY = event.screenY - this.startDragY || 0;
 
@@ -964,6 +969,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			}
 
 			event.cancelBubble = true;
+			this._registerContentResizeHandler();
 			return false;
 		};
 
@@ -982,7 +988,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		/**
 		 * Handle mouseup event.
 		 * This does the cleanup after drag and move handling.
-		 * @param {jQuery.EventObject} oEvent The event object
+		 * @param {jQuery.Event} oEvent The event object
 		 * @private
 		 */
 		Dialog.prototype.handleMouseUp = function (oEvent) {
@@ -1015,7 +1021,34 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			this.oPopup.getAutoClose();
 		};
 
+		/**
+		*
+		* @private
+		*/
+		Dialog.prototype._deregisterContentResizeHandler = function () {
+			if (this._sContentResizeListenerId) {
+				ResizeHandler.deregister(this._sContentResizeListenerId);
+				this._sContentResizeListenerId = null;
+			}
+		};
+
+		/**
+		 *
+		 * @private
+		 */
+		Dialog.prototype._registerContentResizeHandler = function() {
+			if (!this._sContentResizeListenerId) {
+				this._sContentResizeListenerId = ResizeHandler.register(this.getDomRef("cont"), this._fnOnResizeRecenter);
+			}
+		};
+
+		Dialog.prototype._onResize = function() {
+			var eDock = Popup.Dock;
+			if (this.oPopup) {
+				this.oPopup.setPosition(eDock.CenterCenter, eDock.CenterCenter, window);
+			}
+		};
 
 		return Dialog;
 
-	}, /* bExport= */ true);
+	});

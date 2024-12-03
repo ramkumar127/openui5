@@ -2,8 +2,8 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './CalendarRenderer'],
-	function(jQuery, Renderer, CalendarRenderer) {
+sap.ui.define(['sap/ui/core/Renderer', './CalendarRenderer'],
+	function(Renderer, CalendarRenderer) {
 	"use strict";
 
 
@@ -12,19 +12,46 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './CalendarRenderer'
 	 * @namespace
 	 */
 	var CalendarDateIntervalRenderer = Renderer.extend(CalendarRenderer);
+	CalendarDateIntervalRenderer.apiVersion = 2;
 
-	CalendarDateIntervalRenderer.addAttributes = function(oRm, oCal){
+	CalendarDateIntervalRenderer.renderCalContentOverlay = function() {
+	// we don't need the ContentOverlay in CalendarDateInterval case
+	};
 
-		oRm.addClass("sapUiCalInt");
-		oRm.addClass("sapUiCalDateInt");
+	CalendarDateIntervalRenderer.renderCalContentAndArrowsOverlay = function(oRm, oCal, sId) {
+
+		if (oCal.getPickerPopup()) {
+			oRm.openStart("div", sId + "-contentOver");
+			oRm.class("sapUiCalContentOver");
+			if (!oCal._oPopup || !oCal._oPopup.isOpen()) {
+				oRm.style("display", "none");
+			}
+			oRm.openEnd();
+			oRm.close("div");
+		}
+
+	};
+
+	CalendarDateIntervalRenderer.addAttributes = function(oRm, oCal) {
+
+		oRm.class("sapUiCalInt");
+		oRm.class("sapUiCalDateInt");
 		var iDays = oCal._getDays();
 
-		if (iDays > oCal._iDaysLarge) {
-			oRm.addClass("sapUiCalIntLarge");
+		if (iDays > oCal._getDaysLarge()) {
+			oRm.class("sapUiCalIntLarge");
 		}
 
 		if (iDays > oCal._iDaysMonthHead) {
-			oRm.addClass("sapUiCalIntHead");
+			oRm.class("sapUiCalIntHead");
+		}
+
+		if (oCal.getShowDayNamesLine()) {
+			oRm.class("sapUiCalWithDayNamesLine");
+		}
+
+		if (oCal.getShowWeekNumbers()) {
+			oRm.class("sapUiCalWithWeekNumbers");
 		}
 
 	};

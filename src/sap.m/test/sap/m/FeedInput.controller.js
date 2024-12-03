@@ -1,10 +1,18 @@
-sap.ui.controller("sap.m.test.FeedInput", {
+sap.ui.define([
+	"sap/m/MessageToast",
+	"sap/ui/core/mvc/Controller"
+], function (MessageToast, Controller) {
+	"use strict";
 
-	onInit: function () {
-	},
+	return Controller.extend("sap.m.test.FeedInput", {
 
-	onPostFeedItem: function (oEvent) {
-		var sValue = oEvent.getParameter("value");
-		sap.m.MessageToast.show("posted new entry: " + sValue);
-	}
+		onInit: function () {
+		},
+
+		onPostFeedItem: function (oEvent) {
+			var sValue = oEvent.getParameter("value");
+			MessageToast.show("posted new entry: " + sValue);
+		}
+	});
+
 });

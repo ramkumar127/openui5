@@ -15,7 +15,7 @@ Developing Content for UI5
     4.  [Right-to-Left Support](#right-to-left-support)
     5.  [Test Pages](#test-pages)
     6.  [QUnit Tests](#qunit-tests)
-    
+
 
 Control Libraries
 -----------------
@@ -32,23 +32,23 @@ some.lib/
 |   +---some/
 |       +---lib/
 |           +---themes/
-|               +---base
+|               +---base/
 |                   +---img/
 |                       img-RTL/
 |                       library.source.less
-|                       SomeControl.css
-|                   sap_bluecrystal
+|                       SomeControl.less
+|                   sap_horizon/
 |                   +---img/
 |                       img-RTL/
 |                       library.source.less
-|                       SomeControl.css
+|                       SomeControl.less
 |           .library
 |           library.js
 |           messagebundle.properties
 |           messagebundle_<any-locale>.properties
 |           SomeControl.js
 |           SomeControlRenderer.js
-+---test
++---test/
     +---some/
         +---lib/
             +---SomeControl.html
@@ -60,12 +60,12 @@ some.lib/
                     SomeControl.spec.js
 ```
 
-At runtime (and after the Grunt build) all libraries are merged into one directory tree, but during development libraries are separated, hence the duplication of the library name, once as folder containing the complete library and twice inside as folder structure for the runtime sources as well as for the test pages.
+At runtime (and after a build) all libraries are merged into one directory tree, but during development libraries are separated, hence the duplication of the library name, once as folder containing the complete library and twice inside as folder structure for the runtime sources as well as for the test pages.
 
-Below the "themes" folder, there is one directory for each supported theme, with sub-folders for image resources if required (including the right-to-left version). Inside the folders for the themes, there can be any CSS files. The convention is to have one CSS file per control and one "shared.css" file for styles that are not specific to one control, but rather valid for the entire library. The library.source.less files are responsible for making LESS aware of all files that should be combined and how parts of the theme are connected. All CSS files should reside at the same directory level to avoid changing image paths when they are combined to one file in the build step.
- Note: themes can also be in separate theme libraries. For the standard UI5 controls sap\_bluecrystal and sap\_goldreflection are such separate theme libraries. Their internal file structure is identical to control libraries, but when they support several control libraries, all their paths are contained.
+Below the "themes" folder, there is one directory for each supported theme, with sub-folders for image resources if required (including the right-to-left version). Inside the folders for the themes, there can be any LESS files. The convention is to have one LESS file per control and one "shared.less" file for styles that are not specific to one control, but rather valid for the entire library. The library.source.less files are responsible for making LESS aware of all files that should be combined and how parts of the theme are connected. All LESS files should reside at the same directory level to avoid changing image paths when they are combined to one file in the build step.
+ Note: themes can also be in separate theme libraries. For the standard UI5 controls sap\_horizon and sap\_fiori_3 are such separate theme libraries. Their internal file structure is identical to control libraries, but when they support several control libraries, all their paths are contained.
 
-The main implementation folder (src/some/lib) contains the implementation of controls and their renderers (they are typically separate when developed in control libraries and resolved by naming convention), the message bundles (translation texts), any other JavaScript files (may be in sub-folders) and two central library files: `.library` contains metadata and `library.js` contains the library declaration, the control list, and any library-level JavaScript.
+The main implementation folder (src/some/lib) contains the implementation of controls and their renderers (they are typically separate when developed in control libraries and referenced by the control), the message bundles (translation texts), any other JavaScript files (may be in sub-folders) and two central library files: `.library` contains metadata and `library.js` contains the library declaration, the control list, and any library-level JavaScript.
 
 Finally, below `test/some/lib` there are any test pages for manual testing and pages used during development, and - in the `qunit` sub-folder - the automated unit tests.
 
@@ -82,15 +82,15 @@ This is one example file from an existing library:
   <vendor>SAP SE</vendor>
   <copyright>${copyright}</copyright>
   <version>${version}</version>
-  
+
   <documentation>Unified controls intended for both, mobile and desktop scenarios</documentation>
-  
+
   <dependencies>
 	<dependency>
 	  <libraryName>sap.ui.core</libraryName>
 	</dependency>
   </dependencies>
-  
+
   <appData>
 	<selenium xmlns="http://www.sap.com/ui5/buildext/selenium" package="com.sap.ui5.selenium.unified" />
 	<!-- excludes for the JSCoverage -->
@@ -111,87 +111,89 @@ The `library.js` file is a central file for each control library that contains t
 
 The most important feature in this file from the perspective of a control developer is the list of controls maintained in the library declaration: all controls must be added there in order to make their constructors available immediately when the library is loaded (so applications only need to require the library, not each control).
 
-One example `library.js` file of a small control library, the `sap.ui.suite` library. It contains two controls (`sap.ui.suite.TaskCircle` and `sap.ui.suite.VerticalProgressIndicator`) and one enum (`sap.ui.suite.TaskCircleColor`). Also note the usage of JSDoc to create the API documentation:
+The example `library.js` file below of a small control library, the `my.sample.library` library, contains two controls (`my.sample.library.TaskCircle` and `my.sample.library.VerticalProgressIndicator`) and one enum (`my.sample.library.TaskCircleColor`). This enum is registered with the corresponding `sap.ui.base.DataType.registerEnum` API. Also note the usage of JSDoc to create the API documentation:
 ```js
 /*!
  * ${copyright}
  */
 
 /**
- * Initialization Code and shared classes of library sap.ui.suite.
+ * Initialization Code and shared classes of library my.sample.library.
  */
-sap.ui.define(['jquery.sap.global', 
-	'sap/ui/core/library'], // library dependency
-	function(jQuery) {
+sap.ui.define([
+	'sap/ui/base/DataType',
+	'sap/ui/core/Lib',
+	'sap/ui/core/library' // library dependency
+	], function(DataType, Library) {
 
 	"use strict";
 
 	/**
-	 * Suite controls library.
+	 * My sample controls library.
 	 *
 	 * @namespace
-	 * @name sap.ui.suite
+	 * @alias my.sample.library
 	 * @author SAP SE
 	 * @version ${version}
 	 * @public
 	 */
-	
-	// delegate further initialization of this library to the Core
-	sap.ui.getCore().initLibrary({
-		name : "sap.ui.suite",
+
+	const thisLib = Library.init({
+		apiVersion: 2,
+		name : "my.sample.library",
 		version: "${version}",
 		dependencies : ["sap.ui.core"],
 		types: [
-			"sap.ui.suite.TaskCircleColor"
+			"my.sample.library.TaskCircleColor"
 		],
 		interfaces: [],
 		controls: [
-			"sap.ui.suite.TaskCircle",
-			"sap.ui.suite.VerticalProgressIndicator"
+			"my.sample.library.TaskCircle",
+			"my.sample.library.VerticalProgressIndicator"
 		],
 		elements: []
 	});
-	
-	
+
+
 	/**
 	 * Defined color values for the Task Circle Control
 	 *
 	 * @version ${version}
 	 * @enum {string}
 	 * @public
-	 * @ui5-metamodel This enumeration also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	sap.ui.suite.TaskCircleColor = {
-	
+	thisLib.TaskCircleColor = {
+
 		/**
 		 * Red
 		 * @public
 		 */
 		Red : "Red",
-	
+
 		/**
 		 * Yellow
 		 * @public
 		 */
 		Yellow : "Yellow",
-	
+
 		/**
 		 * Green
 		 * @public
 		 */
 		Green : "Green",
-	
+
 		/**
 		 * Default value
 		 * @public
 		 */
 		Gray : "Gray"
-	
+
 	};
 
-	return sap.ui.suite;
+	DataType.registerEnum("my.sample.library.TaskCircleColor", thisLib.TaskCircleColor);
 
-}, /* bExport= */ false);
+	return thisLib;
+});
 ```
 
 ### Translation file (messagebundle.properties) and translation
@@ -232,19 +234,27 @@ The one in the base theme imports `base.less` and `global.less` from the core li
 ...
 ```
 
-The one in the specific theme (here: sap\_hcb) imports the above `library.source.less` from the base theme in this library and `global.less` from the specific theme in the core library (and all existing sap\_hcb CSS files of the controls in this library):
+The one in the specific theme (here: sap\_horizon) imports the above `library.source.less` from the base theme in this library and `base.less` and `global.less` from the specific theme in the core library (and all existing sap\_horizon CSS files of the controls as well as `shared.css` in this library):
 ```css
 @import "../base/library.source.less";
-@import "../../../../sap/ui/core/themes/sap_hcb/global.less";
+@import "../../../../sap/ui/core/themes/sap_horizon/base.less";
+@import "../../../../sap/ui/core/themes/sap_horizon/global.less";
 @import "shared.less";
 
 @import "ActionListItem.less";
 ...
 ```
+Note that the relative paths, which are going up four levels and then descending into `sap/ui/core/themes/sap_horizon`, do not correspond to the physical file locations of the sources, but to the file tree as it would exist at runtime (where the content of source folders like `sap.ui.core` and `themelib_sap_horizon` is merged into one tree).
 
 `shared.less` is by convention the name of a CSS file for library-level styles. It is handled and imported just like normal control CSS files, the separation is purely for better maintainability.
 
-The `img` folder contains any image resources and the same-name images are automatically loaded from the `img-RTL` folder when UI5 runs in right-to-left mode, so images can be either just copied, or mirrored, or otherwise modified to fit the desired RTL visuals and then put into this folder.
+The `img` folder contains any image resources required by your control.
+If an image should be displayed differently (e.g. mirrored) in right-to-left mode, it additionally needs to be stored in the `img-RTL` folder under the same path and name.
+When UI5 runs in right-to-left mode, both the mirrored images from `img-RTL` and the non-mirrored images from `img` are loaded.
+Whether your image is displayed differently in right-to-left mode depends on the presence of an image with the same name and path in the `img-RTL` folder.
+- Image resources which **should not** be mirrored **must not** have a same-name image inside the `img-RTL` folder.
+- Image resources which **should** be mirrored **must** have a same-name image inside the `img-RTL` folder.
+  To achieve this, simply modify your image resources to fit the desired RTL visuals, and then put them into the `img-RTL` folder using the same name and path..
 
 Developing a Control inside a Library
 -------------------------------------
@@ -257,11 +267,11 @@ At development time a control consists of three parts:
 
 ### The Control API and Behavior
 
-The main JavaScript file of a control contains the metadata object describing the API (properties, aggregations, events,...) as well as all method implementations reacting to browser events. This is explained in the main [control development documentation](https://openui5.hana.ondemand.com/#docs/guide/91f1703b6f4d1014b6dd926db0e91070.html). However, there are three significant differences when a control is developed within a control library:
+The main JavaScript file of a control contains the metadata object describing the API (properties, aggregations, events,...) as well as all method implementations reacting to browser events. This is explained in the main [control development documentation](https://sdk.openui5.org/topic/91f1703b6f4d1014b6dd926db0e91070). However, there are three significant differences when a control is developed within a control library:
 
-1.  By convention, the overall control is implemented in an [AMD structure](http://requirejs.org/docs/whyamd.html) ("Asynchronous Module Definition"), so there is a `sap.ui.define` function call wrapping the implementation and passing in all dependencies. Inside the implementation only the passed objects are used, not fully-namespaced global objects. E.g. if a `sap.ui.commons.Button` is required, it is added to the `define` function and the inner code only refers to a local `Button` object. This is to allow asynchronous usage and to conform with many tools depending on this structure.
+1.  By convention, the overall control is implemented in an [AMD structure](http://requirejs.org/docs/whyamd.html) ("Asynchronous Module Definition"), so there is a `sap.ui.define` function call wrapping the implementation and passing in all dependencies. Inside the implementation only the passed objects are used, not fully-namespaced global objects. E.g. if a `sap.m.Button` is required, it is added to the `define` function and the inner code only refers to a local `Button` object. This is to allow asynchronous usage and to conform with many tools depending on this structure.
 2.  Usually [the renderer](#the-control-renderer) is not just a static function in the behavior JS file, but a separate JS file. This is technically not mandatory, but a way to keep files smaller and more maintainable.
-3.  The documentation written for the API definition and any public methods is significant because it can be automatically extracted and converted into JSDoc documentation pages (this build step is not yet re-implemented with the Grunt build, though).
+3.  The documentation written for the API definition and any public methods is significant because it can be automatically extracted and converted into JSDoc documentation pages (this build step is not yet re-implemented with the UI5 Tooling build, though).
 4.  To be built and packaged with the library, controls need to be registered in [the library.js file](#libraryjs-file).
 
 #### The AMD syntax
@@ -275,26 +285,25 @@ sap.ui.define([dependency1Name, dependency2Name,...], function(dependency1, depe
 
 One example control implementation using this syntax (but not containing any documentation or further functionality):
 ```js
-sap.ui.define(['jquery.sap.global', './ListItemBase', './library'],
-	function(jQuery, ListItemBase, library) {
+sap.ui.define(["./ListItemBase", "./library"],
+	function(ListItemBase, library) {
 	"use strict";
 
-	var MyListItem = ListItemBase.extend("sap.m.MyListItem", /** @lends sap.m.MyListItem.prototype */ { metadata : {
-		library : "sap.m",
-		properties : {}
-	}});
+	const MyListItem = ListItemBase.extend("sap.m.MyListItem", /** @lends sap.m.MyListItem.prototype */ {
+
+		// ...
+
+	});
 
 	return MyListItem;
-
-}, /* bExport= */ true);
+});
 ```
 
-You see the two standard dependencies:
+You see a standard dependency:
 
--   ```jquery.sap.global``` providing jQuery itself, enriched with additional UI5 plugins
 -   ```./library``` providing the library definition in the `library.js` file
 
-as well as another very common dependency, the base class:
+as well as another very common kind of dependency, the base class:
 
 -   ```./ListItemBase``` the base class of this specific ListItem type
 
@@ -321,14 +330,20 @@ While the implementation code is the same as in "notepad controls", some aspects
  */
 
 // Provides control sap.m.ObjectNumber.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
-	function(jQuery, library, Control) {
+sap.ui.define([
+	"./library",                 // dependency to library, ensures that enums and CSS are loaded
+	"sap/ui/core/Control",       // dependency to base class
+	"sap/ui/core/library",       // dependency to sap.ui.core library, required for one of the property types
+	"./ObjectNumberRenderer",    // dependency to externalized renderer
+], function(library, Control, ObjectNumberRenderer) {
 	"use strict";
+
+	const { ValueState } = library;
 
 	/**
 	 * Constructor for a new ObjectNumber.
 	 *
-	 * @param {string} [sId] id for the new control, generated automatically if no id is given 
+	 * @param {string} [sId] id for the new control, generated automatically if no id is given
 	 * @param {object} [mSettings] initial settings for the new control
 	 *
 	 * @class
@@ -336,86 +351,89 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * @extends sap.ui.core.Control
 	 * @version ${version}
 	 *
-	 * @constructor
 	 * @public
 	 * @since 1.12
-	 * @name sap.m.ObjectNumber
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
+	 * @alias sap.m.ObjectNumber
 	 */
-	var ObjectNumber = Control.extend("sap.m.ObjectNumber", /** @lends sap.m.ObjectNumber.prototype */ { metadata : {
-	
-		library : "sap.m",
-		properties : {
-	
-			/**
-			 * Number field of the object number
-			 */
-			number : {type : "string", group : "Misc", defaultValue : null},
-	
-			/**
-			 * Number units qualifier
-			 * @deprecated Since version 1.16.1. 
-			 * 
-			 * Replaced by unit property due to the number before unit is redundant.
-			 */
-			numberUnit : {type : "string", group : "Misc", defaultValue : null, deprecated: true},
-	
-			/**
-			 * Indicates if object number is visible. Invisible object number is not rendered.
-			 */
-			visible : {type : "boolean", group : "Appearance", defaultValue : true},
-	
-			/**
-			 * Indicates if the object number should appear emphasized
-			 */
-			emphasized : {type : "boolean", group : "Appearance", defaultValue : true},
-	
-			/**
-			 * The object number's value state. Setting this state will cause the number to be rendered in state-specific colors (only blue-crystal theme).
-			 */
-			state : {type : "sap.ui.core.ValueState", group : "Misc", defaultValue : sap.ui.core.ValueState.None},
-	
-			/**
-			 * Number units qualifier. If numberUnit and unit are both set, the unit value is used.
-			 * @since 1.16.1
-			 */
-			unit : {type : "string", group : "Misc", defaultValue : null}
-		}
+	const ObjectNumber = Control.extend("sap.m.ObjectNumber", /** @lends sap.m.ObjectNumber.prototype */ {
+
+		metadata : {
+
+			library : "sap.m",
+			properties : {
+
+				/**
+				 * Number field of the object number
+				 */
+				number : {type : "float", group : "Misc", defaultValue : 0},
+
+				/**
+				 * Number units qualifier
+				 * @deprecated Since version 1.16.1.
+				 *
+				 * Replaced by unit property due to the number before unit is redundant.
+				 */
+				numberUnit : {type : "string", group : "Misc", defaultValue : "", deprecated: true},
+
+				/**
+				 * Indicates if the object number should appear emphasized
+				 */
+				emphasized : {type : "boolean", group : "Appearance", defaultValue : true},
+
+				/**
+				 * The object number's value state. Setting this state will cause the number to be rendered in state-specific colors (only blue-crystal theme).
+				 */
+				state : {type : "sap.ui.core.ValueState", group : "Misc", defaultValue : ValueState.None},
+
+				/**
+				 * Number units qualifier. If numberUnit and unit are both set, the unit value is used.
+				 * @since 1.16.1
+				 */
+				unit : {type : "string", group : "Misc", defaultValue : ""}
+			},
+		},
+
+		/// The `renderer` property, next to the `metadata` property, defines the renderer for the control.
+		/// It can either reference an imported, external renderer or the render logic can be embedded
+		/// as an object with at least an ´apiVersion:2` property and a `render` function.
+
+		renderer: ObjectNumberRenderer,
+
+		/// Further prototype methods can go into the `extend` call as well,
+		/// next to the `metadata` and `renderer` properties
+
+		/**
+		 * @see sap.ui.core.Control#getAccessibilityInfo
+		 * @returns {sap.ui.core.AccessibilityInfo} Current accessibility state of the control
+		 * @protected
+		 */
+		ObjectNumber.prototype.getAccessibilityInfo = function() {
+			let sStateText = "";
+
+			if (this.getState() !== ValueState.None) {
+				sStateText = this._getStateText();
+			}
+
+			return {
+				description: `${this.getNumber()} ${this.getUnit()} ${sStateText}`.trim()
+			};
+		};
 	}});
 
+	/// static properties or methods cannot be defined in the `extend` call, they have to be added afterwards
+
 	/**
-	 * String to prefix css class for number status to be used in
-	 * controler and renderer
-	 * @private 
-	 */
-	ObjectNumber.prototype._sCSSPrefixObjNumberStatus = 'sapMObjectNumberStatus';
-	
-	/**
-	 * API method to set the object number's value state
+	 * String to prefix CSS class for number status to be used in
+	 * control and renderer.
 	 *
-	 * @param {string} sState the Object Number's value state
-	 * @public
+	 * @private
+	 * @static
 	 */
-	ObjectNumber.prototype.setState = function(sState) {
-		//remove the current value state css class
-		this.$().removeClass(this._sCSSPrefixObjNumberStatus + this.getState());
-	
-		//do suppress rerendering
-		this.setProperty("state", sState, true);
-	
-		//now set the new css state class
-		this.$().addClass(this._sCSSPrefixObjNumberStatus + this.getState());
-	
-		return this;
-	};
+	ObjectNumber._sCSSPrefixObjNumberStatus = 'sapMObjectNumberStatus';
 
 	return ObjectNumber;
-
-}, /* bExport= */ true);
+});
 ```
-
-The ´@ui5-metamodel´ annotation relates to the "old" Maven build, which is internally still used. It means that the legacy `*.control` files should be re-generated for this control, for potential other users in upper layers. This annotation is planned to be removed.
-
 
 ### The Control Renderer
 
@@ -424,7 +442,6 @@ The below is one complete renderer file from an existing control library. It is 
 -   The renderer is typically defined in a file on its own, as a static class (initialized as empty object)
 -   The same copyright placeholder (for controls within UI5) and AMD syntax and strict mode settings as used in control behavior files
 -   The renderer class has one main method, `render(...)`, getting a RenderManager instance and the control instance to be rendered as arguments
-    -   Additional static functions can be created to structure the code or to create reusable functionality that creates chunks of HTML also needed elsewhere (e.g. when controls are capable of re-rendering certain sub-areas without invocation of the normal UI5 rendering mechanism)
 
 The code within the `render()` method is the same as in "notepad controls".
 ```js
@@ -432,102 +449,93 @@ The code within the `render()` method is the same as in "notepad controls".
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define(function() {
 	"use strict";
 
+	/**
+	 * NavContainer renderer.
+	 * @namespace
+	 * @private
+	 */
+	const NavContainerRenderer = {
+		apiVersion: 2,
 
-	/**
-	 * @class NavContainer renderer. 
-	 * @static
-	 */
-	var NavContainerRenderer = {
+		/**
+		 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
+		 *
+		 * @param {sap.ui.core.RenderManager} rm the RenderManager that can be used for writing to the Render-Output-Buffer
+		 * @param {sap.m.NavContainer} oControl an object representation of the control that should be rendered
+		 */
+		render(rm, oControl) {
+			rm.openStart("div", oControl);
+
+			rm.class("sapMNav");
+			rm.style("width", oControl.getWidth());
+			rm.style("height", oControl.getHeight());
+
+			// Optional hook method that may be implemented by inheriting renderers
+			// to set additional attributes, classes or styles; but they must not call openEnd!
+			this.renderAttributes?.(rm, oControl);
+
+			const sTooltip = oControl.getTooltip_AsString();
+			if (sTooltip) {
+				rm.attr("title", sTooltip);
+			}
+			rm.openEnd(); // div element
+
+			/// hook method; may be implemented by inheriting renderers
+			this.renderBeforeContent?.(rm, oControl);
+
+			const oContent = oControl.getCurrentPage();
+			if (oContent) {
+				rm.renderControl(oContent);
+			}
+
+			rm.close("div");
+		}
 	};
-	
-	
-	/**
-	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
-	 * 
-	 * @param {sap.ui.core.RenderManager} rm the RenderManager that can be used for writing to the Render-Output-Buffer
-	 * @param {sap.ui.core.Control} oControl an object representation of the control that should be rendered
-	 */
-	NavContainerRenderer.render = function(rm, oControl) {
-		// return immediately if control is invisible, do not render any HTML
-		if (!oControl.getVisible()) {
-			return;
-		}
-		
-		rm.write("<div");
-		rm.writeControlData(oControl);
-		
-		rm.addClass("sapMNav");
-		rm.addStyle("width", oControl.getWidth());
-		rm.addStyle("height", oControl.getHeight());
-	
-		if (this.renderAttributes) {
-			this.renderAttributes(rm, oControl); // may be used by inheriting renderers, but DO NOT write class or style attributes! Instead, call addClass/addStyle.
-		}
-		
-		rm.writeClasses();
-		rm.writeStyles();
-		
-		var sTooltip = oControl.getTooltip_AsString();
-		if (sTooltip) {
-			rm.writeAttributeEscaped("title", sTooltip);
-		}
-		rm.write(">"); // div element
-	
-		if (this.renderBeforeContent) {
-			this.renderBeforeContent(rm, oControl); // hook method; may be used by inheriting renderers
-		}
-		
-		var oContent = oControl.getCurrentPage();
-		if (oContent) {
-			rm.renderControl(oContent);
-		}
-	
-		rm.write("</div>");
-	};
-	
 
 	return NavContainerRenderer;
-
-}, /* bExport= */ true);
+});
 ```
 
-Renderers of controls inheriting from other controls often re-use the parent class' renderer - sometimes the parent rendering is sufficient, sometimes they add some attributes or HTML in certain places. One example for this is the following `sap.ui.commons.ToggleButtonRenderer`. It extends/re-uses the `sap.ui.commons.ButtonRenderer`, but in addition it implements the `renderButtonAttributes` method, which is called by the `ButtonRenderer` in case it is implemented by any subclass. So on top of the normal Button rendering, the ToggleButton adds the "pressed" state to the HTML as an attribute and also adds a CSS class when it is pressed
+Renderers of controls inheriting from other controls often re-use the parent class' renderer - sometimes the parent rendering is sufficient, sometimes they add some attributes or HTML in certain places. One example for this is the following `sap.m.ToggleButtonRenderer`. It extends/re-uses the `sap.m.ButtonRenderer`, but in addition it implements the `renderButtonAttributes` method, which is called by the `ButtonRenderer` in case it is implemented by any subclass. So on top of the normal Button rendering, the ToggleButton adds the "pressed" state to the HTML as an attribute and also adds a CSS class when it is pressed
 
-Note that the `.extend(...)` method used here is different from the normal UI5 inheritance method. This will be changed and made more consistent, so the below code will change slightly.
-
-Documentation omitted to keep this example short:
+Documentation has been omitted to keep this example short:
 ```js
-// Provides default renderer for control sap.ui.commons.ToggleButton
-sap.ui.define(['jquery.sap.global', './ButtonRenderer', 'sap/ui/core/Renderer'],
-	function(jQuery, ButtonRenderer, Renderer) {
+// Provides default renderer for control sap.m.ToggleButton
+sap.ui.define([
+	"./ButtonRenderer",
+	"sap/ui/core/Renderer"
+], function(ButtonRenderer, Renderer) {
 	"use strict";
 
-	var ToggleButtonRenderer = Renderer.extend(ButtonRenderer);
+	const ToggleButtonRenderer = Renderer.extend.call(ButtonRenderer, "sap.m.ToggleButtonRenderer");
+	// if ButtonRenderer would be a modern renderer, this could be shortened a bit to:
+	// const ToggleButtonRenderer = ButtonRenderer.extend("sap.m.ToggleButtonRenderer");
+
+	// Renderers do not inherit the `apiVersion` of their base renderer. It has to be specified again.
+	ToggleButtonRenderer.apiVersion = 2;
 
 	ToggleButtonRenderer.renderButtonAttributes = function(rm, oToggleButton) {
-		var bPressed = oToggleButton.getPressed();
-	
+		const bPressed = oToggleButton.getPressed();
+
 		if (bPressed) {
-			rm.addClass("sapMToggleBtnPressed");
+			rm.class("sapMToggleBtnPressed");
 		}
-	
-		rm.writeAttribute('pressed', bPressed);
+
+		rm.attr("pressed", bPressed);
 	};
 
 	return ToggleButtonRenderer;
-
-}, /* bExport= */ true);
+});
 ```
 
 ### Control CSS/LESS files
 
 Controls developed in libraries can come with their own CSS. The CSS for each control *can* be developed separately (and will be merged), the CSS for the correct theme is automatically loaded by the UI5 core at runtime, and several build steps with additional benefits are available. One of them is [LESS](http://lesscss.org) preprocessing which allows (among other features) the usage of variables.
 
-The UI5 theming concept is based on two-level themes: one "base" theme is the foundation for all "real" themes like "sap\_bluecrystal" And "sap\_hcb". The "real" theme is always the result of appending theme-specific CSS to the base theme CSS. This happens in the UI5 library build. E.g. the "library.css" file for Blue Crystal is created by concatenating all control CSS files in the "themes/base" folder and then all control CSS files in the "themes/sap\_bluecrystal" folder.
+The UI5 theming concept is based on two-level themes: one "base" theme is the foundation for all "real" themes like "sap\_horizon". The "real" theme is always the result of appending theme-specific CSS to the base theme CSS. This happens in the UI5 library build. E.g. the "library.css" file for Blue Crystal is created by concatenating all control CSS files in the "themes/base" folder and then all control CSS files in the "themes/sap\_horizon" folder.
 
 The reason for this is that the styling rules contained in CSS files have two different purposes:
 
@@ -536,7 +544,7 @@ The reason for this is that the styling rules contained in CSS files have two di
 
 Examples for 1.) are "z-index" settings, "position:absolute", "box-sizing:border-box" "white-space:nowrap", or "overflow:hidden". Examples for 2.) are paddings and dimensions (other than "100%"), shadows, gradients, and settings for the "border-radius".
 
-The functional settings from 1.) go into the "base" theme, so they are automatically available for all themes. The visual settings from 2.) go into the specific themes like "sap\_bluecrystal".
+The functional settings from 1.) go into the "base" theme, so they are automatically available for all themes. The visual settings from 2.) go into the specific themes like "sap\_horizon".
 
 One special case is whenever LESS variables are used: they are mainly used for colors and colors are very much related to the visual design, so colors normally belong into category 2.). However, when LESS variables are used, every theme can re-define them and even when they are used in the "base" theme CSS, the generated CSS file will automatically have the correct values for each theme! Hence, the following CSS should go into the "base" theme:
 ```css
@@ -564,9 +572,9 @@ In the UI5 theming concept, RTL support is defined as follows:
   ``` css
         html[dir=rtl] .sapUiBtn {
            color: red; /* make button text red in RTL mode */
-        }   
+        }
   ```
-		
+
 However, this should only be required in rare cases, as the mentioned CSS mirroring algorithm covers most required RTL transformations. NOTE: this style is also mirrored in the actual RTL case, so you might need to write it mirrored.
 
 

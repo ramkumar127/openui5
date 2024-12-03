@@ -2,17 +2,17 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>MessageBar Test Page</title>
+    <script src="shared-config.js"></script>
     <script id="sap-ui-bootstrap"
-      data-sap-ui-theme="sap_goldreflection"
+      data-sap-ui-theme="sap_bluecrystal"
       data-sap-ui-trace="true"
-      type="text/javascript"
+     
       data-sap-ui-libs="sap.ui.commons"
       src="../../../../resources/sap-ui-core.js"
       >
   </script>
-  <script type="text/javascript">
+  <script>
     function getDetails(sId) {
     	var details = "";
     	if (sId != "error1") {
@@ -188,7 +188,7 @@
 	deleteWarningButtonB.placeAt("deleteTwoB");
 
     // SUCCESS buttons
-    // Instantiating a button for adding 3 Informations:
+    // Instantiating a button for adding 3 information items:
 	var addInformationButton = new sap.ui.commons.Button("addInformationButton");
 	addInformationButton.setText("Add 1 success");
 	addInformationButton.attachPress(
@@ -197,7 +197,7 @@
 	  }
 	);
 	addInformationButton.placeAt("addThree");
-    // Instantiating a button for removing those 3 Informations:
+    // Instantiating a button for removing those 3 information items:
 	var deleteInformationButton = new sap.ui.commons.Button("deleteInformationButton");
 	deleteInformationButton.setText("Delete 1 success");
 	deleteInformationButton.attachPress(

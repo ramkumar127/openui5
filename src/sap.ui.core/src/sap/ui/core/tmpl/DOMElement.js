@@ -3,8 +3,15 @@
  */
 
 // Provides control sap.ui.core.tmpl.DOMElement.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/library'],
-	function(jQuery, Control, library) {
+sap.ui.define([
+	'sap/ui/core/Control',
+	'./DOMAttribute',
+	"./DOMElementRenderer",
+	"sap/base/Log",
+	"sap/ui/thirdparty/jquery",
+	'sap/ui/core/library'
+],
+	function(Control, DOMAttribute, DOMElementRenderer, Log, jQuery) {
 	"use strict";
 
 
@@ -20,42 +27,43 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/library'
 	 * @extends sap.ui.core.Control
 	 * @version ${version}
 	 *
-	 * @constructor
 	 * @public
-	 * @experimental Since version 1.15.
-	 * The templating might be changed in future versions.
+	 * @since 1.15
+	 * @deprecated as of version 1.56. Use an {@link sap.ui.core.mvc.XMLView XMLView} or a {@link topic:e6bb33d076dc4f23be50c082c271b9f0 Typed View} instead.
 	 * @alias sap.ui.core.tmpl.DOMElement
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	var DOMElement = Control.extend("sap.ui.core.tmpl.DOMElement", /** @lends sap.ui.core.tmpl.DOMElement.prototype */ { metadata : {
+	var DOMElement = Control.extend("sap.ui.core.tmpl.DOMElement", /** @lends sap.ui.core.tmpl.DOMElement.prototype */ {
+		metadata : {
 
-		library : "sap.ui.core",
-		properties : {
+			library : "sap.ui.core",
+			properties : {
 
-			/**
-			 * The text content of the DOM element
-			 */
-			text : {type : "string", group : "Appearance", defaultValue : null},
+				/**
+				 * The text content of the DOM element
+				 */
+				text : {type : "string", group : "Appearance", defaultValue : null},
 
-			/**
-			 * The HTML-tag of the DOM element which contains the text
-			 */
-			tag : {type : "string", group : "Behavior", defaultValue : 'span'}
+				/**
+				 * The HTML-tag of the DOM element which contains the text
+				 */
+				tag : {type : "string", group : "Behavior", defaultValue : 'span'}
+			},
+			defaultAggregation: "attributes",
+			aggregations : {
+
+				/**
+				 * DOM attributes which are rendered as part of the DOM element and bindable
+				 */
+				attributes : {type : "sap.ui.core.tmpl.DOMAttribute", multiple : true, singularName : "attribute"},
+
+				/**
+				 * Nested DOM elements to support nested bindable structures
+				 */
+				elements : {type : "sap.ui.core.tmpl.DOMElement", multiple : true, singularName : "element"}
+			}
 		},
-		defaultAggregation: "attributes",
-		aggregations : {
-
-			/**
-			 * DOM attributes which are rendered as part of the DOM element and bindable
-			 */
-			attributes : {type : "sap.ui.core.tmpl.DOMAttribute", multiple : true, singularName : "attribute"},
-
-			/**
-			 * Nested DOM elements to support nested bindable structures
-			 */
-			elements : {type : "sap.ui.core.tmpl.DOMElement", multiple : true, singularName : "element"}
-		}
-	}});
+		renderer: DOMElementRenderer
+	});
 
 
 	// TODO: maybe this is something for the sap.ui.core itself - something more general for UI5!!
@@ -73,10 +81,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/library'
 			// handle custom attributes if not already defined in settings
 			if (!mSettings["attributes"]) {
 				var aAttributes = mSettings["attributes"] = [];
-				jQuery.each(mSettings, function(sKey, oValue) {
+				jQuery.each(mSettings, function(sKey, oValue) { // @legacy-relevant: jQuery usage in deprecated code
 					if (sKey !== "id" && !mJSONKeys[sKey] && typeof oValue === "string") {
 						// add custom settings as DOM attributes
-						aAttributes.push(new sap.ui.core.tmpl.DOMAttribute({
+						aAttributes.push(new DOMAttribute({
 							name: sKey,
 							value: oValue
 						}));
@@ -84,7 +92,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/library'
 					}
 				});
 			} else {
-				jQuery.sap.log.warning("DOMElement#" + this.getId() + ": custom attributes in settings will be ignored since attributes are provided!");
+				Log.warning("DOMElement#" + this.getId() + ": custom attributes in settings will be ignored since attributes are provided!");
 			}
 		}
 
@@ -123,7 +131,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/library'
 		var sTag = this.getTag().toLowerCase();
 		if (sTag === "input") {
 			var sValue = this.$().val();
-			jQuery.each(this.getAttributes(), function(iIndex, oAttribute) {
+			this.getAttributes().forEach(function(oAttribute) {
 				if (oAttribute.getName().toLowerCase() === "value") {
 					oAttribute.setValue(sValue);
 				}
@@ -153,20 +161,14 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/library'
 	 *         The value of the DOM attribute. If the value is undefined the DOM attribute will be removed.
 	 * @return {any} value of attribute or <code>this</code> when called as a setter
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	DOMElement.prototype.attr = function(sKey, sValue) {
 
 		// lookup the attribute (required for the setter and the getter)
-		var aAttributes = this.getAttributes(),
-			oAttribute;
-		jQuery.each(aAttributes, function(iIndex, oValue) {
-			var sName = oValue.getName();
-			if (sName.toLowerCase() === sKey) {
-				oAttribute = oValue;
-				return false;
-			}
-		});
+		var oAttribute = this.getAttributes().find(function(oValue) {
+				var sName = oValue.getName();
+				return sName.toLowerCase() === sKey;
+			});
 
 		if (sValue === undefined) {
 
@@ -187,7 +189,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/library'
 				// in case of a no attribute has been found we create and add
 				// a new DOM attribute for the given key and value
 				if (sValue !== null) {
-					this.addAttribute(new sap.ui.core.tmpl.DOMAttribute({
+					this.addAttribute(new DOMAttribute({
 						name: sKey,
 						value: sValue
 					}));
@@ -206,9 +208,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/library'
 	 *
 	 * @param {string} sName
 	 *         The name of the DOM attribute.
-	 * @return {sap.ui.core.tmpl.DOMElement}
+	 * @return {this}
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 
 	DOMElement.prototype.removeAttr = function(sKey) {
@@ -233,6 +234,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/library'
 				$this.text(this.getProperty("text"));
 			}
 		}
+		return this;
 	};
 
 

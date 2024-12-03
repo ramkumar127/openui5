@@ -2,13 +2,13 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>List - sap.m (Table mode)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 
 
-<script src="../../../resources/sap-ui-core.js" type="text/javascript"
-	id="sap-ui-bootstrap" data-sap-ui-libs="sap.m" data-sap-ui-theme="sap_bluecrystal">
+<script src="shared-config.js"></script>
+<script src="../../../resources/sap-ui-core.js"
+	id="sap-ui-bootstrap" data-sap-ui-libs="sap.m">
 </script>
 
 <style type="text/css">
@@ -116,7 +116,7 @@
 	var page = new sap.m.Page({
 		title : "Form Table",
 		enableScrolling : true,
-		content : [form = new sap.m.Table({
+		content : [new sap.m.Table({
 			inset : false,
 			showUnread : true,
 			scrollToLoad : true,
@@ -124,7 +124,7 @@
 			columns : [
 				new sap.m.Column({
 					styleClass : "key",
-					valign : "Center",
+					vAlign : "Middle",
 					width : "35%",
 					hAlign : "Right"
 				}),
@@ -162,11 +162,7 @@
 						new sap.m.Label({
 							text : "Birthday"
 						}),
-						new sap.m.DateTimeInput({
-							displayFormat : "dd-mm-yyyy",
-							placeholder : "dd-mm-yyyy",
-							valueFormat : "dd-mm-yyyy"
-						})
+						new sap.m.DatePicker()
 					]
 				}),
 				new sap.m.ColumnListItem({
@@ -238,7 +234,7 @@
 								new sap.m.Slider({
 									min : 150,
 									max : 250,
-									value : 170,
+									value : 170
 								}).attachLiveChange(function(e) {
 									sap.ui.getCore().byId("length").setValue(e.getParameter("value") + " cm");
 								}),

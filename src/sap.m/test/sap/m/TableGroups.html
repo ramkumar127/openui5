@@ -1,13 +1,13 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>
 
 <title>Table Grouping Example Page</title>
 
+<script src="shared-config.js"></script>
 <script src="../../../resources/sap-ui-core.js" data-sap-ui-xx-bindingSyntax="complex"
-	id="sap-ui-bootstrap" data-sap-ui-libs="sap.m" data-sap-ui-theme="sap_bluecrystal">
+	id="sap-ui-bootstrap" data-sap-ui-libs="sap.m">
 </script>
 
 <script>
@@ -47,9 +47,6 @@
 	// set the data for the model
 	oModel.setData(data);
 
-	// set the model to the core
-	sap.ui.getCore().setModel(oModel);
-
 	// create a Sorter with very simple grouping by the gender attribute
 	var oGenderSorter = new sap.ui.model.Sorter("gender", false, true);
 
@@ -59,7 +56,7 @@
 		return {
 			key: sKey, // group by first letter of last name
 			text: "First letter: " + sKey
-		}
+		};
 	});
 
 	// another Sorter with grouping function
@@ -67,12 +64,12 @@
 		return {
 			key: oContext.getProperty("firstName").charAt(0), // group by first letter of first name
 			sorter_sorted_by: "FirstName"  // this information is only meant for the factory function!
-		}
+		};
 	});
 
 	// another Sorter with grouping function
 	var oDateSorter = new sap.ui.model.Sorter("birthDate", false, function(oContext){
-		var year = parseInt(oContext.getProperty("birthDate").split("-")[0], 10);
+		var year = parseInt(oContext.getProperty("birthDate").split("-")[0]);
 		var key, text;
 
 		if (year < 1980) {
@@ -89,7 +86,7 @@
 		return {
 			key: key,
 			text: text
-		}
+		};
 	});
 
 	// define the row template
@@ -97,6 +94,7 @@
 		tooltip: "Gender icon chosen because no better suitable icon is available... no discrimination of any gender intended",
 		cells : [
 			new sap.ui.core.Icon({
+				decorative: false,
 				src : {
 					path: "gender",
 					formatter: function(sGender) {
@@ -220,7 +218,8 @@
 	});
 
 	var oApp = new sap.m.App({
-		pages : [oPage]
+		pages : [oPage],
+		models: oModel
 	}).placeAt("content");
 </script>
 </head>

@@ -1,20 +1,155 @@
-/*!
+	/*!
 * ${copyright}
 */
 
 // Provides control sap.m.ViewSettingsDialog.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/core/IconPool', './Toolbar', './CheckBox', './SearchField'],
-function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
+sap.ui.define([
+	'./library',
+	'sap/ui/core/Control',
+	'sap/ui/core/Element',
+	'sap/ui/core/IconPool',
+	'sap/ui/core/Lib',
+	'./Toolbar',
+	'./CheckBox',
+	'./SearchField',
+	'./List',
+	'./StandardListItem',
+	'./Dialog',
+	'./Button',
+	'./ToggleButton',
+	'./Title',
+	'./NavContainer',
+	'./Bar',
+	'./SegmentedButton',
+	'./Page',
+	'./ViewSettingsItem',
+	'sap/ui/base/ManagedObject',
+	'sap/ui/base/ManagedObjectObserver',
+	'sap/ui/base/EventProvider',
+	'sap/ui/Device',
+	'sap/ui/core/InvisibleText',
+	'./ViewSettingsDialogRenderer',
+	"sap/m/GroupHeaderListItem",
+	"sap/ui/base/Object",
+	"sap/ui/core/StaticArea",
+	"sap/base/Log",
+	"sap/ui/core/library",
+	"sap/ui/thirdparty/jquery",
+	// jQuery Plugin "firstFocusableDomRef"
+	"sap/ui/dom/jquery/Focusable"
+],
+function(
+	library,
+	Control,
+	Element,
+	IconPool,
+	Library,
+	Toolbar,
+	CheckBox,
+	SearchField,
+	List,
+	StandardListItem,
+	Dialog,
+	Button,
+	ToggleButton,
+	Title,
+	NavContainer,
+	Bar,
+	SegmentedButton,
+	Page,
+	ViewSettingsItem,
+	ManagedObject,
+	ManagedObjectObserver,
+	EventProvider,
+	Device,
+	InvisibleText,
+	ViewSettingsDialogRenderer,
+	GroupHeaderListItem,
+	BaseObject,
+	StaticArea,
+	Log,
+	coreLibrary,
+	jQuery
+) {
 	"use strict";
 
+	// shortcut for sap.m.ListMode
+	var ListMode = library.ListMode;
+
+	// shortcut for sap.m.ListType
+	var ListType = library.ListType;
+
+	// shortcut for sap.m.StringFilterOperator
+	var StringFilterOperator = library.StringFilterOperator;
+
+	// shortcut for sap.m.TitleAlignment
+	var TitleAlignment = library.TitleAlignment;
+
+	// shortcut for sap.m.ButtonType
+	var ButtonType = library.ButtonType;
+
+	// shortcut for sap.ui.core.TitleLevel
+	var TitleLevel = coreLibrary.TitleLevel;
+
+	var LIST_ITEM_SUFFIX = "-list-item";
+
 	/**
-	 * Constructor for a new ViewSettingsDialog.
+	 * Constructor for a new <code>ViewSettingsDialog</code>.
 	 *
 	 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
 	 * @param {object} [mSettings] Initial settings for the new control
 	 *
 	 * @class
-	 * The ViewSettingsDialog control provides functionality to easily select the options for sorting, grouping, and filtering data. It is a composite control, consisting of a modal popover and several internal lists. There are three different tabs (Sort, Group, Filter) in the dialog that can be activated by filling the respective associations. If only one association is filled, the other tabs are automatically hidden. The selected options can be used to create sorters and filters for the table.
+	 * Helps the user to sort, filter, or group data within a (master) {@link sap.m.List} or a
+	 * {@link sap.m.Table}. The dialog is triggered by icon buttons in the table toolbar. Each
+	 * button shows a dropdown list icon.
+	 *
+	 * <h3>Overview</h3>
+	 *
+	 * The <code>ViewSettingsDialog</code> is a composite control,
+	 * consisting of a modal {@link sap.m.Popover} and several internal lists.
+	 * There are three different tabs (Sort, Group, Filter) in the dialog that can be
+	 * activated by filling the respective associations. If only one association is
+	 * filled, the other tabs are automatically hidden. The selected options can be used
+	 * to create sorters and filters for the table.
+	 *
+	 * <b>Note:</b> If the app does not offer all three sorting, filtering, and grouping
+	 * operations, but only one of these (such as sort), we recommend placing the
+	 * icon button directly in the toolbar. Do not place sort, filter, or group buttons in
+	 * the footer toolbar if they refer to a table. Place group, sort, and filter buttons
+	 * in the footer toolbar if they refer to a master list.
+	 *
+	 * <b>Note:</b> If <code>ViewSettingsDialog</code> is used without custom tabs or custom items
+	 * in any of its aggregations, then Reset button is enabled if the user selects any Filters or
+	 * presetFilters or changes any of the Sort by, Sort order, Group by, or Group order values.
+	 * When <code>ViewSettingsDialog</code> is used with custom tabs or custom items
+	 * in any of its aggregations (sortItems, groupItems, filterItems or presetFilterItems),
+	 * the Reset button is always enabled, because there is no way to determine
+	 * the initial state of the custom tabs and compare it to their current state in order to
+	 * determine the enable/disable state of the Reset button.
+	 *
+	 * <h3>Usage</h3>
+	 *
+	 * <i>When to use?</i>
+	 * <ul><li>If you need to allow the user to sort line items in a manageable list or
+	 * table (up to 20 columns)</li>
+	 * <li>If you need to offer custom filter settings in a manageable list or table
+	 * (up to 20 columns)</li>
+	 * <li>If you need to allow the user to group line items in a manageable list or
+	 * table (up to 20 columns)</li></ul>
+	 *
+	 * <i>When not to use?</i>
+	 * <ul><li>If you have complex tables (more than 20 columns)</li>
+	 * <li>If you need to rearrange columns within your table (use the
+	 * {@link sap.m.TablePersoDialog} instead)</li>
+	 * <li>If you need very specific sort, filter, or column sorting options within
+	 * complex tables (use the {@link sap.m.P13nDialog} instead)</li></ul>
+	 *
+	 * <h3>Responsive behavior</h3>
+	 *
+	 * The popover dialog appears as a modal window on desktop and tablet screen sizes,
+	 * but full screen on smartphones.
+	 *
 	 * @extends sap.ui.core.Control
 	 *
 	 * @author SAP SE
@@ -24,150 +159,189 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @public
 	 * @since 1.16
 	 * @alias sap.m.ViewSettingsDialog
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
+	 * @see {@link fiori:https://experience.sap.com/fiori-design-web/view-settings-dialog/ View Settings Dialog}
 	 */
-	var ViewSettingsDialog = Control.extend("sap.m.ViewSettingsDialog", /** @lends sap.m.ViewSettingsDialog.prototype */ { metadata : {
+	var ViewSettingsDialog = Control.extend("sap.m.ViewSettingsDialog", /** @lends sap.m.ViewSettingsDialog.prototype */ {
+		metadata : {
 
-		library : "sap.m",
-		properties : {
+			library : "sap.m",
+			properties : {
 
-			/**
-			 * Defines the title of the dialog. If not set and there is only one active tab, the dialog uses the default "View" or "Sort", "Group", "Filter" respectively.
-			 */
-			title : {type : "string", group : "Behavior", defaultValue : null},
+				/**
+				 * Defines the title of the dialog. If not set and there is only one active tab, the dialog uses the default "View" or "Sort", "Group", "Filter" respectively.
+				 */
+				title : {type : "string", group : "Behavior", defaultValue : null},
 
-			/**
-			 * Determines whether the sort order is descending or ascending (default).
-			 */
-			sortDescending : {type : "boolean", group : "Behavior", defaultValue : false},
+				/**
+				 * Determines whether the sort order is descending or ascending (default).
+				 */
+				sortDescending : {type : "boolean", group : "Behavior", defaultValue : false},
 
-			/**
-			 * Determines whether the group order is descending or ascending (default).
-			 */
-			groupDescending : {type : "boolean", group : "Behavior", defaultValue : false}
-		},
-		aggregations : {
+				/**
+				 * Determines whether the group order is descending or ascending (default).
+				 */
+				groupDescending : {type : "boolean", group : "Behavior", defaultValue : false},
 
-			/**
-			 * The list of items with key and value that can be sorted over (for example, a list of columns for a table).
-			 * @since 1.16
-			 */
-			sortItems : {type : "sap.m.ViewSettingsItem", multiple : true, singularName : "sortItem", bindable : "bindable"},
+				/**
+				 * Provides a string filter operator which is used when the user searches items in filter details page.
+				 * Possible operators are: <code>AnyWordStartsWith</code>, <code>Contains</code>, <code>StartsWith</code>, <code>Equals</code>.
+				 * This property will be ignored if a custom callback is provided through <code>setFilterSearchCallback</code> method.
+				 * @since 1.42
+				 */
+				filterSearchOperator: {type: "sap.m.StringFilterOperator", group: "Behavior", defaultValue: StringFilterOperator.StartsWith },
 
-			/**
-			 * The list of items with key and value that can be grouped on (for example, a list of columns for a table).
-			 * @since 1.16
-			 */
-			groupItems : {type : "sap.m.ViewSettingsItem", multiple : true, singularName : "groupItem", bindable : "bindable"},
+				/**
+				 * Specifies the Title alignment (theme specific).
+				 * If set to <code>TitleAlignment.None</code>, the automatic title alignment depending on the theme settings will be disabled.
+				 * If set to <code>TitleAlignment.Auto</code>, the Title will be aligned as it is set in the theme (if not set, the default value is <code>center</code>);
+				 * Other possible values are <code>TitleAlignment.Start</code> (left or right depending on LTR/RTL), and <code>TitleAlignment.Center</code> (centered)
+				 * @since 1.72
+				 * @public
+				 */
+				titleAlignment : {type : "sap.m.TitleAlignment", group : "Misc", defaultValue : TitleAlignment.Auto}
 
-			/**
-			 * The list of items with key and value that can be filtered on (for example, a list of columns for a table). A filterItem is associated with one or more detail filters.
-			 * @since 1.16
-			 */
-			filterItems : {type : "sap.m.ViewSettingsItem", multiple : true, singularName : "filterItem", bindable : "bindable"},
-
-			/**
-			 * The list of preset filter items that allows the selection of more complex or custom filters. These entries are displayed at the top of the filter tab.
-			 * @since 1.16
-			 */
-			presetFilterItems : {type : "sap.m.ViewSettingsItem", multiple : true, singularName : "presetFilterItem", bindable : "bindable"},
-			/**
-			 * The list of all the custom tabs.
-			 * @since 1.30
-			 */
-			customTabs: {type: "sap.m.ViewSettingsCustomTab", multiple: true, singularName: "customTab", bindable : "bindable"}
-		},
-		associations : {
-
-			/**
-			 * The sort item that is selected. It can be set by either passing a key or the item itself to the function setSelectedSortItem.
-			 */
-			selectedSortItem : {type : "sap.m.ViewSettingsItem", multiple : false},
-
-			/**
-			 * The group item that is selected. It can be set by either passing a key or the item itself to the function setSelectedGroupItem.
-			 */
-			selectedGroupItem : {type : "sap.m.ViewSettingsItem", multiple : false},
-
-			/**
-			 * The preset filter item that is selected. It can be set by either passing a key or the item itself to the function setSelectedPresetFilterItem. Note that either a preset filter OR multiple detail filters can be active at the same time.
-			 */
-			selectedPresetFilterItem : {type : "sap.m.ViewSettingsItem", multiple : false}
-		},
-		events : {
-
-			/**
-			 * Indicates that the user has pressed the OK button and the selected sort, group, and filter settings should be applied to the data on this page.
-			 * </br></br><b>Note:</b> Custom tabs are not converted to event parameters automatically. For custom tabs, you have to read the state of your controls inside the callback of this event.
-			 */
-			confirm : {
-				parameters : {
-
-					/**
-					 * The selected sort item.
-					 */
-					sortItem : {type : "sap.m.ViewSettingsItem"},
-
-					/**
-					 * The selected sort order (true = descending, false = ascending).
-					 */
-					sortDescending : {type : "boolean"},
-
-					/**
-					 * The selected group item.
-					 */
-					groupItem : {type : "sap.m.ViewSettingsItem"},
-
-					/**
-					 * The selected group order (true = descending, false = ascending).
-					 */
-					groupDescending : {type : "boolean"},
-
-					/**
-					 * The selected preset filter item.
-					 */
-					presetFilterItem : {type : "sap.m.ViewSettingsItem"},
-
-					/**
-					 * The selected filters in an array of ViewSettingsItem.
-					 */
-					filterItems : {type : "sap.m.ViewSettingsItem[]"},
-
-					/**
-					 * The selected filter items in an object notation format: { key: boolean }. If a custom control filter was displayed (for example, the user clicked on the filter item), the value for its key is set to true to indicate that there has been an interaction with the control.
-					 */
-					filterKeys : {type : "object"},
-
-					/**
-					 * The selected filter items in a string format to display in the control's header bar in format "Filtered by: key (subkey1, subkey2, subkey3)".
-					 */
-					filterString : {type : "string"}
-				}
 			},
+			aggregations : {
 
-			/**
-			 * Called when the Cancel button is pressed. It can be used to set the state of custom filter controls.
-			 */
-			cancel : {},
+				/**
+				 * The list of items with key and value that can be sorted over (for example, a list of columns for a table).
+				 * @since 1.16
+				 */
+				sortItems : {type : "sap.m.ViewSettingsItem", multiple : true, singularName : "sortItem", bindable : "bindable"},
 
-			/**
-			 * Called when the reset filters button is pressed. It can be used to clear the state of custom filter controls.
-			 */
-			resetFilters : {},
+				/**
+				 * The list of items with key and value that can be grouped on (for example, a list of columns for a table).
+				 * @since 1.16
+				 */
+				groupItems : {type : "sap.m.ViewSettingsItem", multiple : true, singularName : "groupItem", bindable : "bindable"},
 
-			/**
-			 * Fired when the filter detail page is opened.
-			 */
-			filterDetailPageOpened: {
-				parameters: {
-					/**
-					 * The filter item for which the details are opened.
-					 */
-					parentFilterItem: {type: "sap.m.ViewSettingsFilterItem"}
+				/**
+				 * The list of items with key and value that can be filtered on (for example, a list of columns for a table). A filterItem is associated with one or more detail filters.
+				 *
+				 * <b>Note:</b> It is recommended to use the <code>sap.m.ViewSettingsFilterItem</code> as it fits best at the filter page.
+				 * @since 1.16
+				 */
+				filterItems : {type : "sap.m.ViewSettingsItem", multiple : true, singularName : "filterItem", bindable : "bindable"},
+
+				/**
+				 * The list of preset filter items with key and value that allows the selection of more complex or custom filters.
+				 * These entries are displayed at the top of the filter tab.
+				 * @since 1.16
+				 */
+				presetFilterItems : {type : "sap.m.ViewSettingsItem", multiple : true, singularName : "presetFilterItem", bindable : "bindable"},
+				/**
+				 * The list of all the custom tabs.
+				 * @since 1.30
+				 */
+				customTabs: {type: "sap.m.ViewSettingsCustomTab", multiple: true, singularName: "customTab", bindable : "bindable"}
+			},
+			associations : {
+
+				/**
+				 * The sort item that is selected. It can be set by either passing a key or the item itself to the function setSelectedSortItem.
+				 */
+				selectedSortItem : {type : "sap.m.ViewSettingsItem", multiple : false},
+
+				/**
+				 * The group item that is selected. It can be set by either passing a key or the item itself to the function setSelectedGroupItem.
+				 * By default 'None' is selected. You can restore back to 'None' by setting this association to empty value.
+				 */
+				selectedGroupItem : {type : "sap.m.ViewSettingsItem", multiple : false},
+
+				/**
+				 * The preset filter item that is selected. It can be set by either passing a key or the item itself to the function setSelectedPresetFilterItem. Note that either a preset filter OR multiple detail filters can be active at the same time.
+				 */
+				selectedPresetFilterItem : {type : "sap.m.ViewSettingsItem", multiple : false}
+			},
+			events : {
+
+				/**
+				 * Indicates that the user has pressed the OK button and the selected sort, group, and filter settings should be applied to the data on this page.
+				 * </br></br><b>Note:</b> Custom tabs are not converted to event parameters automatically. For custom tabs, you have to read the state of your controls inside the callback of this event.
+				 */
+				confirm : {
+					parameters : {
+
+						/**
+						 * The selected sort item.
+						 */
+						sortItem : {type : "sap.m.ViewSettingsItem"},
+
+						/**
+						 * The selected sort order (true = descending, false = ascending).
+						 */
+						sortDescending : {type : "boolean"},
+
+						/**
+						 * The selected group item.
+						 */
+						groupItem : {type : "sap.m.ViewSettingsItem"},
+
+						/**
+						 * The selected group order (true = descending, false = ascending).
+						 */
+						groupDescending : {type : "boolean"},
+
+						/**
+						 * The selected preset filter item.
+						 */
+						presetFilterItem : {type : "sap.m.ViewSettingsItem"},
+
+						/**
+						 * The selected filters in an array of ViewSettingsItem.
+						 */
+						filterItems : {type : "sap.m.ViewSettingsItem[]"},
+
+						/**
+						 * The selected filter items in an object notation format: { key: boolean }. If a custom control filter was displayed (for example, the user clicked on the filter item), the value for its key is set to true to indicate that there has been an interaction with the control.
+						 * @deprecated as of version 1.42, replaced by <code>filterCompoundKeys</code> event
+						 */
+						filterKeys : {type : "object", deprecated: true},
+
+						/**
+						 * The selected filter items in an object notation format: { parentKey: { key: boolean, key2: boolean, ...  }, ...}. If a custom control filter was displayed (for example, the user clicked on the filter item), the value for its key is set to true to indicate that there has been an interaction with the control.
+						 * @since 1.42
+						 */
+						filterCompoundKeys : {type : "object"},
+
+						/**
+						 * The selected filter items in a string format to display in the control's header bar in format "Filtered by: key (subkey1, subkey2, subkey3)".
+						 */
+						filterString : {type : "string"}
+					}
+				},
+
+				/**
+				 * Called when the Cancel button is pressed. It can be used to set the state of custom filter controls.
+				 */
+				cancel : {},
+
+				/**
+				 * Called when the filters are being reset.
+				 */
+				resetFilters : {},
+
+				/**
+				 * Called when the Reset button is pressed. It can be used to set the state of custom tabs.
+				 */
+				reset : {},
+
+				/**
+				 * Fired when the filter detail page is opened.
+				 */
+				filterDetailPageOpened: {
+					parameters: {
+						/**
+						 * The filter item for which the details are opened.
+						 */
+						parentFilterItem: {type: "sap.m.ViewSettingsFilterItem"}
+					}
 				}
 			}
-		}
-	}});
+		},
+
+		renderer: ViewSettingsDialogRenderer
+	});
 
 
 	/* =========================================================== */
@@ -175,7 +349,9 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/* =========================================================== */
 
 	ViewSettingsDialog.prototype.init = function() {
-		this._rb                            = sap.ui.getCore().getLibraryResourceBundle("sap.m");
+		var sId = this.getId();
+
+		this._rb                            = Library.getResourceBundleFor("sap.m");
 		this._sDialogWidth                  = "350px";
 		this._sDialogHeight                 = "434px";
 
@@ -189,6 +365,49 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 		this._oContentItem                  = null;
 		this._oPreviousState                = {};
 		this._sCustomTabsButtonsIdPrefix    = '-custom-button-';
+		this._sTitleLabelId                 = sId + "-title";
+		this._sFilterDetailTitleLabelId     = sId + "-detailtitle";
+		this._oFiltersSelectedOnly			= {};
+		this._oKeylessFilters				= {};
+
+		/* setup a name map between the sortItems
+		 aggregation and an sap.m.List with items
+		 the list itself will not be created right now */
+		this._aggregationToListItems("sortItems", {
+			text: {
+				listProp: "title"
+			},
+			selected: {
+			},
+			wrapping: {
+			}
+		}, {
+			tooltip: {}
+		},{
+			type : ListType.Active
+		}, {
+			mode : ListMode.SingleSelectLeft,
+			includeItemInSelection : true,
+			selectionChange : function(oEvent) {
+				var oListItem = oEvent.getParameter('listItem'),
+					aItems = this.getSortItems(),
+					oVSItemToSelect = this._getVSItem(oListItem),
+					i;
+
+				oVSItemToSelect.setProperty('selected', oEvent.getParameter('selected'), true, false);
+				this.setAssociation('selectedSortItem', oVSItemToSelect, true);
+
+				for (i = 0; i < aItems.length; i++) {
+					if (oVSItemToSelect !== aItems[i]) {
+						aItems[i].setProperty('selected', false, true, false);
+					}
+				}
+
+				// enable/disable reset button if necessary
+				this._checkResetStatus();
+
+			}.bind(this)
+		});
 	};
 
 	ViewSettingsDialog.prototype.exit = function() {
@@ -205,13 +424,14 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 		this._groupContent                  = null;
 		this._filterContent                 = null;
 		this._sCustomTabsButtonsIdPrefix    = null;
+		this._fnFilterSearchCallback        = null;
+		this._oKeylessFilters               = null;
 
 		// sap.ui.core.Popup removes its content on close()/destroy() automatically from the static UIArea,
 		// but only if it added it there itself. As we did that, we have to remove it also on our own
-		if ( this._bAppendedToUIArea ) {
-			var oStatic = sap.ui.getCore().getStaticAreaRef();
-			oStatic = sap.ui.getCore().getUIArea(oStatic);
-			oStatic.removeContent(this, true);
+		if ( this._bAppendedToUIArea && this._dialog ) {
+			var oStatic = StaticArea.getUIArea();
+			oStatic.removeContent(this._dialog, true);
 		}
 
 		// controls that are internally managed and may or may not be assigned to an
@@ -267,14 +487,11 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 		if (this._sortList) {
 			this._sortList.destroy();
 			this._sortList = null;
-			this._ariaSortListInvisibleText.destroy();
-			this._ariaSortListInvisibleText = null;
 		}
+
 		if (this._sortOrderList) {
 			this._sortOrderList.destroy();
 			this._sortOrderList = null;
-			this._ariaSortOrderInvisibleText.destroy();
-			this._ariaSortOrderInvisibleText = null;
 		}
 
 		if (this._oGroupingNoneItem) {
@@ -284,14 +501,10 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 		if (this._groupList) {
 			this._groupList.destroy();
 			this._groupList = null;
-			this._ariaGroupListInvisibleText.destroy();
-			this._ariaGroupListInvisibleText = null;
 		}
 		if (this._groupOrderList) {
 			this._groupOrderList.destroy();
 			this._groupOrderList = null;
-			this._ariaGroupOrderInvisibleText.destroy();
-			this._ariaGroupOrderInvisibleText = null;
 		}
 
 		if (this._presetFilterList) {
@@ -316,16 +529,111 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 			this._filterDetailList.destroy();
 			this._filterDetailList = null;
 		}
+		if (this._oStringFilter) {
+			this._oStringFilter = null;
+		}
+		if (this._oSelectedFilterKeys) {
+			this._oSelectedFilterKeys = null;
+		}
+	};
+
+	ViewSettingsDialog.prototype._aggregationToListItems = function(sAggregationName, oItemPropertyMap, oItemAggregationMap, oListItemInitials, oListOptions) {
+		var sType = this._getListType(sAggregationName),
+			sListName = "_" + sType + "List";
+
+		if (!this.mToList) {
+			this.mToList = {};
+		}
+
+		this.mToList[sType] = {
+			"itemPropertyMap": oItemPropertyMap,
+			"itemAggregationMap": oItemAggregationMap,
+			"listItemOptions": oListItemInitials,
+			"listOptions": oListOptions,
+			"listName": sListName
+		};
+	};
+
+	ViewSettingsDialog.prototype._getListType = function(sAggregationName) {
+		return sAggregationName.replace('Items', '');
+	};
+
+	ViewSettingsDialog.prototype._createList = function(sType) {
+		var sListId = this.getId() + "-" + sType + "list",
+			oList = new List(sListId, this.mToList[sType].listOptions),
+			oGHI = this._createGroupHeaderItem(sType);
+
+		oList.addItemGroup(undefined, oGHI);
+		this[this.mToList[sType].listName] = oList;
+
+		return oList;
+	};
+
+	ViewSettingsDialog.prototype._createGroupHeaderItem = function(sListType) {
+		return new GroupHeaderListItem({ title: this._rb.getText("VIEWSETTINGS_" + sListType.toUpperCase() + "_OBJECT") });
+	};
+
+	ViewSettingsDialog.prototype._getList = function(sType) {
+		if (!this.mToList || !this.mToList[sType]) {
+			return;
+		}
+
+		return this[this.mToList[sType].listName];
+	};
+
+	ViewSettingsDialog.prototype._createListItem = function(sType, oVSItem) {
+		var oOptions = this.mToList[sType].listItemOptions,
+			mItemPropertyMap = this.mToList[sType].itemPropertyMap,
+			mItemAggregationMap = this.mToList[sType].itemAggregationMap,
+			sListProp,
+			oCreatedListItem;
+
+		// Pass the properties
+		for (var sProperty in mItemPropertyMap) {
+			if (mItemPropertyMap.hasOwnProperty(sProperty)) {
+				sListProp = mItemPropertyMap[sProperty].listProp || sProperty;
+				oOptions[sListProp] = this._createListItemPropertyValue(sType, sProperty, oVSItem);
+			}
+		}
+
+		// Pass the aggregations
+		for (var sAggregationName in mItemAggregationMap) {
+			if (mItemAggregationMap.hasOwnProperty(sAggregationName)) {
+				oOptions[sAggregationName] = oVSItem.getAggregation(sAggregationName);
+			}
+		}
+
+		oCreatedListItem = new StandardListItem(oOptions).data('item', oVSItem);
+
+		return oCreatedListItem;
+	};
+
+	ViewSettingsDialog.prototype._createListItemPropertyValue = function(sType, sPropertyName, oVSItem) {
+		var vVal = ManagedObject.escapeSettingsValue(oVSItem.getMetadata().getAllProperties()[sPropertyName].get(oVSItem)),
+			fn = this.mToList[sType].itemPropertyMap[sPropertyName].fn;
+		return fn ? fn(vVal) : vVal;
+	};
+
+	ViewSettingsDialog.prototype._getListItem = function(sType, oVSItem) {
+		var aListItems = this._getList(sType).getItems().filter(function(oItem) {
+			return oItem.data('item') === oVSItem;
+		});
+
+		return aListItems.length ? aListItems[0] : null;
+	};
+
+	ViewSettingsDialog.prototype._getVSItem = function(oListItem) {
+		return oListItem.data('item');
 	};
 
 	/**
 	 * Overwrites the aggregation setter in order to have ID validation logic as some strings
 	 * are reserved for the predefined tabs.
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
-	 * @param {object} oCustomTab The custom tab to be added
-	 * @returns {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @param {sap.m.ViewSettingsCustomTab} oCustomTab The custom tab to be added
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.addCustomTab = function (oCustomTab) {
 		var sId = oCustomTab.getId();
@@ -338,17 +646,13 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 		return this;
 	};
 
-	/**
-	 * Invalidates the control (suppressed as there is no renderer).
-	 * @overwrite
-	 * @public
-	 */
 	ViewSettingsDialog.prototype.invalidate = function() {
+		// Invalidate call on ViewSettingsDialog is directly forwarded to the sap.m.Dialog
+		// since the ViewSettingsDialog has no renderer.
 		// CSN #80686/2014: only invalidate inner dialog if call does not come from inside
+		// BCP #1670394376
 		if (this._dialog && (!arguments[0] || arguments[0] && arguments[0].getId() !== this.getId() + "-dialog")) {
 			this._dialog.invalidate(arguments);
-		} else {
-			Control.prototype.invalidate.apply(this, arguments);
 		}
 	};
 
@@ -357,7 +661,8 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * Forward method to the inner dialog method: addStyleClass.
 	 * @public
 	 * @override
-	 * @returns {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @param {string} sStyleClass CSS class name to add
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.addStyleClass = function () {
 		var oDialog = this._getDialog();
@@ -370,7 +675,8 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * Forward method to the inner dialog method: removeStyleClass.
 	 * @public
 	 * @override
-	 * @returns {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @param {string} sStyleClass CSS class name to remove
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.removeStyleClass = function () {
 		var oDialog = this._getDialog();
@@ -383,7 +689,9 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * Forward method to the inner dialog method: toggleStyleClass.
 	 * @public
 	 * @override
-	 * @returns {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @param {string} sStyleClass CSS class name to add or remove
+	 * @param {boolean} [bAdd] Whether style class should be added (or removed); when this parameter is not given, the given style class will be toggled (removed, if present, and added if not present)
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.toggleStyleClass = function () {
 		var oDialog = this._getDialog();
@@ -408,7 +716,7 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * Forward method to the inner dialog method: getDomRef.
 	 * @public
 	 * @override
-	 * @return {Element} The Element's DOM Element sub DOM Element or null
+	 * @returns {Element|null} The Element's DOM Element, sub DOM Element or <code>null</code>
 	 */
 	ViewSettingsDialog.prototype.getDomRef = function () {
 		// this is also called on destroy to remove the DOM element, therefore we directly check the reference instead of the internal getter
@@ -422,45 +730,279 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/**
 	 * Sets the title of the internal dialog.
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
 	 * @param {string} sTitle The title text for the dialog
-	 * @return {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.setTitle = function(sTitle) {
 		this._getTitleLabel().setText(sTitle);
-		this.setProperty("title", sTitle, true);
+		this.setProperty("title", sTitle);
 		return this;
 	};
 
+	ViewSettingsDialog.prototype.setTitleAlignment = function (sAlignment) {
+		this.setProperty("titleAlignment", sAlignment);
+		if (this._page1) {
+			this._page1.setTitleAlignment(sAlignment);
+		}
+		if (this._page2) {
+			this._page2.setTitleAlignment(sAlignment);
+		}
+		return this;
+	};
 
 	/**
-	 * Override the method in order to attach an event handler responsible for propagating item property changes.
+	 * Override the method in order to attach some event handlers
 	 * @override
 	 * @param {string} sAggregationName Name of the added aggregation
-	 * @param {object} oObject Intance that is going to be added
+	 * @param {object} oObject Instance that is going to be added
 	 * @param {boolean} bSuppressInvalidate Flag indicating whether invalidation should be supressed
 	 * @returns {object} This instance for chaining
 	 */
 	ViewSettingsDialog.prototype.addAggregation = function (sAggregationName, oObject, bSuppressInvalidate) {
-		sap.ui.base.ManagedObject.prototype.addAggregation.apply(this, arguments);
+		Control.prototype.addAggregation.apply(this, arguments);
 
+		var sType = this._getListType(sAggregationName);
+		if (this.mToList[sType]) {
+			var oListItem = this._createListItem(sType, oObject);
+			var oList = this._getList(sType);
+			if (!oList) {
+				oList = this._createList(sType);
+			} else if (!oList.getItems().length) {
+				oList.addItemGroup(undefined, this._createGroupHeaderItem(sType));
+			}
+
+			oList.addItem(oListItem);
+			this._attachItemPropertyChange(sType, oObject);
+		} else {
+			this._attachItemEventHandlers(sAggregationName, oObject);
+		}
+
+		if (sAggregationName === "filterItems") {
+			this._observeItem(oObject);
+		}
+
+		return this;
+	};
+
+	/**
+	 * Override the method in order to attach some event handlers
+	 * @override
+	 * @param {string} sAggregationName Name of the added aggregation
+	 * @param {object} oObject Instance that is going to be added
+	 * @param {int} iIndex the <code>0</code>-based index the managed object should be inserted
+	 * @param {boolean} bSuppressInvalidate Flag indicating whether invalidation should be supressed
+	 * @returns {sap.ui.base.ManagedObject} Returns <code>this</code> to allow method chaining
+	 */
+	ViewSettingsDialog.prototype.insertAggregation = function(sAggregationName, oObject, iIndex, bSuppressInvalidate) {
+		Control.prototype.insertAggregation.apply(this, arguments);
+
+		var sType = this._getListType(sAggregationName);
+		if (this.mToList[sType]) {
+			var oListItem = this._createListItem(sType, oObject);
+			var oList = this._getList(sType);
+			if (!oList) {
+				oList = this._createList(sType);
+				oList.insertItem(oListItem, iIndex);
+			} else if (!oList.getItems().length) {
+				oList.addItemGroup(undefined, this._createGroupHeaderItem(sType));
+				oList.insertItem(oListItem, iIndex + 1);
+			} else {
+				oList.insertItem(oListItem, iIndex);
+			}
+
+			this._attachItemPropertyChange(sType, oObject);
+		} else {
+			this._attachItemEventHandlers(sAggregationName, oObject);
+		}
+
+		if (sAggregationName === "filterItems") {
+			this._observeItem(oObject);
+		}
+
+		return this;
+	};
+
+	ViewSettingsDialog.prototype.removeAggregation = function(sAggregationName, vObject, bSuppressInvalidate) {
+		restoreCustomTabContentAggregation.call(this, sAggregationName, vObject);
+
+		var vRemovedObject = Control.prototype.removeAggregation.apply(this, arguments);
+
+		var sType = this._getListType(sAggregationName);
+		if (this.mToList[sType]) {
+			var oListItem = this._getListItem(sType, vRemovedObject);
+			var oList = this._getList(sType);
+			var oRemovedListItem = oList.removeItem(oListItem);
+			oRemovedListItem.destroy();
+			this._detachItemPropertyChange(vRemovedObject);
+		}
+
+		if (sAggregationName === "filterItems") {
+			this._unobserveItem(vRemovedObject);
+			if (!this.getFilterItems().length) {
+				this._disconnectAndDestroyFilterItemsObserver();
+			}
+		}
+
+		return vRemovedObject;
+	};
+
+	ViewSettingsDialog.prototype.removeAllAggregation = function(sAggregationName, bSuppressInvalidate) {
+		// custom tabs aggregation needs special handling - make sure it happens
+		restoreCustomTabContentAggregation.call(this);
+
+		var vRemovedObjects = Control.prototype.removeAllAggregation.apply(this, arguments);
+
+		var sType = this._getListType(sAggregationName);
+		if (this.mToList[sType]) {
+			var oList = this._getList(sType);
+			if (oList) { //we may not have any internal lists (e.g. no sortItems for this VSD instance)
+				var oRemovedListItems = oList.removeAllItems();
+
+				oRemovedListItems.forEach(function(oItem) {
+					oItem.destroy();
+				});
+			}
+			vRemovedObjects.forEach(function(oItem) {
+				this._detachItemPropertyChange(oItem);
+			}, this);
+		}
+
+		if (sAggregationName === "filterItems") {
+			this._disconnectAndDestroyFilterItemsObserver();
+		}
+
+		return vRemovedObjects;
+	};
+
+	ViewSettingsDialog.prototype.destroyAggregation = function(sAggregationName, bSuppressInvalidate) {
+		restoreCustomTabContentAggregation.call(this);
+
+		Control.prototype.destroyAggregation.apply(this, arguments);
+
+		var sType = this._getListType(sAggregationName);
+		if (this.mToList[sType]) {
+			var oList = this._getList(sType);
+			if (oList) {
+				oList.destroyItems();
+			}
+		}
+
+		if (sAggregationName === "filterItems") {
+			this._disconnectAndDestroyFilterItemsObserver();
+		}
+
+		return this;
+	};
+
+	ViewSettingsDialog.prototype._detachItemPropertyChange = function(oVSItem) {
+		delete EventProvider.getEventList(oVSItem)["itemPropertyChanged"];
+	};
+
+	ViewSettingsDialog.prototype._attachItemPropertyChange = function(sType, oVSItem) {
+		oVSItem.attachEvent('itemPropertyChanged', function fnHandleItemPropertyChanged(oEvent) {
+			var oListItem,
+				sProp,
+				sListProp,
+				vVal,
+				fn,
+				vListPropVal;
+
+			oListItem = this._getListItem(sType, oVSItem);
+			sProp = oEvent.getParameter('propertyKey');
+
+			if (!this.mToList[sType].itemPropertyMap[sProp]) {
+				return;
+			}
+
+			sListProp = this.mToList[sType].itemPropertyMap[sProp].listProp || sProp;
+			vVal = oEvent.getParameter('propertyValue');
+			fn = this.mToList[sType].itemPropertyMap[sProp].fn;
+			vListPropVal = fn ? fn(vVal) : vVal;
+
+			oListItem.getMetadata().getAllProperties()[sListProp].set(oListItem, vListPropVal);
+		}, this);
+	};
+
+	/**
+	 * Returns the ManagedObjectObserver for the filterItems
+	 *
+	 * @returns {sap.ui.base.ManagedObjectObserver} the filterItems observer object
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._getFilterItemsObserver = function () {
+		if (!this._oFilterItemsObserver) {
+			this._oFilterItemsObserver = new ManagedObjectObserver(function() {
+				if (this._oSelectedFilterKeys) {
+					this.setSelectedFilterCompoundKeys(this._oSelectedFilterKeys);
+				}
+			}.bind(this));
+		}
+		return this._oFilterItemsObserver;
+	};
+
+	/**
+	 * Observes the items aggregation of the passed filterItem
+	 *
+	 * @param {sap.m.ViewSettingsDialogFilterItem} oFilterItem the filterItem, which aggregation will be observed
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._observeItem = function (oFilterItem) {
+		this._getFilterItemsObserver().observe(oFilterItem, {
+			aggregations: ["items"]
+		});
+	};
+
+	/**
+	 * Unobserves the items aggregation of the passed filterItem
+	 *
+	 * @param {sap.m.ViewSettingsDialogFilterItem} oFilterItem the filterItem, which aggregation will be unobserved
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._unobserveItem = function (oFilterItem) {
+		this._getFilterItemsObserver().unobserve(oFilterItem, {
+			aggregations: ["items"]
+		});
+	};
+
+	/**
+	 * Disconnects and destroys the ManagedObjectObserver observing the used filterItem
+	 *
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._disconnectAndDestroyFilterItemsObserver = function () {
+		if (this._oFilterItemsObserver) {
+			this._oFilterItemsObserver.disconnect();
+			this._oFilterItemsObserver.destroy();
+			this._oFilterItemsObserver = null;
+		}
+	};
+
+	/**
+	 * Attaches event handlers responsible for propagating
+	 * item property changes as well as filter detail items' change.
+	 * @param {string} sAggregationName The name of the aggregation
+	 * @param {Object} oObject
+	 * @returns {object} This instance for chaining
+	 */
+	ViewSettingsDialog.prototype._attachItemEventHandlers = function(sAggregationName, oObject) {
 		// perform the following logic only for the items aggregations, except custom tabs
-		if (sAggregationName !== 'sortItems' && sAggregationName !== 'groupItems' && sAggregationName !== 'filterItems') {
+		if (sAggregationName !== 'groupItems' && sAggregationName !== 'filterItems') {
 			return this;
 		}
 
-		var sType = sAggregationName.replace('Items', ''); // extract "filter"/"group"/"sort"
+		var sType = sAggregationName.replace('Items', ''); // extract "filter"/"group"
 		sType = sType.charAt(0).toUpperCase() + sType.slice(1); // capitalize
 
 
-		// Attach 'itemPropertyChaged' handler, that will re-initiate (specific) dialog content
+		// Attach 'itemPropertyChanged' handler, that will re-initiate (specific) dialog content
 		oObject.attachEvent('itemPropertyChanged', function (sAggregationName, oEvent) {
-			/* If the the changed item was a 'sap.m.ViewSettingsItem'
+			/* If the changed item was a 'sap.m.ViewSettingsItem'
 			 * then threat it differently as filter detail item.
 			 * */
 			if (sAggregationName === 'filterItems' &&
-				oEvent.getParameter('changedItem').getMetadata().getName() === 'sap.m.ViewSettingsItem') {
+				oEvent.getParameter('changedItem').getParent().getMetadata().getName() === 'sap.m.ViewSettingsFilterItem') {
 				// handle the select differently
 				if (oEvent.getParameter('propertyKey') !== 'selected') {
 					// if on filter details page for a concrete filter item
@@ -482,12 +1024,16 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 						this._updateSelectAllCheckBoxState();
 					}
 				}
+				this._updateFilterCounters(); //selected item has changed, so counters must be updated
 			} else {
-				// call _initFilterContent and _initFilterItems methods, where "Filter" might be also "Group" or "Sort"
+				// call _initFilterContent and _initFilterItems methods, where "Filter" might be also "Group"
 				if (typeof this['_init' + sType + 'Content'] === 'function') {
 					this['_init' + sType + 'Content']();
 				}
 				if (typeof this['_init' + sType + 'Items'] === 'function') {
+					if (oEvent.getParameter("propertyKey") === "selected" && oEvent.getParameter("propertyValue") === true) {
+						this.setAssociation("selectedGroupItem", oEvent.getParameter("changedItem"), true);
+					}
 					this['_init' + sType + 'Items']();
 				}
 			}
@@ -500,6 +1046,8 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 				this._initFilterDetailItems(this._oContentItem);
 			}
 		}.bind(this));
+
+		return this;
 	};
 
 	/**
@@ -508,9 +1056,42 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._setFilterDetailTitle = function (oItem) {
-		this._getDetailTitleLabel().setText(
-			this._rb.getText("VIEWSETTINGS_TITLE_FILTERBY") + " "
-			+ oItem.getText());
+		var sText = this._rb.getText("VIEWSETTINGS_TITLE_FILTERBY") + " " + oItem.getText();
+		this._getDetailTitleLabel().setText(sText);
+
+		// Update the dialog's title as well, so that the new detail title can be read out by the screen reader
+		this._toggleDialogTitle(this._sFilterDetailTitleLabelId);
+	};
+
+	/**
+	 * Adds a reference to a specific title in the dialog's <code>aria-labelledby</code> attribute.
+	 *
+	 * @param {string} sNewTitleId Title's ID
+	 * @returns {this} Reference to <code>this</code> for method chaining
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._toggleDialogTitle = function (sNewTitleId) {
+		var oDialog = this._getDialog(),
+			aAriaLabelledByIds = oDialog.getAriaLabelledBy(),
+			// Title options are in an array, for ease of extending this in the future.
+			aTitleOptions = [
+				this._sTitleLabelId,
+				this._sFilterDetailTitleLabelId
+			];
+
+		if (aTitleOptions.indexOf(sNewTitleId) === -1 && aAriaLabelledByIds.indexOf(sNewTitleId) > -1) {
+			// Don't do anything if the title isn't one of the options, or it's already set in the ariaLabelledBy
+			return this;
+		}
+
+		for (var sTitleOptionId in aTitleOptions) {
+			// Make sure that only the new title will be in ariaLabelledBy
+			oDialog.removeAriaLabelledBy(aTitleOptions[sTitleOptionId]);
+		}
+
+		oDialog.addAriaLabelledBy(sNewTitleId);
+
+		return this;
 	};
 
 	/**
@@ -521,10 +1102,10 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @returns {ViewSettingsDialog} this instance for chaining
 	 */
 	ViewSettingsDialog.prototype.updateAggregation = function (sAggregationName) {
-		sap.ui.base.ManagedObject.prototype.updateAggregation.apply(this, arguments);
+		Control.prototype.updateAggregation.apply(this, arguments);
 
 		// perform the following logic only for the items aggregations, except custom tabs
-		if (sAggregationName !== 'sortItems' && sAggregationName !== 'groupItems' && sAggregationName !== 'filterItems') {
+		if (sAggregationName !== 'groupItems' && sAggregationName !== 'filterItems') {
 			return this;
 		}
 
@@ -543,44 +1124,54 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/**
 	 * Adds a sort item and sets the association to reflect the selected state.
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
 	 * @param {sap.m.ViewSettingsItem} oItem The item to be added to the aggregation
-	 * @return {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.addSortItem = function(oItem) {
 		this.addAggregation("sortItems", oItem);
 
-		if (oItem.getSelected()) {
-			this.setSelectedSortItem(oItem);
+		if (this.getSelectedSortItem() === oItem.getId() || this.getSelectedSortItem() === oItem.getKey()) {
+			oItem.setSelected(true);
 		}
+
+		if (oItem.getSelected()) {
+			this.setAssociation("selectedSortItem", oItem, true);
+		}
+
 		return this;
 	};
 
 	/**
 	 * Adds a group item and sets the association to reflect the selected state.
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
 	 * @param {sap.m.ViewSettingsItem} oItem The item to be added to the group items
-	 * @return {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.addGroupItem = function(oItem) {
 		this.addAggregation("groupItems", oItem);
 
-		if (oItem.getSelected()) {
-			this.setSelectedGroupItem(oItem);
+		if (this.getSelectedGroupItem() === oItem.getId() || this.getSelectedGroupItem() === oItem.getKey()) {
+			oItem.setSelected(true);
 		}
+
+		if (oItem.getSelected()) {
+			this.setAssociation("selectedGroupItem", oItem, true);
+		}
+
 		return this;
 	};
 
 	/**
 	 * Adds a preset filter item and sets the association to reflect the selected state.
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
 	 * @param {sap.m.ViewSettingsItem} oItem The selected item or a string with the key
-	 * @return {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.addPresetFilterItem = function(oItem) {
 		this.addAggregation("presetFilterItems", oItem);
@@ -592,32 +1183,36 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	};
 
 	/**
-	 * Sets the selected sort item (either by key or by item).
+	 * Sets the selected sort item (either by key, item id or item instance).
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
-	 * @param {sap.m.ViewSettingsItem|string} vItemOrKey The selected item or the item's key string
-	 * @return {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @param {sap.m.ViewSettingsItem|sap.ui.core.ID|string} vItemOrKey The selected item, the item's string key
+	 * or the item id
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.setSelectedSortItem = function(vItemOrKey) {
 		var aItems = this.getSortItems(),
 			i = 0,
 			oItem = findViewSettingsItemByKey(
 				vItemOrKey,
-				aItems,
-				"Could not set selected sort item. Item is not found: '" + vItemOrKey + "'"
+				aItems
 			);
 
-		//change selected item only if it is found among the sort items
-		if (validateViewSettingsItem(oItem)) {
+		if (!oItem && (typeof vItemOrKey === "string")) {
+			oItem = Element.getElementById(vItemOrKey);
+		}
+
+		//change selected item only if it is found among the sort items or if there is no selected item
+		if (!oItem || validateViewSettingsItem(oItem)) {
 			// set selected = true for this item & selected = false for all others items
 			for (i = 0; i < aItems.length; i++) {
-				if (aItems[i].getId() !== oItem.getId()) {
+				if (!oItem || aItems[i].getId() !== oItem.getId()) {
 					aItems[i].setProperty('selected', false, true);
 				}
 			}
 
-			if (oItem.getProperty('selected') !== true) {
+			if (oItem && oItem.getProperty('selected') !== true) {
 				oItem.setProperty('selected', true, true);
 			}
 
@@ -625,28 +1220,41 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 			if (this._getDialog().isOpen()) {
 				this._updateListSelection(this._sortList, oItem);
 			}
-			this.setAssociation("selectedSortItem", oItem, true);
 		}
+
+		this.setAssociation("selectedSortItem", oItem || vItemOrKey, true);
 
 		return this;
 	};
 
 	/**
-	 * Sets the selected group item (either by key or by item).
+	 * Sets the selected group item (either by key, item id or item instance).
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
-	 * @param {sap.m.ViewSettingsItem|string} vItemOrKey The selected item or the item's key string
-	 * @return {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @param {sap.m.ViewSettingsItem|sap.ui.core.ID|string} vItemOrKey The selected item, the item's string key
+	 * or the item id
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.setSelectedGroupItem = function(vItemOrKey) {
 		var aItems = this.getGroupItems(),
 			i = 0,
 			oItem = findViewSettingsItemByKey(
 				vItemOrKey,
-				aItems,
-				"Could not set selected group item. Item is not found: '" + vItemOrKey + "'"
+				aItems
 			);
+
+		if (!oItem && (typeof vItemOrKey === "string")) {
+			oItem = Element.getElementById(vItemOrKey);
+		}
+
+		// if no Item is found and the key is empty set the default "None" item as selected
+		// BCP: 1780536754
+		if (!oItem && !vItemOrKey) {
+			oItem = this._oGroupingNoneItem;
+			this.setAssociation("selectedGroupItem", oItem, true);
+			return this;
+		}
 
 		//change selected item only if it is found among the group items
 		if (validateViewSettingsItem(oItem)) {
@@ -661,8 +1269,9 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 			if (this._getDialog().isOpen()) {
 				this._updateListSelection(this._groupList, oItem);
 			}
-			this.setAssociation("selectedGroupItem", oItem, true);
 		}
+
+		this.setAssociation("selectedGroupItem", oItem || vItemOrKey, true);
 
 		return this;
 	};
@@ -670,10 +1279,10 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/**
 	 * Sets the selected preset filter item.
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
-	 * @param {sap.m.ViewSettingsItem|string} vItemOrKey The selected item or the item's key string
-	 * @return {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @param {sap.m.ViewSettingsItem|sap.ui.core.ID|string|null} vItemOrKey The selected item or the item's key string
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.setSelectedPresetFilterItem = function(vItemOrKey) {
 		var aItems = this.getPresetFilterItems(),
@@ -684,14 +1293,16 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 				"Could not set selected preset filter item. Item is not found: '" + vItemOrKey + "'"
 			);
 
-		//change selected item only if it is found among the preset filter items
-		if (validateViewSettingsItem(oItem)) {
+		//change selected item if it is found among the preset filter items or in case of resetting the value
+		if (validateViewSettingsItem(oItem) || oItem === null) {
 			// set selected = true for this item & selected = false for all others items
 			for (i = 0; i < aItems.length; i++) {
 				aItems[i].setProperty('selected', false, true);
 			}
 
-			oItem.setProperty('selected', true, true);
+			if (oItem !== null) {
+				oItem.setProperty('selected', true, true);
+			}
 			// clear filters (only one mode is allowed, preset filters or filters)
 			this._clearSelectedFilters();
 
@@ -708,22 +1319,23 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @param {string} [sPageId] The ID of the initial page to be opened in the dialog.
 	 *	The available values are "sort", "group", "filter" or IDs of custom tabs.
 	 *
-	 * @return {sap.m.ViewSettingsDialog} this pointer for chaining
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.open = function(sPageId) {
 		// add to static UI area manually because we don't have a renderer
+
 		if (!this.getParent() && !this._bAppendedToUIArea) {
-			var oStatic = sap.ui.getCore().getStaticAreaRef();
-			oStatic = sap.ui.getCore().getUIArea(oStatic);
-			oStatic.addContent(this, true);
+			var oStatic = StaticArea.getUIArea();
+			// add as content the Dialog to the Static area and not the ViewSettingsDialog
+			// once the Static area is invalidated, the Dialog will be rendered and not the ViewSettingsDialog which has no renderer
+			// and uses the renderer of the Dialog
+			oStatic.addContent(this._getDialog(), true);
 			this._bAppendedToUIArea = true;
 		}
 
 		// if there is a default tab and the user has been at filter details view on page2, go back to page1
 		if (sPageId && this._vContentPage === 3) {
-			jQuery.sap.delayedCall(0, this._getNavContainer(), "to", [
-				this._getPage1().getId(), "show" ]);
+			setTimeout(this._getNavContainer()["to"].bind(this._getNavContainer(), this._getPage1().getId(), "show"), 0);
 		}
 
 		// init the dialog content based on the aggregations
@@ -731,37 +1343,38 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 		// store the current dialog state to be able to reset it on cancel
 		this._oPreviousState = {
-			sortItem : sap.ui.getCore().byId(this.getSelectedSortItem()),
+			sortItem : Element.getElementById(this._getSelectedSortItem()),
 			sortDescending : this.getSortDescending(),
-			groupItem : sap.ui.getCore().byId(this.getSelectedGroupItem()),
+			groupItem : Element.getElementById(this._getSelectedGroupItem()),
 			groupDescending : this.getGroupDescending(),
-			presetFilterItem : sap.ui.getCore().byId(
-				this.getSelectedPresetFilterItem()),
+			presetFilterItem : Element.getElementById(this.getSelectedPresetFilterItem()),
+			/**
+			 * @deprecated as of version 1.42
+			 */
 			filterKeys : this.getSelectedFilterKeys(),
+			filterCompoundKeys: this.getSelectedFilterCompoundKeys(),
 			navPage : this._getNavContainer().getCurrentPage(),
 			contentPage : this._vContentPage,
 			contentItem : this._oContentItem
 		};
 
-		//focus the first focusable item in current page's content
-		if (sap.ui.Device.system.desktop) {
-			this._getDialog().attachEventOnce("afterOpen", function () {
-				var oCurrentPage = this._getNavContainer().getCurrentPage(),
-				    $firstFocusable;
-				if (oCurrentPage) {
-					$firstFocusable = oCurrentPage.$("cont").firstFocusableDomRef();
-					if ($firstFocusable) {
-						if (jQuery($firstFocusable).hasClass('sapMListUl')) {
-							var $aListItems = jQuery($firstFocusable).find('.sapMLIB');
-							$aListItems.length && $aListItems[0].focus();
-							return;
-						}
-
-						$firstFocusable.focus();
-					}
-				}
-			}, this);
+		// store initial dialog state in order to be able to reset it on reset button click
+		if (!this._oInitialState) {
+			this._oInitialState = {
+				sortItem: this._getSelectedSortItem(),
+				sortDescending: this.getSortDescending(),
+				groupItem: this._getSelectedGroupItem(),
+				groupDescending: this.getGroupDescending(),
+				presetFilterItem: this.getSelectedPresetFilterItem()
+			};
 		}
+
+		//focus the first focusable item in current page's content
+		if (Device.system.desktop) {
+			this._getDialog().attachEventOnce("afterOpen", this._focusFirstListItem, this);
+		}
+
+		this._checkResetStatus();
 
 		// open dialog
 		this._getDialog().open();
@@ -769,24 +1382,41 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 		return this;
 	};
 
+	ViewSettingsDialog.prototype._focusFirstListItem = function() {
+		var oCurrentPage = this._getNavContainer().getCurrentPage(),
+			$firstFocusable;
+
+		if (oCurrentPage) {
+			$firstFocusable = oCurrentPage.$("cont").firstFocusableDomRef();
+			if ($firstFocusable) {
+				if (jQuery($firstFocusable).hasClass('sapMListUl')) {
+					var $aListItems = jQuery($firstFocusable).find('.sapMLIB');
+					$aListItems.length && $aListItems[0].focus();
+					return;
+				}
+
+				$firstFocusable.focus();
+			}
+		}
+	};
+
 	/**
 	 * Returns the selected filters as an array of ViewSettingsItems.
 	 *
 	 * It can be used to create matching sorters and filters to apply the selected settings to the data.
-	 * @overwrite
+	 * @override
 	 * @public
-	 * @return {sap.m.ViewSettingsItem[]} An array of selected filter items
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
+	 * @returns {sap.m.ViewSettingsItem[]} An array of selected filter items
 	 */
 	ViewSettingsDialog.prototype.getSelectedFilterItems = function() {
 		var aSelectedFilterItems = [], aFilterItems = this.getFilterItems(), aSubFilterItems, bMultiSelect = true, i = 0, j;
 
 		for (; i < aFilterItems.length; i++) {
-			if (aFilterItems[i] instanceof sap.m.ViewSettingsCustomItem) {
+			if (BaseObject.isObjectA(aFilterItems[i], "sap.m.ViewSettingsCustomItem")) {
 				if (aFilterItems[i].getSelected()) {
 					aSelectedFilterItems.push(aFilterItems[i]);
 				}
-			} else if (aFilterItems[i] instanceof sap.m.ViewSettingsFilterItem) {
+			} else if (BaseObject.isObjectA(aFilterItems[i], "sap.m.ViewSettingsFilterItem")) {
 				aSubFilterItems = aFilterItems[i].getItems();
 				bMultiSelect = aFilterItems[i].getMultiSelect();
 				for (j = 0; j < aSubFilterItems.length; j++) {
@@ -810,30 +1440,32 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * For custom and preset filters it will only add the filter name to the resulting string.
 	 *
 	 * @public
-	 * @return {string} The selected filter string
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
+	 * @returns {string} The selected filter string
 	 */
 	ViewSettingsDialog.prototype.getSelectedFilterString = function() {
-		var sFilterString       = "",
-		    sSubfilterString,
-		    oPresetFilterItem   = this.getSelectedPresetFilterItem(),
-		    aFilterItems        = this.getFilterItems(),
-		    aSubFilterItems,
-		    bMultiSelect        = true,
-		    i                   = 0,
-		    j;
+		var sFilterString = "",
+			sSubfilterString,
+			oPresetFilterItem = this.getSelectedPresetFilterItem(),
+			aFilterItems = this.getFilterItems(),
+			aSubFilterItems,
+			bMultiSelect = true,
+			bSelectedFilters,
+			i = 0,
+			j;
 
 		if (oPresetFilterItem) {
 			// preset filter: add "filter name"
-			sFilterString = this._rb.getText("VIEWSETTINGS_FILTERTEXT").concat(" " + sap.ui.getCore().byId(oPresetFilterItem).getText());
+			sFilterString = this._rb.getText("VIEWSETTINGS_FILTERTEXT").concat(" " + Element.getElementById(oPresetFilterItem).getText());
 		} else { // standard & custom filters
 			for (; i < aFilterItems.length; i++) {
-				if (aFilterItems[i] instanceof sap.m.ViewSettingsCustomItem) {
+				bSelectedFilters = false;
+				if (BaseObject.isObjectA(aFilterItems[i], "sap.m.ViewSettingsCustomItem")) {
 					// custom filter: add "filter name,"
 					if (aFilterItems[i].getSelected()) {
+						bSelectedFilters = true;
 						sFilterString += aFilterItems[i].getText() + ", ";
 					}
-				} else if (aFilterItems[i] instanceof sap.m.ViewSettingsFilterItem) {
+				} else if (BaseObject.isObjectA(aFilterItems[i], "sap.m.ViewSettingsFilterItem")) {
 					// standard filter: add "filter name (sub filter 1 name, sub
 					// filter 2 name, ...), "
 					aSubFilterItems = aFilterItems[i].getItems();
@@ -841,6 +1473,7 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 					sSubfilterString = "";
 					for (j = 0; j < aSubFilterItems.length; j++) {
 						if (aSubFilterItems[j].getSelected()) {
+							bSelectedFilters = true;
 							sSubfilterString += aSubFilterItems[j].getText() + ", ";
 							if (!bMultiSelect) {
 								break; // only first item is added to the selection
@@ -853,7 +1486,7 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 						sSubfilterString.length - 2);
 
 					// add surrounding brackets and comma
-					if (sSubfilterString) {
+					if (bSelectedFilters) {
 						sSubfilterString = " (" + sSubfilterString + ")";
 						sFilterString += aFilterItems[i].getText()
 						+ sSubfilterString + ", ";
@@ -873,17 +1506,23 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	};
 
 	/**
+	 * @typedef {Object<string, boolean>} sap.m.SelectedFilterKeys
+	 * @description An object with item and sub-item keys
+	 * @public
+	 */
+
+	/**
 	 * Gets the selected filter object in format {key: boolean}.
 	 *
 	 * It can be used to create matching sorters and filters to apply the selected settings to the data.
 	 *
 	 * @public
-	 * @return {object} An object with item and subitem keys
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
+	 * @returns {sap.m.SelectedFilterKeys} An object with item and sub-item keys
+	 * @deprecated as of version 1.42, replaced by <code>getSelectedFilterCompoundKeys</code> method
 	 */
 	ViewSettingsDialog.prototype.getSelectedFilterKeys = function() {
-		var oSelectedFilterKeys = {}, aSelectedFilterItems = this
-			.getSelectedFilterItems(), i = 0;
+		var oSelectedFilterKeys = {},
+			aSelectedFilterItems = this.getSelectedFilterItems(), i = 0;
 
 		for (; i < aSelectedFilterItems.length; i++) {
 			oSelectedFilterKeys[aSelectedFilterItems[i].getKey()] = aSelectedFilterItems[i]
@@ -894,44 +1533,85 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	};
 
 	/**
-	 * Sets the selected filter object in format {key: boolean}.
+	 * Gets the selected filter object in format { parent_key: { key: boolean, key2: boolean, ...}, ... }.
 	 *
 	 * @public
-	 * @param {object} oSelectedFilterKeys
+	 * @returns {Object<string, sap.m.SelectedFilterKeys>} An object with item and sub-item keys
+	 * @since 1.42
+	 */
+	ViewSettingsDialog.prototype.getSelectedFilterCompoundKeys = function() {
+		var oSelectedFilterKeys = {},
+			aSelectedFilterItems = this.getSelectedFilterItems(),
+			i,
+			sKey,
+			sParentKey,
+			oFilterItem;
+
+		this._oKeylessFilters = {};
+
+		for (i = 0; i < aSelectedFilterItems.length; i++) {
+			oFilterItem = aSelectedFilterItems[i];
+			if (BaseObject.isObjectA(oFilterItem, "sap.m.ViewSettingsCustomItem")) {
+				sKey = oFilterItem.getKey();
+				oSelectedFilterKeys[sKey] = oFilterItem.getSelected();
+			} else {
+				sKey = oFilterItem.getKey();
+				sParentKey = oFilterItem.getParent().getKey();
+				if (!oSelectedFilterKeys[sParentKey]) {
+					oSelectedFilterKeys[sParentKey] = {};
+				}
+				oSelectedFilterKeys[sParentKey][sKey] = oFilterItem.getSelected();
+				if (sKey === "") {
+					// store additional data for keyless items in order to ease restore
+					if (!this._oKeylessFilters[sParentKey]) {
+						this._oKeylessFilters[sParentKey] = {};
+					}
+					this._oKeylessFilters[sParentKey][oFilterItem.getText()] = true;
+				}
+			}
+		}
+
+		return oSelectedFilterKeys;
+	};
+
+	/**
+	 * Sets the selected filter object in format {key: boolean}.
+	 * <b>Note:</b> Do not use duplicated item keys with this method.
+	 *
+	 * @public
+	 * @param {sap.m.SelectedFilterKeys} oSelectedFilterKeys
 	 *         A configuration object with filter item and sub item keys in the format: { key: boolean }.
 	 *         Setting boolean to true will set the filter to true, false or omitting an entry will set the filter to false.
 	 *         It can be used to set the dialog state based on presets.
-	 * @return {sap.m.ViewSettingsDialog} this pointer for chaining
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
+	 * @returns {this} Reference to <code>this</code> for method chaining
+	 * @deprecated as of version 1.42, replaced by <code>setSelectedFilterCompoundKeys</code> method
 	 */
 	ViewSettingsDialog.prototype.setSelectedFilterKeys = function(oSelectedFilterKeys) {
-		var sKey            = "",
-		    aFilterItems    = this.getFilterItems(),
-		    aSubFilterItems = {},
-		    oFilterItem,
-		    bMultiSelect,
-		    i,
-		    j,
-		    k;
+		var aFilterItems    = this.getFilterItems(),
+			aSubFilterItems = {},
+			oFilterItem,
+			bMultiSelect,
+			i,
+			j,
+			k;
 
-		// clear preset filters (only one mode is allowed, preset filters or
-		// filters)
+		// clear preset filters (only one mode is allowed, preset filters or filters)
 		if (Object.keys(oSelectedFilterKeys).length) {
 			this._clearPresetFilter();
 		}
 
 		// loop through the provided object array {key -> subKey -> boolean}
-		for (sKey in oSelectedFilterKeys) { // filter key
+		for (var sKey in oSelectedFilterKeys) { // filter key
 			oFilterItem = null;
 			if (oSelectedFilterKeys.hasOwnProperty(sKey)) {
 				for (i = 0; i < aFilterItems.length; i++) {
-					if (aFilterItems[i] instanceof sap.m.ViewSettingsCustomItem) {
+					if (BaseObject.isObjectA(aFilterItems[i], "sap.m.ViewSettingsCustomItem")) {
 						// just compare the key of this control
 						if (aFilterItems[i].getKey() === sKey) {
 							oFilterItem = aFilterItems[i];
 							aFilterItems[i].setProperty('selected', oSelectedFilterKeys[sKey], true);
 						}
-					} else if (aFilterItems[i] instanceof sap.m.ViewSettingsFilterItem) {
+					} else if (BaseObject.isObjectA(aFilterItems[i], "sap.m.ViewSettingsFilterItem")) {
 						// find the sub filter item with the specified key
 						aSubFilterItems = aFilterItems[i].getItems();
 						bMultiSelect = aFilterItems[i].getMultiSelect();
@@ -956,16 +1636,89 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 				// skip if we don't have an item with this key
 				if (oFilterItem === null) {
-					jQuery.sap.log.warning('Cannot set state for key "' + sKey
+					Log.warning('Cannot set state for key "' + sKey
 					+ '" because there is no filter with these keys');
 					continue;
 				}
 
-				// set the the selected state on the item
+				// set the selected state on the item
 				oFilterItem.setProperty('selected', oSelectedFilterKeys[sKey], true);
 			}
 		}
 
+		return this;
+	};
+
+	/**
+	 * Sets the selected filter object in format { parent_key: { key: boolean, key2: boolean, ...}, ... }.
+	 *
+	 * @public
+	 * @param {Object<string, sap.m.SelectedFilterKeys>} oSelectedFilterKeys
+	 *         A configuration object with filter item and sub item keys in the format: { parent_key: { key: boolean, key2: boolean, ...}, ... }.
+	 *         Setting boolean to true will set the filter to true, false or omitting an entry will set the filter to false.
+	 *         It can be used to set the dialog state based on presets.
+	 * @returns {this} Reference to <code>this</code> for method chaining
+	 * @since 1.42
+	 */
+	ViewSettingsDialog.prototype.setSelectedFilterCompoundKeys = function(oSelectedFilterKeys) {
+		var aFilterItems = this.getFilterItems(),
+			sParentKey,
+			sKey,
+			sText,
+			oParentItem,
+			oSelectedSubFilterKeys,
+			aSubFilterItems,
+			bMultiSelect,
+			bSelected,
+			bOneSelected,
+			iIndex;
+
+		this._oSelectedFilterKeys = oSelectedFilterKeys;
+
+		if (Object.keys(oSelectedFilterKeys).length) {
+
+			// clear preset filters (only one mode is allowed, preset filters or filters)
+			this._clearPresetFilter();
+
+			// loop through the provided object array {key -> subKey -> boolean}
+			for (sParentKey in oSelectedFilterKeys) { // filter key
+				oParentItem = null;
+				for (iIndex = 0; iIndex < aFilterItems.length; iIndex++) {
+					sKey = aFilterItems[iIndex].getKey();
+					if ( sKey === sParentKey) {
+						oParentItem = aFilterItems[iIndex];
+						break;
+					}
+				}
+				if (BaseObject.isObjectA(oParentItem, "sap.m.ViewSettingsCustomItem")) {
+					oParentItem.setProperty('selected', oSelectedFilterKeys[sParentKey], true);
+				} else if (BaseObject.isObjectA(oParentItem, "sap.m.ViewSettingsFilterItem")) {
+					oSelectedSubFilterKeys = oSelectedFilterKeys[sParentKey];
+					aSubFilterItems = oParentItem.getItems();
+					bMultiSelect = oParentItem.getMultiSelect();
+					bOneSelected = false;
+					// loop through the sub-items
+					for (iIndex = 0; iIndex < aSubFilterItems.length; iIndex++) {
+						sKey = aSubFilterItems[iIndex].getKey();
+						sText = aSubFilterItems[iIndex].getText();
+						if ((sKey !== "" && oSelectedSubFilterKeys[sKey]) ||
+							(sKey === "" && this._oKeylessFilters[sParentKey]
+										 && this._oKeylessFilters[sParentKey][sText])) {
+							// get passed value; respect multi-select
+							bSelected = bOneSelected ? false : oSelectedSubFilterKeys[sKey];
+						} else {
+							// clear omitted sub-items
+							bSelected = false;
+						}
+						aSubFilterItems[iIndex].setProperty("selected", bSelected, true);
+						if (bSelected && !bMultiSelect) {
+							// if not multi-select, only one TRUE value can be set
+							bOneSelected = true;
+						}
+					}
+				}
+			}
+		}
 		return this;
 	};
 
@@ -978,7 +1731,120 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/* =========================================================== */
 
 	/**
+	 * Checks if there is a custom item in the given aggregation, one of sortItems, groupItems, filterItems or presetFilterItems.
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._checkForInnerCustomItems = function(aItems) {
+		for (var i = 0; i < aItems.length; i++) {
+			if (aItems[i].isA("sap.m.ViewSettingsCustomItem")) {
+				return true;
+			}
+		}
+		return false;
+	};
+
+	/**
+	 * Checks if there is a custom tab or a custom item in the aggregations sortItems, groupItems, filterItems and presetFilterItems.
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._checkForCustomItems = function() {
+		var aSortItems = this.getSortItems(),
+			aGroupItems = this.getGroupItems(),
+			aFilterItems = this.getFilterItems(),
+			aPresetFilterItems = this.getPresetFilterItems();
+
+		return this.getAggregation("customTabs").length ||
+			aSortItems.length && this._checkForInnerCustomItems(aSortItems) ||
+			aGroupItems.length && this._checkForInnerCustomItems(aGroupItems) ||
+			aFilterItems.length && this._checkForInnerCustomItems(aFilterItems) ||
+			aPresetFilterItems.length && this._checkForInnerCustomItems(aPresetFilterItems);
+	};
+
+	/**
+	 * Checks if there are changes made since the initial VSD open and enables/disables reset buttons accordingly
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._checkResetStatus = function() {
+		var bChanges = false,
+			oFilterKeys = this.getSelectedFilterItems();
+
+		if (this._checkForCustomItems()) {
+			// there are custom tabs defined, enable Reset button in any case
+			bChanges = true;
+		} else {
+			// there are only default tabs, check the button status
+			if (this._oInitialState) {
+
+				// check if there are filter items selected
+				if (oFilterKeys.length > 0) {
+					bChanges = true;
+				}
+
+				// check if the sortItem or sortDescending are different than initial
+				if (this._oInitialState.sortItem !== this._getSelectedSortItem() || this._oInitialState.sortDescending !== this.getSortDescending()) {
+					bChanges = true;
+				}
+
+				// check if the groupItem or groupDescending are different than initial
+				if ((this._oInitialState.groupItem && this._oInitialState.groupItem !== this._getSelectedGroupItem()) || this._oInitialState.groupDescending !== this.getGroupDescending()) {
+					bChanges = true;
+				}
+
+				// check if the presetFilter is different than initial
+				if (this._oInitialState.presetFilterItem !== undefined && this.getSelectedPresetFilterItem() !== null) {
+					bChanges = true;
+				}
+
+			}
+		}
+
+		// set buttons state
+		if (this._resetButton) {
+			this._resetButton.setEnabled(bChanges);
+		}
+		if (this._detailResetButton) {
+			this._detailResetButton.setEnabled(bChanges);
+		}
+	};
+
+	/**
+	 * Resets the filters, sorting and grouping
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._globalReset = function () {
+		var bHasCustomItems = this._checkForCustomItems();
+
+		// clear filters
+		this.clearFilters();
+
+		// clear sortItem/sortDescending
+		this.setSelectedSortItem(Element.getElementById(this._oInitialState.sortItem));
+		this.setSortDescending(this._oInitialState.sortDescending);
+		this._updateListSelection(this._sortOrderList, this._oInitialState.sortDescending);
+
+		// clear groupItem/groupDescending
+		this._oInitialState.groupItem !== undefined && this.setSelectedGroupItem(Element.getElementById(this._oInitialState.groupItem));
+		this.setGroupDescending(this._oInitialState.groupDescending);
+		this._updateListSelection(this._groupOrderList, this._oInitialState.groupDescending);
+
+		if (Device.system.desktop) {
+			if (!bHasCustomItems && this._filterList && this._filterList.getDomRef()) {
+				this._getNavContainer().attachEventOnce("afterNavigate", this._focusFirstListItem, this);
+			} else if (!bHasCustomItems && ((this._sortList && this._sortList.getDomRef()) || (this._groupList  && this._groupList.getDomRef()))) {
+				this._focusFirstListItem();
+			}
+		}
+
+		// set reset buttons state the global reset
+		this._checkResetStatus();
+
+		// fire the reset event. It can be used to set the state of custom tabs.
+		this.fireReset();
+	};
+
+	/**
 	 * Lazy initialization of the internal dialog.
+	 * @returns {sap.m.Dialog} The created dialog
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getDialog = function() {
@@ -986,21 +1852,26 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 		// create an internal instance of a dialog
 		if (this._dialog === undefined) {
-			this._dialog = new sap.m.Dialog(this.getId() + "-dialog", {
+			this._dialog = new Dialog(this.getId() + "-dialog", {
+				ariaLabelledBy      : this._sTitleLabelId,
 				showHeader          : false,
-				stretch             : sap.ui.Device.system.phone,
+				stretch             : Device.system.phone,
 				verticalScrolling   : true,
 				horizontalScrolling : false,
 				contentWidth        : this._sDialogWidth,
 				contentHeight       : this._sDialogHeight,
 				content             : this._getNavContainer(),
-				beginButton         : new sap.m.Button(this.getId() + "-acceptbutton", {
-					text : this._rb.getText("VIEWSETTINGS_ACCEPT")
+				titleAlignment		: this.getTitleAlignment(),
+				beginButton         : new Button(this.getId() + "-acceptbutton", {
+					text : this._rb.getText("VIEWSETTINGS_ACCEPT"),
+					type: ButtonType.Emphasized
 				}).attachPress(this._onConfirm, this),
-				endButton           : new sap.m.Button(this.getId() + "-cancelbutton", {
+				endButton           : new Button(this.getId() + "-cancelbutton", {
 					text : this._rb.getText("VIEWSETTINGS_CANCEL")
 				}).attachPress(this._onCancel, this)
 			}).addStyleClass("sapMVSD");
+
+			this.addDependent(this._dialog);
 
 			// CSN# 3696452/2013: ESC key should also cancel dialog, not only close
 			// it
@@ -1028,12 +1899,13 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Lazy initialization of the internal nav container.
+	 * @returns {sap.m.NavContainer} The created navigation container
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getNavContainer = function() {
 		// create an internal instance of a dialog
 		if (this._navContainer === undefined) {
-			this._navContainer = new sap.m.NavContainer(this.getId()
+			this._navContainer = new NavContainer(this.getId()
 			+ '-navcontainer', {
 				pages : []
 			});
@@ -1043,12 +1915,14 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Lazy initialization of the internal title label.
+	 * @returns {sap.m.Title} The created title label
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getTitleLabel = function() {
 		if (this._titleLabel === undefined) {
-			this._titleLabel = new sap.m.Label(this.getId() + "-title", {
-				text : this._rb.getText("VIEWSETTINGS_TITLE")
+			this._titleLabel = new Title(this._sTitleLabelId, {
+				text : this._rb.getText("VIEWSETTINGS_TITLE"),
+				level: TitleLevel.H1
 			}).addStyleClass("sapMVSDTitle");
 		}
 		return this._titleLabel;
@@ -1056,32 +1930,50 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Lazy initialization of the internal reset button.
+	 * @returns {sap.m.Button} The created reset button
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getResetButton = function() {
-		var that = this;
 
-		if (this._resetButton === undefined) {
-			this._resetButton = new sap.m.Button(this.getId() + "-resetbutton", {
-				icon : IconPool.getIconURI("refresh"),
+		if (!this._resetButton) {
+			this._resetButton = new Button(this.getId() + "-resetbutton", {
 				press : function() {
-					that._onClearFilters();
-				},
-				tooltip : this._rb.getText("VIEWSETTINGS_CLEAR_FILTER_TOOLTIP")
+					this._globalReset();
+				}.bind(this),
+				text : this._rb.getText("VIEWSETTINGS_RESET")
 			});
 		}
 		return this._resetButton;
 	};
 
 	/**
+	 * Lazy initialization of the Filter Detail page reset button.
+	 * @returns {sap.m.Button} The created reset button
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._getDetailResetButton = function() {
+
+		if (this._detailResetButton === undefined) {
+			this._detailResetButton = new Button(this.getId() + "-detailresetbutton", {
+				press : function() {
+					this._globalReset();
+				}.bind(this),
+				text : this._rb.getText("VIEWSETTINGS_RESET")
+			});
+		}
+		return this._detailResetButton;
+	};
+
+	/**
 	 * Lazy initialization of the internal detail title label.
+	 * @returns {sap.m.Title} The created detail title label
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getDetailTitleLabel = function() {
 		if (this._detailTitleLabel === undefined) {
-			this._detailTitleLabel = new sap.m.Label(this.getId() + "-detailtitle",
-				{
-					text : this._rb.getText("VIEWSETTINGS_TITLE_FILTERBY")
+			this._detailTitleLabel = new Title(this.getId() + "-detailtitle", {
+					text : this._rb.getText("VIEWSETTINGS_TITLE_FILTERBY"),
+					level: TitleLevel.H1
 				}).addStyleClass("sapMVSDTitle");
 		}
 		return this._detailTitleLabel;
@@ -1089,24 +1981,28 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Lazy initialization of the internal header.
+	 * @returns {sap.m.Bar} The created header
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getHeader = function() {
 		if (this._header === undefined) {
-			this._header = new sap.m.Bar({
+			this._header = new Bar({
+				titleAlignment : this.getTitleAlignment(),
 				contentMiddle : [ this._getTitleLabel() ]
 			}).addStyleClass("sapMVSDBar");
 		}
+
 		return this._header;
 	};
 
 	/**
 	 * Lazy initialization of the internal sub header.
+	 * @returns {sap.m.Bar} The created sub-header
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getSubHeader = function() {
 		if (this._subHeader === undefined) {
-			this._subHeader = new sap.m.Bar({
+			this._subHeader = new Bar({
 				contentLeft : [ this._getSegmentedButton() ]
 			}).addStyleClass("sapMVSDBar");
 		}
@@ -1115,6 +2011,7 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Lazy initialization of the internal segmented button.
+	 * @returns {sap.m.SegmentedButton} The created segmentedButton
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getSegmentedButton = function() {
@@ -1124,25 +2021,26 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 			i                   = 0;
 
 		if (this._segmentedButton === undefined) {
-			this._segmentedButton = new sap.m.SegmentedButton({
-				select : function(oEvent) {
-					var selectedId = oEvent.getParameter('id');
-					if (selectedId === that.getId() + "-sortbutton") {
+			this._segmentedButton = new SegmentedButton({
+				selectionChange : function(oEvent) {
+					var selectedButtonId = oEvent.getSource().getSelectedButton();
+					if (selectedButtonId === that.getId() + "-sortbutton") {
 						that._switchToPage(0);
-					} else if (selectedId === that.getId() + "-groupbutton") {
+					} else if (selectedButtonId === that.getId() + "-groupbutton") {
 						that._switchToPage(1);
-					} else if (selectedId === that.getId() + "-filterbutton") {
+					} else if (selectedButtonId === that.getId() + "-filterbutton") {
 						that._switchToPage(2);
 					} else {
 						for (i = 0; i < iCustomTabsLength; i++) {
-							var oCustomTab = aCustomTabs[i];
-							if (!that._isEmptyTab(oCustomTab) && selectedId === oCustomTab.getTabButton().getId()) {
+							var oCustomTab = aCustomTabs[i],
+								sCustomTabId = that.getId() + that._sCustomTabsButtonsIdPrefix + oCustomTab.getId();
+							if (!that._isEmptyTab(oCustomTab) && selectedButtonId === sCustomTabId) {
 								that._switchToPage(oCustomTab.getId());
 								break;
 							}
 						}
 					}
-					jQuery.sap.log.info('press event segmented: '
+					Log.info('press event segmented: '
 					+ oEvent.getParameter('id'));
 				}
 			}).addStyleClass("sapMVSDSeg");
@@ -1156,11 +2054,12 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Lazy initialization of the internal sort button.
+	 * @returns {sap.m.Button} The created sort button
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getSortButton = function() {
 		if (this._sortButton === undefined) {
-			this._sortButton = new sap.m.Button(this.getId() + "-sortbutton", {
+			this._sortButton = new Button(this.getId() + "-sortbutton", {
 				icon : IconPool.getIconURI("sort"),
 				tooltip : this._rb.getText("VIEWSETTINGS_TITLE_SORT")
 			});
@@ -1170,11 +2069,12 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Lazy initialization of the internal group button.
+	 * @returns {sap.m.Button} The created group button
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getGroupButton = function() {
 		if (this._groupButton === undefined) {
-			this._groupButton = new sap.m.Button(this.getId() + "-groupbutton", {
+			this._groupButton = new Button(this.getId() + "-groupbutton", {
 				icon : IconPool.getIconURI("group-2"),
 				tooltip : this._rb.getText("VIEWSETTINGS_TITLE_GROUP")
 			});
@@ -1184,11 +2084,12 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Lazy initialization of the internal filter button.
+	 * @returns {sap.m.Button} The created filter sap.m.Button
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getFilterButton = function() {
 		if (this._filterButton === undefined) {
-			this._filterButton = new sap.m.Button(this.getId() + "-filterbutton", {
+			this._filterButton = new Button(this.getId() + "-filterbutton", {
 				icon : IconPool.getIconURI("filter"),
 				tooltip : this._rb.getText("VIEWSETTINGS_TITLE_FILTER")
 			});
@@ -1199,48 +2100,51 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/**
 	 * Lazy initialization of the internal page1 (sort/group/filter).
 	 * @param {boolean} bSuppressCreation If true, no page will be create in case it doesn't exist.
+	 * @returns {sap.m.Page} The created first page
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getPage1 = function(bSuppressCreation) {
 		if (this._page1 === undefined && !bSuppressCreation) {
-			this._page1 = new sap.m.Page(this.getId() + '-page1', {
-				title           : this._rb.getText("VIEWSETTINGS_TITLE"),
-				customHeader    : this._getHeader()
+			this._page1 = new Page(this.getId() + '-page1', {
+				title : this._rb.getText("VIEWSETTINGS_TITLE"),
+				titleAlignment : this.getTitleAlignment(),
+				customHeader : this._getHeader()
 			});
 			this._getNavContainer().addPage(this._page1); // sort, group, filter
 		}
+
 		return this._page1;
 	};
 
 	/**
 	 * Lazy initialization of the internal page2 (detail filters).
+	 * @returns {sap.m.Page} The created second page
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getPage2 = function() {
-		var that = this, oDetailHeader, oBackButton, oDetailResetButton;
+		var oDetailHeader,
+			oBackButton,
+			oDetailResetButton,
+			sTitleAlignment = this.getTitleAlignment();
 
 		if (this._page2 === undefined) {
 			// init internal page content
-			oBackButton = new sap.m.Button(this.getId() + "-backbutton", {
+			oBackButton = new Button(this.getId() + "-backbutton", {
 				icon : IconPool.getIconURI("nav-back"),
 				press : [this._pressBackButton, this]
 			});
-			oDetailResetButton = new sap.m.Button(this.getId()
-			+ "-detailresetbutton", {
-				icon : IconPool.getIconURI("refresh"),
-				press : function() {
-					that._onClearFilters();
-				},
-				tooltip : this._rb.getText("VIEWSETTINGS_CLEAR_FILTER_TOOLTIP")
-			});
-			oDetailHeader = new sap.m.Bar({
+			oDetailResetButton = this._getDetailResetButton();
+			oDetailHeader = new Bar({
+				titleAlignment	: sTitleAlignment,
 				contentLeft     : [ oBackButton ],
 				contentMiddle   : [ this._getDetailTitleLabel() ],
 				contentRight    : [ oDetailResetButton ]
 			}).addStyleClass("sapMVSDBar");
-			this._page2 = new sap.m.Page(this.getId() + '-page2', {
-				title           : this._rb.getText("VIEWSETTINGS_TITLE_FILTERBY"),
-				customHeader    : oDetailHeader
+
+			this._page2 = new Page(this.getId() + '-page2', {
+				title : this._rb.getText("VIEWSETTINGS_TITLE_FILTERBY"),
+				titleAlignment : sTitleAlignment,
+				customHeader : oDetailHeader
 			});
 			this._getNavContainer().addPage(this._page2); // filter details
 		}
@@ -1250,10 +2154,14 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Create list item instance for each filter detail item.
-	 * @param {object} oItem Filter item instance for which the details should be displayed
+	 * @param {sap.m.ViewSettingsFilterItem} oItem Filter item instance for which the details should be displayed
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._initFilterDetailItems = function(oItem) {
+		if (!(BaseObject.isObjectA(oItem, "sap.m.ViewSettingsFilterItem"))) {
+			return;
+		}
+
 		var oListItem;
 		var bMultiSelectMode = oItem.getMultiSelect();
 		var aSubFilters = oItem.getItems();
@@ -1265,17 +2173,16 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 		this._getPage2().removeAllAggregation('content');
 
-		this._filterDetailList = new sap.m.List(
-		{
-			mode : (bMultiSelectMode ? sap.m.ListMode.MultiSelect
-				: sap.m.ListMode.SingleSelectLeft),
+		this._filterDetailList = new List({
+			mode : (bMultiSelectMode ? ListMode.MultiSelect
+				: ListMode.SingleSelectLeft),
 			includeItemInSelection : true,
 			selectionChange : function(oEvent) {
 				var oSubItem,
-				    aEventListItems = oEvent.getParameter("listItems"),
-				    aSubItems,
-				    i = 0,
-				    bNewValue;
+					aEventListItems = oEvent.getParameter("listItems"),
+					aSubItems,
+					i = 0,
+					bNewValue;
 
 				that._clearPresetFilter();
 
@@ -1311,51 +2218,48 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 						oSubItem.setProperty('selected', bNewValue, true);
 					}
 				}
-			}.bind(this)
+
+				// enable/disable reset button if necessary
+				this._checkResetStatus();
+
+			}.bind(this),
+			ariaLabelledBy: this._sFilterDetailTitleLabelId
 		});
 
 		for (var i = 0; i < aSubFilters.length; i++) {
 			// use name if there is no key defined
-			oListItem = new sap.m.StandardListItem({
-				title : aSubFilters[i].getText(),
-				type : sap.m.ListType.Active,
-				selected : aSubFilters[i].getSelected()
+			oListItem = new StandardListItem({
+				title : ManagedObject.escapeSettingsValue(aSubFilters[i].getText()),
+				type : ListType.Active,
+				selected : aSubFilters[i].getSelected(),
+				tooltip : aSubFilters[i].getTooltip(),
+				wrapping: aSubFilters[i].getWrapping()
 			}).data("item", aSubFilters[i]);
 			this._filterDetailList.addItem(oListItem);
 		}
 
+		this._filterSearchField = this._getFilterSearchField(this._filterDetailList);
+		this._showOnlySelectedButton = this._getShowOnlySelectedButton();
+		this._searchBar = new Toolbar({
+			content: [ this._filterSearchField.addStyleClass('sapMVSDFilterSearchField').addStyleClass('sapMTBShrinkItem'), this._showOnlySelectedButton ]
+		});
+		this._getPage2().addContent(this._searchBar);
+		// add this css style for recognizing when after the sap.m.Bar is SearchField, so we can remove the bar border
+		this._getPage2().getCustomHeader().addStyleClass('sapMVSDBarWithSearch');
+
 		if (bMultiSelectMode) {
-			this._filterSearchField = this._getFilterSearchField(this._filterDetailList);
-			this._selectAllCheckBox = this._getSelectAllCheckbox(aSubFilters, this._filterDetailList);
-			this._getPage2().addContent(this._filterSearchField.addStyleClass('sapMVSDFilterSearchField'));
+			this._selectAllCheckBox = this._createSelectAllCheckbox(aSubFilters, this._filterDetailList);
+
+			if (this._filterDetailList.getItems().length === 0) {
+				this._selectAllCheckBox.setEnabled(false);
+			}
+
 			this._filterDetailList.setHeaderToolbar(new Toolbar({
 				content: [ this._selectAllCheckBox ]
 			}).addStyleClass('sapMVSDFilterHeaderToolbar'));
 		}
-
+		this._setFilterDetailItemsVisibility(this._filterDetailList, true);
 		this._getPage2().addContent(this._filterDetailList);
-	};
-
-	/**
-	 * Create list item instance for each sort item.
-	 * @private
-	 */
-	ViewSettingsDialog.prototype._initSortItems = function() {
-		var aSortItems,
-		    oListItem;
-		this._sortList.removeAllItems();
-		aSortItems = this.getSortItems();
-
-		if (aSortItems.length) {
-			aSortItems.forEach(function(oItem) {
-				oListItem = new sap.m.StandardListItem({
-					title : oItem.getText(),
-					type : sap.m.ListType.Active,
-					selected : oItem.getSelected()
-				}).data("item", oItem);
-				this._sortList.addItem(oListItem);
-			}, this);
-		}
 	};
 
 	/**
@@ -1363,56 +2267,35 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._initSortContent = function() {
-		var that = this;
 
 		if (this._sortContent) {
 			return;
 		}
 		this._vContentPage = -1;
 
-		// Aria - used to label the sort order list
-		this._ariaSortOrderInvisibleText = new sap.ui.core.InvisibleText(this.getId() + "-sortOrderLabel", {
-			text: this._rb.getText("VIEWSETTINGS_SORT_DIRECTION").concat(":")
-		});
-
-		this._sortOrderList = new sap.m.List(this.getId() + "-sortorderlist", {
-			mode : sap.m.ListMode.SingleSelectLeft,
+		this._sortOrderList = new List(this.getId() + "-sortorderlist", {
+			mode : ListMode.SingleSelectLeft,
 			includeItemInSelection : true,
 			selectionChange : function(oEvent) {
-				that.setProperty('sortDescending', oEvent.getParameter("listItem").data("item"), true);
-			},
-			ariaLabelledBy: this._ariaSortOrderInvisibleText
-		}).addStyleClass("sapMVSDUpperList");
-		this._sortOrderList.addItem(new sap.m.StandardListItem({
+				this.setProperty('sortDescending', oEvent.getParameter("listItem").data("item"), true);
+				// enable/disable reset button if necessary
+				this._checkResetStatus();
+			}.bind(this),
+			ariaLabelledBy: this._sTitleLabelId
+		});
+
+		this._sortOrderList.addItemGroup(undefined, new GroupHeaderListItem({title: this._rb.getText("VIEWSETTINGS_SORT_BY")}));
+
+		this._sortOrderList.addItem(new StandardListItem({
 			title : this._rb.getText("VIEWSETTINGS_ASCENDING_ITEM")
 		}).data("item", false).setSelected(true));
-		this._sortOrderList.addItem(new sap.m.StandardListItem({
+		this._sortOrderList.addItem(new StandardListItem({
 			title : this._rb.getText("VIEWSETTINGS_DESCENDING_ITEM")
 		}).data("item", true));
 
-		// Aria - used to label the sort list
-		this._ariaSortListInvisibleText = new sap.ui.core.InvisibleText(this.getId() + "-sortListLabel", {
-			text: this._rb.getText("VIEWSETTINGS_TITLE_SORT").concat(":")
-		});
+		this._sortList.addAriaLabelledBy(this._sTitleLabelId);
 
-		this._sortList = new sap.m.List(this.getId() + "-sortlist", {
-			mode : sap.m.ListMode.SingleSelectLeft,
-			includeItemInSelection : true,
-			selectionChange : function(oEvent) {
-				var oSelectedSortItem = sap.ui.getCore().byId(that.getSelectedSortItem());
-				var item = oEvent.getParameter("listItem").data("item");
-				if (item) {
-					if (oSelectedSortItem) {
-						oSelectedSortItem.setSelected(!oEvent.getParameter("listItem").getSelected());
-					}
-					item.setProperty('selected', oEvent.getParameter("listItem").getSelected(), true);
-				}
-				that.setAssociation("selectedSortItem", item, true);
-			},
-			ariaLabelledBy: this._ariaSortListInvisibleText
-		});
-
-		this._sortContent = [ this._ariaSortOrderInvisibleText, this._sortOrderList, this._ariaSortListInvisibleText, this._sortList ];
+		this._sortContent = [ this._sortOrderList, this._sortList ];
 	};
 
 	/**
@@ -1422,23 +2305,27 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	ViewSettingsDialog.prototype._initGroupItems = function () {
 		var oListItem,
 			bHasSelections,
-			aGroupItems = this.getGroupItems();
+			aGroupItems = this.getGroupItems(),
+			sTitleGroupObject = this._rb.getText("VIEWSETTINGS_GROUP_OBJECT");
 
-		this._groupList.removeAllItems();
-
-		if (!!aGroupItems.length) {
+		this._groupList.destroyItems();
+		if (aGroupItems.length) {
+			this._groupList.addItemGroup(undefined, new GroupHeaderListItem({title: sTitleGroupObject}));
 			aGroupItems.forEach(function (oItem) {
-				oListItem = new sap.m.StandardListItem({
-					title: oItem.getText(),
-					type: sap.m.ListType.Active,
-					selected: oItem.getSelected()
+				oListItem = new StandardListItem({
+					id: oItem.getId() + LIST_ITEM_SUFFIX,
+					title: ManagedObject.escapeSettingsValue(oItem.getText()),
+					type: ListType.Active,
+					selected: oItem.getSelected(),
+					tooltip : oItem.getTooltip(),
+					wrapping: oItem.getWrapping()
 				}).data("item", oItem);
 				this._groupList.addItem(oListItem);
 			}, this);
 
 			if (!this._oGroupingNoneItem || this._oGroupingNoneItem.bIsDestroyed) {
-				bHasSelections = !!this.getSelectedGroupItem();
-				this._oGroupingNoneItem = new sap.m.ViewSettingsItem({
+				bHasSelections = !!this._getSelectedGroupItem();
+				this._oGroupingNoneItem = new ViewSettingsItem({
 					text: this._rb.getText("VIEWSETTINGS_NONE_ITEM"),
 					selected: !bHasSelections,
 					/**
@@ -1455,10 +2342,12 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 			}
 
 			// Append the None button to the list
-			oListItem = new sap.m.StandardListItem({
+			oListItem = new StandardListItem({
+				id: this._oGroupingNoneItem.getId() + LIST_ITEM_SUFFIX,
 				title: this._oGroupingNoneItem.getText(),
-				type: sap.m.ListType.Active,
-				selected: this._oGroupingNoneItem.getSelected()
+				type: ListType.Active,
+				selected: this._oGroupingNoneItem.getSelected(),
+				wrapping: this._oGroupingNoneItem.getWrapping()
 			}).data("item", this._oGroupingNoneItem);
 			this._groupList.addItem(oListItem);
 		}
@@ -1469,58 +2358,46 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._initGroupContent = function() {
-		var that = this;
 
 		if (this._groupContent) {
 			return;
 		}
 		this._vContentPage = -1;
 
-		// Aria - used to label the group order
-		this._ariaGroupOrderInvisibleText = new sap.ui.core.InvisibleText(this.getId() + "-groupOrderLabel", {
-			text: this._rb.getText("VIEWSETTINGS_GROUP_DIRECTION").concat(":")
-		});
-
-		this._groupOrderList = new sap.m.List(this.getId() + "-grouporderlist", {
-			mode : sap.m.ListMode.SingleSelectLeft,
+		this._groupOrderList = new List(this.getId() + "-grouporderlist", {
+			mode : ListMode.SingleSelectLeft,
 			includeItemInSelection : true,
 			selectionChange : function(oEvent) {
-				that.setProperty('groupDescending', oEvent.getParameter("listItem").data("item"), true);
-			},
-			ariaLabelledBy: this._ariaGroupOrderInvisibleText
-		}).addStyleClass("sapMVSDUpperList");
-		this._groupOrderList.addItem(new sap.m.StandardListItem({
+				this.setProperty('groupDescending', oEvent.getParameter("listItem").data("item"), true);
+				// enable/disable reset button if necessary
+				this._checkResetStatus();
+			}.bind(this),
+			ariaLabelledBy: this._sTitleLabelId
+		});
+
+		this._groupOrderList.addItemGroup(undefined, new GroupHeaderListItem({title: this._rb.getText("VIEWSETTINGS_GROUP_BY")}));
+		this._groupOrderList.addItem(new StandardListItem({
 			title : this._rb.getText("VIEWSETTINGS_ASCENDING_ITEM")
 		}).data("item", false).setSelected(true));
-		this._groupOrderList.addItem(new sap.m.StandardListItem({
+		this._groupOrderList.addItem(new StandardListItem({
 			title : this._rb.getText("VIEWSETTINGS_DESCENDING_ITEM")
 		}).data("item", true));
 
-		// Aria - used to label the group list
-		this._ariaGroupListInvisibleText = new sap.ui.core.InvisibleText(this.getId() + "-groupListLabel", {
-			text: this._rb.getText("VIEWSETTINGS_TITLE_GROUP").concat(":")
-		});
-
-		this._groupList = new sap.m.List(this.getId() + "-grouplist",
+		this._groupList = new List(this.getId() + "-grouplist",
 			{
-				mode : sap.m.ListMode.SingleSelectLeft,
+				mode : ListMode.SingleSelectLeft,
 				includeItemInSelection : true,
 				selectionChange: function (oEvent) {
-					var oSelectedGroupItem = sap.ui.getCore().byId(that.getSelectedGroupItem()),
-						item = oEvent.getParameter("listItem").data("item");
+					var item = oEvent.getParameter("listItem").data("item");
+					this.setSelectedGroupItem(item);
 
-					if (!!item) {
-						if (!!oSelectedGroupItem) {
-							oSelectedGroupItem.setSelected(!oEvent.getParameter("listItem").getSelected());
-						}
-						item.setProperty('selected', oEvent.getParameter("listItem").getSelected(), true);
-					}
-					that.setAssociation("selectedGroupItem", item, true);
-				},
-				ariaLabelledBy: this._ariaGroupListInvisibleText
+					// enable/disable reset button if necessary
+					this._checkResetStatus();
+				}.bind(this),
+				ariaLabelledBy: this._sTitleLabelId
 			});
 
-		this._groupContent = [ this._ariaGroupOrderInvisibleText, this._groupOrderList, this._ariaGroupListInvisibleText, this._groupList ];
+		this._groupContent = [ this._groupOrderList, this._groupList ];
 	};
 
 	/**
@@ -1529,48 +2406,59 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 */
 	ViewSettingsDialog.prototype._initFilterItems = function() {
 		var aPresetFilterItems,
-		    aFilterItems,
-		    oListItem,
-			that = this;
+			aFilterItems,
+			oListItem,
+			that = this,
+			sTitleFilterBy = this._rb.getText("VIEWSETTINGS_FILTER_BY");
 
-		this._presetFilterList.removeAllItems();
+		this._presetFilterList.destroyItems();
 		aPresetFilterItems = this.getPresetFilterItems();
 		if (aPresetFilterItems.length) {
 			aPresetFilterItems.forEach(function(oItem) {
-				oListItem = new sap.m.StandardListItem({
-					title : oItem.getText(),
-					type : sap.m.ListType.Active,
-					selected : oItem.getSelected()
+				oListItem = new StandardListItem({
+					id: oItem.getId() + LIST_ITEM_SUFFIX,
+					title: ManagedObject.escapeSettingsValue(oItem.getText()),
+					type: ListType.Active,
+					selected: oItem.getSelected(),
+					tooltip: oItem.getTooltip(),
+					wrapping: oItem.getWrapping()
 				}).data("item", oItem);
 				this._presetFilterList.addItem(oListItem);
 			}, this);
 		}
 		// add none item to preset filter list
 		if (aPresetFilterItems.length) {
-			oListItem = new sap.m.StandardListItem({
-				title : this._rb.getText("VIEWSETTINGS_NONE_ITEM"),
+			oListItem = new StandardListItem({
+				id: this._presetFilterList.getId() + "-none" + LIST_ITEM_SUFFIX,
+				title : this._rb.getText("VIEWSETTINGS_NONE_ITEM_FILTER"),
 				selected : !!this.getSelectedPresetFilterItem()
 			});
 			this._presetFilterList.addItem(oListItem);
 		}
 
-		this._filterList.removeAllItems();
+		this._filterList.destroyItems();
 		aFilterItems = this.getFilterItems();
+
+		this._filterList.addItemGroup(undefined, new GroupHeaderListItem({title: sTitleFilterBy}));
+
 		if (aFilterItems.length) {
 			aFilterItems.forEach(function(oItem) {
-				oListItem = new sap.m.StandardListItem(
+				oListItem = new StandardListItem(
 					{
-						title : oItem.getText(),
-						type : sap.m.ListType.Active,
+						id: oItem.getId() + LIST_ITEM_SUFFIX,
+						title : ManagedObject.escapeSettingsValue(oItem.getText()),
+						type : ListType.Active,
+						tooltip : oItem.getTooltip(),
+						wrapping: oItem.getWrapping(),
 						press : (function(oItem) {
 							return function(oEvent) {
 								// navigate to details page
 								if (that._navContainer.getCurrentPage() .getId() !== that.getId() + '-page2') {
 									that._switchToPage(3, oItem);
 									that._prevSelectedFilterItem = this;
-									jQuery.sap.delayedCall(0, that._navContainer, "to", [ that.getId() + '-page2', "slide" ]);
+									setTimeout(that._navContainer["to"].bind(that._navContainer, that.getId() + '-page2', "slide"), 0);
 								}
-								if (sap.ui.Device.system.desktop && that._filterDetailList && that._filterDetailList.getItems()[0]) {
+								if (Device.system.desktop && that._filterDetailList && that._filterDetailList.getItems()[0]) {
 									that._getNavContainer().attachEventOnce("afterNavigate", function() {
 										that._filterDetailList.getItems()[0].focus();
 									});
@@ -1588,29 +2476,32 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._initFilterContent = function() {
-		var that = this;
 
 		if (this._filterContent) {
 			return;
 		}
 		this._vContentPage = -1;
 
-		this._presetFilterList = new sap.m.List(
+		this._presetFilterList = new List(
 			this.getId() + "-predefinedfilterlist",
 			{
-				mode : sap.m.ListMode.SingleSelectLeft,
+				mode : ListMode.SingleSelectLeft,
 				includeItemInSelection : true,
 				selectionChange : function(oEvent) {
 					var item = oEvent.getParameter("listItem").data("item");
 					if (item) {
 						item.setProperty('selected', oEvent.getParameter("listItem").getSelected(), true);
 					}
-					that.setAssociation("selectedPresetFilterItem", item, true);
-					that._clearSelectedFilters();
-				}
-			}).addStyleClass("sapMVSDUpperList");
+					this.setAssociation("selectedPresetFilterItem", item, true);
+					this._clearSelectedFilters();
+					// enable/disable reset button if necessary
+					this._checkResetStatus();
+				}.bind(this)
+			});
 
-		this._filterList = new sap.m.List(this.getId() + "-filterlist", {});
+		this._filterList = new List(this.getId() + "-filterlist", {
+			ariaLabelledBy: this._sTitleLabelId
+		});
 
 		this._filterContent = [ this._presetFilterList, this._filterList ];
 	};
@@ -1622,14 +2513,13 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 */
 	ViewSettingsDialog.prototype._initDialogContent = function(sPageId) {
 		var bSort               = !!this.getSortItems().length,
-		    bGroup              = !!this.getGroupItems().length,
-		    bPredefinedFilter   = !!this.getPresetFilterItems().length,
-		    bFilter             = !!this.getFilterItems().length;
+			bGroup              = !!this.getGroupItems().length,
+			bPredefinedFilter   = !!this.getPresetFilterItems().length,
+			bFilter             = !!this.getFilterItems().length;
 
 		// sort
 		if (bSort) {
 			this._initSortContent();
-			this._initSortItems();
 		}
 
 		// group
@@ -1652,6 +2542,28 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	};
 
 	/**
+	 * Gets or creates the sap.m.Button which is used inside the SegmentedButton for representation of the custom tab.
+	 * @private
+	 * @param {Object} oCustomTab with options for the button
+	 * @param {string} sButtonIdPrefix preffix for the button id
+	 * @returns {sap.m.Button} The created button
+	 */
+	ViewSettingsDialog.prototype._getTabButton = function (oCustomTab, sButtonIdPrefix) {
+		var sButtonId = sButtonIdPrefix + oCustomTab.getId(),
+			oButton = Element.getElementById(sButtonId);
+
+		if (oButton) {
+			return oButton;
+		} else {
+			return new Button({
+				id      : sButtonId,
+				icon    : oCustomTab.getIcon(),
+				tooltip : oCustomTab.getTooltip()
+			});
+		}
+	};
+
+	/**
 	 * Sets the state of the dialog when it is opened.
 	 * If content for only one tab is defined, then tabs are not displayed, otherwise,
 	 * a SegmentedButton is displayed and the button for the initially displayed page is focused.
@@ -1660,18 +2572,18 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 */
 	ViewSettingsDialog.prototype._updateDialogState = function(sPageId) {
 		var bSort                       = !!this.getSortItems().length,
-		    bGroup                      = !!this.getGroupItems().length,
-		    bPredefinedFilter           = !!this.getPresetFilterItems().length,
-		    bFilter                     = !!this.getFilterItems().length,
-		    bCustomTabs                 = !!this.getCustomTabs().length,
-		    oSegmentedButton            = this._getSegmentedButton(),
-		    sSelectedButtonId           = null,
-		    bIsPageIdOfPredefinedPage   = false,
-		    oDefaultPagesIds            = {
-			    "sort"          : 0,
-			    "group"         : 1,
-			    "filter"        : 2
-		    };
+			bGroup                      = !!this.getGroupItems().length,
+			bPredefinedFilter           = !!this.getPresetFilterItems().length,
+			bFilter                     = !!this.getFilterItems().length,
+			bCustomTabs                 = !!this.getCustomTabs().length,
+			oSegmentedButton            = this._getSegmentedButton(),
+			sSelectedButtonId           = null,
+			bIsPageIdOfPredefinedPage   = false,
+			oDefaultPagesIds            = {
+				"sort"          : 0,
+				"group"         : 1,
+				"filter"        : 2
+			};
 
 		// reset state
 		oSegmentedButton.removeAllButtons();
@@ -1690,11 +2602,9 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 			oSegmentedButton.addButton(this._getFilterButton());
 			if (!bPredefinedFilter) {
 				this._presetFilterList.setVisible(false);
-				this._presetFilterList.addStyleClass("sapMVSDUpperList");
 			}
 			if (!bFilter) {
 				this._filterList.setVisible(false);
-				this._presetFilterList.removeStyleClass("sapMVSDUpperList");
 			}
 		}
 		if (bGroup) {
@@ -1703,9 +2613,8 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 		if (bCustomTabs) {
 			this.getCustomTabs().forEach(function (oCustomTab) {
 				if (!this._isEmptyTab(oCustomTab)) {
-					var oButton = oCustomTab.getTabButton({
-						'idPrefix': this.getId() + this._sCustomTabsButtonsIdPrefix
-					});
+					var sCustomTabButtonIdPrefix = this.getId() + this._sCustomTabsButtonsIdPrefix,
+						oButton = this._getTabButton(oCustomTab, sCustomTabButtonIdPrefix);
 					// add custom tab to segmented button
 					oSegmentedButton.addButton(oButton);
 				}
@@ -1777,8 +2686,8 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 */
 	ViewSettingsDialog.prototype._determineValidPageId = function (sPageId) {
 		var sDefaultPageId      = 'sort',
-		    bHasMatch           = false,
-		    aValidPageIds       = [];
+			bHasMatch           = false,
+			aValidPageIds       = [];
 
 		// get a list of 'valid' page ids - meaning that each one exists and has content
 		aValidPageIds       = this._fetchValidPagesIds();
@@ -1787,7 +2696,7 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 			// use the first valid page as default page id
 			sDefaultPageId = aValidPageIds[0];
 		} else {
-			jQuery.sap.log.warning('No available pages to load - missing items.');
+			Log.warning('No available pages to load - missing items.');
 		}
 
 		// if no specific page id is wanted give a default one
@@ -1814,14 +2723,14 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Fetches a list of valid pages IDs - each page must have valid content.
-	 * @returns {Array} aValidPageIds List of valid page IDs
+	 * @returns {string[]} aValidPageIds List of valid page IDs
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._fetchValidPagesIds = function () {
 		var i,
-		    aCustomTabs         = this.getCustomTabs(),
-		    aCustomTabsLength   = aCustomTabs.length,
-		    aValidPageIds       = [];
+			aCustomTabs         = this.getCustomTabs(),
+			aCustomTabsLength   = aCustomTabs.length,
+			aValidPageIds       = [];
 
 		/* make sure to push the predefined pages ids before the custom tabs as the order is important - if the control
 		 *  has to determine which page to load it takes the first valid page id */
@@ -1847,8 +2756,8 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Checks whether a custom tab instance is not empty.
-	 * @param {object} oCustomTab
-	 * @returns {*|boolean}
+	 * @param {Object} oCustomTab The tab to be checked
+	 * @returns {boolean} Whether the tab is empty
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._isEmptyTab = function (oCustomTab) {
@@ -1862,12 +2771,12 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * Checks whether a given page name corresponds to a valid predefined page ID.
 	 * The meaning of valid would be for the predefined page to also have content.
 	 * @param {string} sName The page name
-	 * @returns {boolean}
+	 * @returns {boolean} whether the name is valid
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._isValidPredefinedPageId = function (sName) {
 		if (!sName) {
-			jQuery.sap.log.warning('Missing mandatory parameter.');
+			Log.warning('Missing mandatory parameter.');
 			return false;
 		}
 
@@ -1888,16 +2797,15 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	};
 
 
-	sap.m.ViewSettingsDialog.prototype._pressBackButton = function() {
-		var that = this;
+	ViewSettingsDialog.prototype._pressBackButton = function() {
 		if (this._vContentPage === 3) {
 			this._updateFilterCounters();
-			this._getNavContainer().attachEvent("afterNavigate", function(){
-				if (that._prevSelectedFilterItem) {
-					that._prevSelectedFilterItem.focus();
+			this._getNavContainer().attachEventOnce("afterNavigate", function(){
+				if (this._prevSelectedFilterItem) {
+					this._prevSelectedFilterItem.focus();
 				}
-			});
-			jQuery.sap.delayedCall(0, this._getNavContainer(), 'back');
+			}, this);
+			setTimeout(this._getNavContainer()['back'].bind(this._getNavContainer()), 0);
 			this._switchToPage(2);
 			this._segmentedButton.setSelectedButton(this._filterButton);
 		}
@@ -1908,25 +2816,25 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * Overwrites the model setter to reset the remembered page in case it was a filter detail page, to make sure
 	 * that the dialog is not trying to re-open a page for a removed item.
 	 *
-	 * @param {object} oModel
-	 * @param {string} sName
-	 * @returns {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @param {sap.ui.model.Model} oModel The model whose setter will be overwritten
+	 * @param {string} sName The name of the model
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.setModel = function (oModel, sName) {
 		// BCP 1570030370
 		if (this._vContentPage === 3 && this._oContentItem) {
 			resetFilterPage.call(this);
 		}
-		return sap.ui.base.ManagedObject.prototype.setModel.call(this, oModel, sName);
+		return Control.prototype.setModel.call(this, oModel, sName);
 	};
 
 	/**
 	 * Removes a filter Item and resets the remembered page if it was the filter detail page of the removed filter.
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
-	 * @param { int| sap.m.ViewSettingsFilterItem | string } vFilterItem The filter item's index, or the item itself, or its id
-	 * @returns {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @param { int| sap.m.ViewSettingsFilterItem | sap.ui.core.ID } vFilterItem The filter item's index, or the item itself, or its ID
+	 * @returns {sap.m.ViewSettingsFilterItem|null} The removed item or <code>null</code>
 	 */
 	ViewSettingsDialog.prototype.removeFilterItem = function (vFilterItem) {
 		var sFilterItemId = "";
@@ -1951,9 +2859,9 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/**
 	 * Removes all filter Items and resets the remembered page if it was a filter detail page and all of its filter items are being removed.
 	 *
-	 * @overwrite
+	 * @override
 	 * @public
-	 * @returns {sap.m.ViewSettingsDialog} this pointer for chaining
+	 * @returns {sap.m.ViewSettingsFilterItem[]} the removed items
 	 */
 	ViewSettingsDialog.prototype.removeAllFilterItems = function () {
 		if (this._vContentPage === 3 && this._oContentItem) {
@@ -1962,36 +2870,36 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 		return this.removeAllAggregation('filterItems');
 	};
 
+	/**
+	 * Sets a callback that will check the ViewSettingsItem's text against the search query.
+	 * If a callback is set, <code>filterSearchOperator</code> property will be ignored, as it serves the same purpose.
+	 * @param {function(string, string): boolean} fnTest A function that accepts two parameters fnTest({string} query, {string} value) and returns boolean if the value satisfies the query.
+	 * @returns {this} Reference to <code>this</code> for method chaining
+	 * @public
+	 * @since 1.42
+	 */
+	ViewSettingsDialog.prototype.setFilterSearchCallback = function(fnTest) {
+		this._fnFilterSearchCallback = fnTest;
+		return this;
+	};
 
 	/**
 	 * Switches to a dialog page (0 = sort, 1 = group, 2 = filter, 3 = subfilter and custom pages).
 	 * @param {int|string} vWhich The page to be navigated to
-	 * @param {sap.m.FilterItem} oItem The filter item for the detail page (optional, only used for page 3).
+	 * @param {sap.m.ViewSettingsFilterItem} oItem The filter item for the detail page (optional, only used for page 3).
 	 *
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._switchToPage = function(vWhich, oItem) {
 		var i               = 0,
-		    oTitleLabel     = this._getTitleLabel(),
-		    oResetButton    = this._getResetButton(),
-		    oHeader         = this._getHeader(),
-		    oSubHeader      = this._getSubHeader();
+			oTitleLabel     = this._getTitleLabel(),
+			oHeader         = this._getHeader(),
+			oSubHeader      = this._getSubHeader();
 
-		// nothing to do if we are already on the requested page (except for filter detail page)
-		if (this._vContentPage === vWhich && vWhich !== 3) {
+		this._checkResetStatus();
 
-			// On switching to different pages, the content (Reset Button) of the header and sub-header is removed and added again
-			// only if vWhich is not 3(filter detail page). So when opening the dialog and navigating to
-			// filter detail page the Reset Button is only removed from page1. On clicking Ok and opening the dialog again vWhich is 2 and
-			// is equal to this._vContentPage so we skip all the following logic that should add the reset button again.
-			// Added logic for adding the Reset Button explicitly when we going into this state and there is no Reset Button.
-			// BCP 0020079747 0000728077 2015
-			if (oHeader.getContentRight().length === 0 && oSubHeader.getContentRight().length === 0) {
-				this._addResetButtonToPage1();
-			}
-
-			return false;
-		}
+		//needed in order when we navigate through the pages to have correctly set box-shadows
+		this._getPage2().getCustomHeader().removeStyleClass('sapMVSDBarWithSearch');
 
 		// needed because the content aggregation is changing it's owner control from custom tab to page and vice-versa
 		// if there is existing page content and the last opened page was a custom tab
@@ -2018,13 +2926,15 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 		if (this.getTitle()) { // custom title
 			oTitleLabel.setText(this.getTitle());
-		} else { // default title
+		} else if (this._hasSubHeader()) { // default title if necessary
 			oTitleLabel.setText(this._rb.getText("VIEWSETTINGS_TITLE"));
 		}
 
+		// Reset the title, since we need the detail title only for case 3 (where it would be changed)
+		this._toggleDialogTitle(this._sTitleLabelId);
+
 		switch (vWhich) {
 			case 1: // grouping
-				oResetButton.setVisible(false);
 				if (!this._showSubHeader && !this.getTitle()) {
 					oTitleLabel.setText(this._rb.getText("VIEWSETTINGS_TITLE_GROUP"));
 				}
@@ -2033,15 +2943,13 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 				}
 				break;
 			case 2: // filtering
-				// only show reset button when there are detail filters available
-				oResetButton.setVisible(!!this.getFilterItems().length);
 				if (!this._showSubHeader && !this.getTitle()) {
 					oTitleLabel.setText(this._rb.getText("VIEWSETTINGS_TITLE_FILTER"));
 				}
 				// update status (something could have been changed on a detail filter
 				// page or by API
-				this._updateListSelection(this._presetFilterList, sap.ui.getCore()
-					.byId(this.getSelectedPresetFilterItem()));
+				this._updateListSelection(this._presetFilterList,
+					Element.getElementById(this.getSelectedPresetFilterItem()));
 				this._updateFilterCounters();
 				for (; i < this._filterContent.length; i++) {
 					this._getPage1().addContent(this._filterContent[i]);
@@ -2051,17 +2959,16 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 				// display filter title
 				this._setFilterDetailTitle(oItem);
 				// fill detail page
-				if (oItem instanceof sap.m.ViewSettingsCustomItem
+				if (BaseObject.isObjectA(oItem, "sap.m.ViewSettingsCustomItem")
 					&& oItem.getCustomControl()) {
 					this._clearPresetFilter();
 					this._getPage2().addContent(oItem.getCustomControl());
-				} else if (oItem instanceof sap.m.ViewSettingsFilterItem
+				} else if (BaseObject.isObjectA(oItem, "sap.m.ViewSettingsFilterItem")
 					&& oItem.getItems()) {
 					this._initFilterDetailItems(oItem);
 				}
 				break;
 			case 0: // sorting
-				oResetButton.setVisible(false);
 				if (!this._getPage1().getSubHeader() && !this.getTitle()) {
 					oTitleLabel.setText(this._rb.getText("VIEWSETTINGS_TITLE_SORT"));
 				}
@@ -2073,7 +2980,6 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 				break;
 			default:
 				// custom tabs
-				oResetButton.setVisible(false);
 				this._getPage1().removeAllAggregation("content", true);
 
 				var sTitle = "VIEWSETTINGS_TITLE";
@@ -2089,6 +2995,7 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 				aCustomTabs.forEach(function (oCustomTab) {
 					if (oCustomTab.getId() === vWhich) {
 						oCustomTab.getContent().forEach(function (oContent) {
+							oContent.addStyleClass("sapMVSDCustomTabContent");
 							this._getPage1().addContent(oContent);
 						}, this);
 					}
@@ -2107,15 +3014,23 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/**
 	 * Creates the Select All checkbox.
 	 *
-	 * @param {Array} aFilterSubItems The detail filter items
-	 * @param oFilterDetailList The actual list created for the detail filter page
+	 * @param {sap.m.ViewSettingsItem[]} aFilterSubItems The detail filter items
+	 * @param {sap.m.List} oFilterDetailList The actual list created for the detail filter page
 	 * @returns {sap.m.CheckBox} A checkbox instance
 	 * @private
 	 */
-	ViewSettingsDialog.prototype._getSelectAllCheckbox = function(aFilterSubItems, oFilterDetailList) {
+	ViewSettingsDialog.prototype._createSelectAllCheckbox = function(aFilterSubItems, oFilterDetailList) {
+		var bAllSelected = false;
+
+		if (aFilterSubItems && aFilterSubItems.length !== 0) {
+			bAllSelected = aFilterSubItems.every(function (oItem) {
+				return oItem.getSelected();
+			});
+		}
+
 		var oSelectAllCheckBox = new CheckBox({
-			text: 'Select All',
-			selected: aFilterSubItems.every(function(oItem) { return oItem.getSelected(); }),
+			text: this._rb.getText("COLUMNSPANEL_SELECT_ALL"),
+			selected: bAllSelected,
 			select: function(oEvent) {
 				var bSelected = oEvent.getParameter('selected');
 				//update the list items
@@ -2126,7 +3041,10 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 					var oVSDItem = oItem.data("item");
 					oVSDItem.setSelected(bSelected);
 				});
-			}
+
+				// enable/disable reset button if necessary
+				this._checkResetStatus();
+			}.bind(this)
 		});
 
 		return oSelectAllCheckBox;
@@ -2138,41 +3056,133 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._updateSelectAllCheckBoxState = function() {
-		var bAllSelected = this._filterDetailList.getItems().filter(function(oItem) {
-			return oItem.getVisible();
-		}).every(function(oItem) {
-			return oItem.getSelected();
-		});
-		if (this._selectAllCheckBox) {
-			this._selectAllCheckBox.setSelected(bAllSelected);
+		var bAllSelected = false,
+			aItems = this._filterDetailList.getItems(),
+			aItemsVisible = [];
+
+		if (!this._selectAllCheckBox) {
+			return;
 		}
+
+		if (aItems && aItems.length !== 0) {
+			aItemsVisible = aItems.filter(function (oItem) {
+				return oItem.getVisible();
+			});
+		}
+		// if empty array, the 'every' call will return true
+		if (aItemsVisible.length !== 0) {
+			this._selectAllCheckBox.setEnabled(true);
+			bAllSelected = aItemsVisible.every(function (oItem) {
+				return oItem.getSelected();
+			});
+		} else {
+			this._selectAllCheckBox.setEnabled(false);
+		}
+
+		this._selectAllCheckBox.setSelected(bAllSelected);
+	};
+
+	/**
+	 * Determines whether or not the passed oItem is visible based on what is entered in the Search field.
+	 *
+	 * @param {sap.m.StandardListItem} oItem An item from the filter details
+	 * @returns {boolean} visibility of the oItem
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._visibilityBySearchField = function(oItem) {
+		var sQuery = this._filterSearchField.getValue(),
+			fnStringFilter = this._getStringFilter(),
+			bTitleSatisfiesTheQuery = fnStringFilter(sQuery, oItem.getTitle());
+		return bTitleSatisfiesTheQuery;
+	};
+
+	/**
+	 * Determines whether or not the passed oItem is visible based on Show only selected button state.
+	 *
+	 * @param {sap.m.StandardListItem} oItem an item from the filter details
+	 * @returns {boolean} visibility of the oItem
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._visibilityByToggleButton = function(oItem) {
+		var bTitleSatisfiesTheToggleButton = this._showOnlySelectedButton.getPressed() ? oItem.getSelected() : true;
+		return bTitleSatisfiesTheToggleButton;
 	};
 
 	/**
 	 * Creates the filter items search field.
 	 *
-	 * @param {Array} oFilterDetailList The actual list created for the detail filter page
+	 * @param {sap.m.List} oFilterDetailList The actual list created for the detail filter page
 	 * @returns {sap.m.SearchField} A search field instance
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._getFilterSearchField = function(oFilterDetailList) {
-		var that = this,
-			oFilterSearchField = new SearchField({
-				liveChange: function(oEvent) {
-					var sQuery = oEvent.getParameter('newValue').toLowerCase();
-
-					//update the list items visibility
-					oFilterDetailList.getItems().forEach(function(oItem) {
-						var bStartsWithQuery = oItem.getTitle().toLowerCase().indexOf(sQuery) === 0;
-						oItem.setVisible(bStartsWithQuery);
-					});
-
-					//update Select All checkbox
-					that._updateSelectAllCheckBoxState();
-				}
+		var oFilterSearchField = new SearchField({
+				liveChange: function() {
+					this._setFilterDetailItemsVisibility(oFilterDetailList);
+				}.bind(this)
 			});
 
 		return oFilterSearchField;
+	};
+
+	/**
+	 * Sets visibility of filter detail items depending on both Search field and Show only selected button state
+	 *
+	 * @param {sap.m.List} oFilterDetailList The actual list created for the detail filter page
+	 * @param {boolean} bSkipSearch if <code>true</code>, skip the search field part (in initial phase)
+	 * @private
+	*/
+	ViewSettingsDialog.prototype._setFilterDetailItemsVisibility = function(oFilterDetailList, bSkipSearch) {
+		oFilterDetailList.getItems().forEach(function (oItem) {
+			oItem.setVisible(this._visibilityByToggleButton(oItem) && (bSkipSearch || this._visibilityBySearchField(oItem)));
+		}.bind(this));
+		//update Select All checkbox
+		this._updateSelectAllCheckBoxState();
+	};
+
+	/**
+	 * Creates the Show only selected Toggle Button.
+	 *
+	 * @returns {sap.m.ToggleButton} A search field instance
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._getShowOnlySelectedButton = function() {
+		var bPressedForFilter = this._oContentItem && this._oFiltersSelectedOnly[this._oContentItem.getId()] ? true : false,
+			oShowOnlySelectedButton = new ToggleButton({
+				icon : IconPool.getIconURI("multi-select"),
+				tooltip: this._rb.getText("SHOW_SELECTED_ONLY"),
+				type : ButtonType.Transparent,
+				pressed: bPressedForFilter,
+				press: function() {
+					var bPressed = this._showOnlySelectedButton.getPressed(),
+						sFilterIndex = this._oContentItem.getId();
+					if (bPressed) { // "remember" this filter "Show only selected" button
+						this._oFiltersSelectedOnly[sFilterIndex] = true;
+					} else { // "forget" this filter "Show only selected" button
+						delete this._oFiltersSelectedOnly[sFilterIndex];
+					}
+					this._setFilterDetailItemsVisibility(this._filterDetailList);
+				}.bind(this)
+			});
+
+		return oShowOnlySelectedButton;
+	};
+
+	/**
+	 * Gets the function that will filter the ViewSettingsItem's text based on the search query.
+	 * @returns {function(sap.m.StandardListItem): sap.m.StandardListItem} A string filter function
+	 * @private
+	 */
+	ViewSettingsDialog.prototype._getStringFilter = function() {
+		if (this._fnFilterSearchCallback) {
+			return this._fnFilterSearchCallback;
+		}
+
+		if (!this._oStringFilter || this._oStringFilter.sOperator !== this.getFilterSearchOperator()) {
+			this._oStringFilter = new StringFilter(this.getFilterSearchOperator());
+		}
+
+		return this._oStringFilter.filter.bind(this._oStringFilter);
 	};
 
 	/**
@@ -2180,11 +3190,11 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._updateListSelections = function() {
-		this._updateListSelection(this._sortList, sap.ui.getCore().byId(this.getSelectedSortItem()));
+		this._updateListSelection(this._sortList, Element.getElementById(this._getSelectedSortItem()));
 		this._updateListSelection(this._sortOrderList, this.getSortDescending());
-		this._updateListSelection(this._groupList, sap.ui.getCore().byId(this.getSelectedGroupItem()));
+		this._updateListSelection(this._groupList, Element.getElementById(this._getSelectedGroupItem()));
 		this._updateListSelection(this._groupOrderList, this.getGroupDescending());
-		this._updateListSelection(this._presetFilterList, sap.ui.getCore().byId(this.getSelectedPresetFilterItem()));
+		this._updateListSelection(this._presetFilterList, Element.getElementById(this.getSelectedPresetFilterItem()));
 		this._updateFilterCounters();
 	};
 
@@ -2193,7 +3203,9 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._updateListSelection = function(oList, oItem) {
-		var items, i = 0;
+		var items,
+			i = 0,
+			bGroupHeaderItem;
 
 		if (!oList) {
 			return false;
@@ -2203,7 +3215,8 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 		oList.removeSelections();
 		for (; i < items.length; i++) {
-			if (items[i].data("item") === oItem || items[i].data("item") === null) { // null
+			bGroupHeaderItem = items[i].isA("sap.m.GroupHeaderListItem"); //group header items should not be selected
+			if (!bGroupHeaderItem && (items[i].data("item") === oItem || items[i].data("item") === null)) { // null
 				// is
 				// "None"
 				// item
@@ -2222,20 +3235,20 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 */
 	ViewSettingsDialog.prototype._updateFilterCounters = function() {
 		var aListItems = (this._filterList ? this._filterList.getItems() : []),
-		    oItem,
-		    aSubItems,
-		    iFilterCount = 0,
-		    i = 0,
-		    j;
+			oItem,
+			aSubItems,
+			iFilterCount = 0,
+			i = 0,
+			j;
 
 		for (; i < aListItems.length; i++) {
 			oItem = aListItems[i].data("item");
 			iFilterCount = 0;
 			if (oItem) {
-				if (oItem instanceof sap.m.ViewSettingsCustomItem) {
+				if (BaseObject.isObjectA(oItem, "sap.m.ViewSettingsCustomItem")) {
 					// for custom filter oItems the oItem is directly selected
 					iFilterCount = oItem.getFilterCount();
-				} else if (oItem instanceof sap.m.ViewSettingsFilterItem) {
+				} else if (BaseObject.isObjectA(oItem, "sap.m.ViewSettingsFilterItem")) {
 					// for filter oItems the oItem counter has to be calculated from
 					// the sub oItems
 					iFilterCount = 0;
@@ -2257,7 +3270,7 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 		// reset all items to selected = false
 		for (; i < items.length; i++) {
-			if (items[i] instanceof sap.m.ViewSettingsFilterItem) {
+			if (BaseObject.isObjectA(items[i], "sap.m.ViewSettingsFilterItem")) {
 				subItems = items[i].getItems();
 				for (j = 0; j < subItems.length; j++) {
 					subItems[j].setProperty('selected', false, true);
@@ -2286,14 +3299,14 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/**
 	 * Determines the number of pages (tabs).
 	 * @private
-	 * @return {int} iActivePages The number of pages in the dialog
+	 * @returns {int} iActivePages The number of pages in the dialog
 	 */
 	ViewSettingsDialog.prototype._calculateNumberOfPages = function () {
 		var iActivePages        = 0,
-		    bSort               = !!this.getSortItems().length,
-		    bGroup              = !!this.getGroupItems().length,
-		    bPredefinedFilter   = !!this.getPresetFilterItems().length,
-		    bFilter             = !!this.getFilterItems().length;
+			bSort               = !!this.getSortItems().length,
+			bGroup              = !!this.getGroupItems().length,
+			bPredefinedFilter   = !!this.getPresetFilterItems().length,
+			bFilter             = !!this.getFilterItems().length;
 
 		if (bSort) {
 			iActivePages++;
@@ -2317,7 +3330,7 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/**
 	 * Determines if a sub header should be displayed or not.
 	 * @private
-	 * @return {boolean}
+	 * @returns {boolean} Whether a sub header should be displayed
 	 */
 	ViewSettingsDialog.prototype._hasSubHeader = function () {
 		return !(this._calculateNumberOfPages() < 2);
@@ -2335,11 +3348,11 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	}
 
 	/**
-	 * Gets a sap.m.ViewSettingsItem from a list of items by a given key.
+	 * Gets an sap.m.ViewSettingsItem from a list of items by a given key.
 	 *
-	 * @param aViewSettingsItems The list of sap.m.ViewSettingsItem objects to be searched
-	 * @param sKey
-	 * @returns {*} The sap.m.ViewSettingsItem found in the list of items
+	 * @param {sap.m.ViewSettingsItem[]} aViewSettingsItems The list of sap.m.ViewSettingsItem objects to be searched
+	 * @param {string} sKey The key of the searched item
+	 * @returns {sap.m.ViewSettingsItem} The sap.m.ViewSettingsItem found in the list of items
 	 * @private
 	 */
 	function getViewSettingsItemByKey(aViewSettingsItems, sKey) {
@@ -2358,13 +3371,14 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	}
 
 	/**
-	 * Finds a sap.m.ViewSettingsItem from a list of items by a given key.
+	 * Finds an sap.m.ViewSettingsItem from a list of items by a given key.
 	 * If it does not succeed logs an error.
 	 *
-	 * @param {sap.m.ViewSettingsItem|string}
-	 * @param aViewSettingsItems The list of sap.m.ViewSettingsItem objects to be searched
-	 * @param {string} sErrorMessage The error message that will be logged if the item is not found
-	 * @returns {*} The sap.m.ViewSettingsItem found in the list of items
+	 * @param {sap.m.ViewSettingsItem|string} vItemOrKey The searched item or its key
+	 * @param {sap.m.ViewSettingsItem[]} aViewSettingsItems The list of sap.m.ViewSettingsItem objects to be searched
+	 * @param {string} sErrorMessage If an error message is provided, it will be logged when the
+	 * item is not found
+	 * @returns {sap.m.ViewSettingsItem} The sap.m.ViewSettingsItem found in the list of items
 	 * @private
 	 */
 	function findViewSettingsItemByKey(vItemOrKey, aViewSettingsItems, sErrorMessage) {
@@ -2375,8 +3389,8 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 			// find item with this key
 			oItem = getViewSettingsItemByKey(aViewSettingsItems, vItemOrKey);
 
-			if (!oItem) {
-				jQuery.sap.log.error(sErrorMessage);
+			if (!oItem && sErrorMessage) {
+				Log.error(sErrorMessage);
 			}
 		} else {
 			oItem = vItemOrKey;
@@ -2386,14 +3400,14 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	}
 
 	/**
-	 * Checks if the item is a sap.m.ViewSettingsItem.
+	 * Checks if the item is an sap.m.ViewSettingsItem.
 	 *
 	 * @param {*} oItem The item to be validated
-	 * @returns {*|boolean} Returns true if the item is a sap.m.ViewSettingsItem
+	 * @returns {boolean} Returns true if the item is an sap.m.ViewSettingsItem
 	 * @private
 	 */
 	function validateViewSettingsItem(oItem) {
-		return oItem && oItem instanceof sap.m.ViewSettingsItem;
+		return oItem && BaseObject.isObjectA(oItem, "sap.m.ViewSettingsItem");
 	}
 
 	/* =========================================================== */
@@ -2406,22 +3420,38 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Internal event handler for the Confirm button.
+	 * @param {Object} oEvent The fired event
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._onConfirm = function(oEvent) {
-		var that            = this,
-		    oDialog         = this._getDialog(),
-		    fnAfterClose    = function() {
-			    var  oSettingsState  = {
-				    sortItem            : sap.ui.getCore().byId(that.getSelectedSortItem()),
-				    sortDescending      : that.getSortDescending(),
-				    groupItem           : sap.ui.getCore().byId(that.getSelectedGroupItem()),
-				    groupDescending     : that.getGroupDescending(),
-				    presetFilterItem    : sap.ui.getCore().byId(that.getSelectedPresetFilterItem()),
-				    filterItems         : that.getSelectedFilterItems(),
-				    filterKeys          : that.getSelectedFilterKeys(),
-				    filterString        : that.getSelectedFilterString()
-			    };
+		var oDialog         = this._getDialog(),
+			that            = this,
+			fnAfterClose = function () {
+				var oSettingsState, vGroupItem,
+					sGroupItemId = that._getSelectedGroupItem();
+
+				// BCP: 1670245110 "None" should be undefined
+				if (!that._oGroupingNoneItem || sGroupItemId != that._oGroupingNoneItem.getId()) {
+					vGroupItem = Element.getElementById(sGroupItemId);
+				}
+
+				// Reset the title on closing the dialog, since it will be needed for the next opening.
+				that._toggleDialogTitle(that._sTitleLabelId);
+
+				oSettingsState = {
+					sortItem            : Element.getElementById(that._getSelectedSortItem()),
+					sortDescending      : that.getSortDescending(),
+					groupItem           : vGroupItem,
+					groupDescending     : that.getGroupDescending(),
+					presetFilterItem    : Element.getElementById(that.getSelectedPresetFilterItem()),
+					filterItems         : that.getSelectedFilterItems(),
+					/**
+					 * @deprecated as of version 1.42
+					 */
+					filterKeys          : that.getSelectedFilterKeys(),
+					filterCompoundKeys  : that.getSelectedFilterCompoundKeys(),
+					filterString        : that.getSelectedFilterString()
+				};
 
 				// detach this function
 				that._dialog.detachAfterClose(fnAfterClose);
@@ -2437,10 +3467,14 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 	/**
 	 * Internal event handler for the Cancel button.
+	 * @param {Object} oEvent The fired event
 	 * @private
 	 */
 	ViewSettingsDialog.prototype._onCancel = function(oEvent) {
 		var that = this, oDialog = this._getDialog(), fnAfterClose = function() {
+			// Reset the title on closing the dialog, since it will be needed for the next opening.
+			that._toggleDialogTitle(that._sTitleLabelId);
+
 			// reset the dialog to the previous state
 			that.setSelectedSortItem(that._oPreviousState.sortItem);
 			that.setSortDescending(that._oPreviousState.sortDescending);
@@ -2450,12 +3484,11 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 			// selected filters need to be cleared before
 			that._clearSelectedFilters();
-			that.setSelectedFilterKeys(that._oPreviousState.filterKeys);
+			that.setSelectedFilterCompoundKeys(that._oPreviousState.filterCompoundKeys);
 
 			// navigate to old page if necessary
 			if (that._navContainer.getCurrentPage() !== that._oPreviousState.navPage) {
-				jQuery.sap.delayedCall(0, that._navContainer, "to", [
-					that._oPreviousState.navPage.getId(), "show" ]);
+				setTimeout(that._navContainer["to"].bind(that._navContainer, that._oPreviousState.navPage.getId(), "show"), 0);
 			}
 
 			// navigate to old tab if necessary
@@ -2476,15 +3509,17 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	};
 
 	/**
-	 * Internal event handler for the reset filter button.
-	 * @private
+	 * Clears the selected filters and navigates to the filter overview page
+	 *
+	 * @public
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
-	ViewSettingsDialog.prototype._onClearFilters = function() {
+	ViewSettingsDialog.prototype.clearFilters = function() {
 		// clear data and update selections
 		this._clearSelectedFilters();
 		this._clearPresetFilter();
 
-		// fire event to allow custom controls to react and reset
+		// fire event to allow developers to react
 		this.fireResetFilters();
 
 		// update counters
@@ -2492,13 +3527,15 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 
 		// page updates
 		if (this._vContentPage === 3) { // go to filter overview page if necessary
-			jQuery.sap.delayedCall(0, this._getNavContainer(), 'to', [this._getPage1().getId()]);
+			setTimeout(this._getNavContainer()['to'].bind(this._getNavContainer(), this._getPage1().getId()), 0);
 			this._switchToPage(2);
 			this._getSegmentedButton().setSelectedButton(this._getFilterButton());
 		}
 		// update preset list selection
-		this._updateListSelection(this._presetFilterList, sap.ui.getCore().byId(
+		this._updateListSelection(this._presetFilterList, Element.getElementById(
 			this.getSelectedPresetFilterItem()));
+
+		return this;
 	};
 
 	/**
@@ -2515,62 +3552,56 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 			if (!this._getPage1().getSubHeader()) {
 				this._getPage1().setSubHeader(oSubHeader);
 			}
-			// show reset button in subheader
-			oSubHeader.addContentRight(oResetButton);
 		} else {
 			if (this._getPage1().getSubHeader()) {
 				this._getPage1().setSubHeader();
 			}
-			// show reset button in header
-			oHeader.addContentRight(oResetButton);
 		}
+		// show reset button in header
+		oHeader.addContentRight(oResetButton);
 	};
 	/* =========================================================== */
 	/* end: event handlers */
 	/* =========================================================== */
 
-
 	/**
-	 * Overwrite the method to make sure the proper internal managing of the aggregations takes place.
-	 * @param {string} sAggregationName The string identifying the aggregation that the given object should be removed from
-	 * @param {int | string | sap.ui.base.ManagedObject} vObject The position or ID of the ManagedObject that should be removed or that ManagedObject itself
-	 * @param {boolean} bSuppressInvalidate If true, this ManagedObject is not marked as changed
-	 * @returns {sap.m.ViewSettingsDialog} This pointer for chaining
+	 * Popup controls should not propagate contextual width
+	 * @private
 	 */
-	ViewSettingsDialog.prototype.removeAggregation = function (sAggregationName, vObject, bSuppressInvalidate) {
-		// custom tabs aggregation needs special handling - make sure it happens
-		restoreCustomTabContentAggregation.call(this, sAggregationName, vObject);
-
-		return sap.ui.core.Control.prototype.removeAggregation.call(this, sAggregationName, vObject,
-			bSuppressInvalidate);
+	ViewSettingsDialog.prototype._applyContextualSettings = function () {
+		Control.prototype._applyContextualSettings.call(this);
 	};
 
 	/**
-	 * Overwrite the method to make sure the proper internal managing of the aggregations takes place.
-	 * @param {string} sAggregationName The string identifying the aggregation that the given object should be removed from
-	 * @param {int | string | sap.ui.base.ManagedObject} vObject tThe position or ID of the ManagedObject that should be removed or that ManagedObject itself
-	 * @param {boolean} bSuppressInvalidate If true, this ManagedObject is not marked as changed
-	 * @returns {sap.m.ViewSettingsDialog} This pointer for chaining
+	 * If there is selected sort item, returns its id,
+	 * unlike the original getter - that can return id or key.
+	 * @returns {string} The selected ViewSettingsItem's id or any unknown string in the association
+	 * @private
 	 */
-	ViewSettingsDialog.prototype.removeAllAggregation = function (sAggregationName, bSuppressInvalidate) {
-		// custom tabs aggregation needs special handling - make sure it happens
-		restoreCustomTabContentAggregation.call(this);
+	ViewSettingsDialog.prototype._getSelectedSortItem = function() {
+		var sSortItem = this.getSelectedSortItem(),
+			oItem = findViewSettingsItemByKey(sSortItem, this.getSortItems())
+				|| Element.getElementById(sSortItem);
 
-		return sap.ui.core.Control.prototype.removeAllAggregation.call(this, sAggregationName, bSuppressInvalidate);
+		if (validateViewSettingsItem(oItem)) {
+			return oItem.getId();
+		}
 	};
 
 	/**
-	 * Overwrite the method to make sure the proper internal managing of the aggregations takes place.
-	 * @param {string} sAggregationName The string identifying the aggregation that the given object should be removed from
-	 * @param {int | string | sap.ui.base.ManagedObject} vObject tThe position or ID of the ManagedObject that should be removed or that ManagedObject itself
-	 * @param {boolean} bSuppressInvalidate If true, this ManagedObject is not marked as changed
-	 * @returns {sap.m.ViewSettingsDialog} This pointer for chaining
+	 * If there is selected group item, returns its id,
+	 * unlike the original getter - that can return id or key.
+	 * @returns {string} The selected ViewSettingsItem's id or any unknown string in the association
+	 * @private
 	 */
-	ViewSettingsDialog.prototype.destroyAggregation = function (sAggregationName, bSuppressInvalidate) {
-		// custom tabs aggregation needs special handling - make sure it happens
-		restoreCustomTabContentAggregation.call(this);
+	ViewSettingsDialog.prototype._getSelectedGroupItem = function() {
+		var sGroupItem = this.getSelectedGroupItem(),
+			oItem = findViewSettingsItemByKey(sGroupItem, this.getGroupItems())
+				|| Element.getElementById(sGroupItem);
 
-		return sap.ui.core.Control.prototype.destroyAggregation.call(this, sAggregationName, bSuppressInvalidate);
+		if (validateViewSettingsItem(oItem)) {
+			return oItem.getId();
+		}
 	};
 
 	/**
@@ -2618,7 +3649,7 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	/**
 	 * Determine if the last opened page has custom tab contents
 	 * @private
-	 * @returns {boolean}
+	 * @returns {boolean} Whether the last opened page has custom tab contents
 	 */
 	function isLastPageContentCustomTab() {
 		// ToDo: make this into enumeration
@@ -2637,13 +3668,82 @@ function(jQuery, library, Control, IconPool, Toolbar, CheckBox, SearchField) {
 	 * Needed because of the not-bullet proof implementation of setBusy in sap.ui.core.Control
 	 * @public
 	 * @param {boolean} bBusy The busy state flag
-	 * @return {sap.m.ViewSettingsDialog} this Instance for chaining
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 */
 	ViewSettingsDialog.prototype.setBusy = function (bBusy) {
 		this._getDialog().setBusy(bBusy);
+		return this;
 	};
 
+	/**
+	 * String filter helper class.
+	 * @param {string} sOperator sap.m.StringFilterOperator value. Default is sap.m.StringFilterOperator.StartsWith.
+	 * @constructor
+	 * @private
+	 */
+	var StringFilter = function(sOperator) {
+		this.sOperator = sOperator || StringFilterOperator.StartsWith;
+
+		switch (this.sOperator) {
+			case StringFilterOperator.Equals:
+				this.fnOperator = fnEquals;
+				break;
+			case StringFilterOperator.Contains:
+				this.fnOperator = fnContains;
+				break;
+			case StringFilterOperator.StartsWith:
+				this.fnOperator = fnStartsWith;
+				break;
+			case StringFilterOperator.AnyWordStartsWith:
+				this.fnOperator = fnAnyWordStartsWith;
+				break;
+			default:
+				//warning when operator has been given but it doesn't match a value from sap.m.StringFilterOperator enum
+				Log.warning("Unknown string compare operator. Use values from sap.m.StringFilterOperator. Default operator should be used.");
+				this.fnOperator = fnContains;
+				break;
+		}
+	};
+
+	/**
+	 * Tests if a string satisfies the query string.
+	 * @param {string} sQuery The string to which will be compared
+	 * @param {string} sValue The tested string
+	 * @returns {boolean} true if the string satisfies the query string
+	 * @private
+	 */
+	StringFilter.prototype.filter = function (sQuery, sValue) {
+		if (!sQuery) {
+			return true;
+		}
+
+		if (!sValue) {
+			return false;
+		}
+
+		sValue = sValue.toLowerCase();
+		sQuery = sQuery.toLowerCase();
+
+		return this.fnOperator(sQuery, sValue);
+	};
+
+	function fnEquals(sQuery, sValue) {
+		return sValue === sQuery;
+	}
+
+	function fnContains(sQuery, sValue) {
+		return sValue.indexOf(sQuery) > -1;
+	}
+
+	function fnStartsWith(sQuery, sValue) {
+		return sValue.indexOf(sQuery) === 0;
+	}
+
+	function fnAnyWordStartsWith(sQuery, sValue) {
+		var rAnyWordStartsWith = new RegExp(".*\\b" + sQuery + ".*");
+		return rAnyWordStartsWith.test(sValue);
+	}
 
 	return ViewSettingsDialog;
 
-}, /* bExport= */ true);
+});

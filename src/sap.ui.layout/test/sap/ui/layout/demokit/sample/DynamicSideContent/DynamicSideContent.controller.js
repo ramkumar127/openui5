@@ -1,36 +1,43 @@
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/mvc/Controller'],
-	function(jQuery, Controller) {
+sap.ui.define(['sap/ui/core/mvc/Controller', 'sap/ui/Device'],
+	function(Controller, Device) {
 	"use strict";
 
-	var DynamicSideContent = Controller.extend("sap.ui.layout.sample.DynamicSideContent.DynamicSideContent", {
+	return Controller.extend("sap.ui.layout.sample.DynamicSideContent.DynamicSideContent", {
+		onInit: function() {
+			this._oDSC = this.byId("DynamicSideContent");
+			this._oToggleButton = this.byId("toggleButton");
+		},
 		onBeforeRendering: function() {
-			this.getView().byId("DSCWidthSlider").setVisible(!sap.ui.Device.system.phone);
-			this.getView().byId("DSCWidthHintText").setVisible(!sap.ui.Device.system.phone);
+			this.byId("DSCWidthSlider").setVisible(!Device.system.phone);
+			this.byId("DSCWidthHintText").setVisible(!Device.system.phone);
+		},
+		onAfterRendering: function() {
+			var sCurrentBreakpoint = this._oDSC.getCurrentBreakpoint();
+			this._updateToggleButtonState(sCurrentBreakpoint);
 		},
 		handleSliderChange: function (oEvent) {
 			var iValue = oEvent.getParameter("value");
 			this.updateControlWidth(iValue);
 		},
 		updateControlWidth: function (iValue) {
-			var $DSCContainer = this.getView().byId("sideContentContainer").$();
+			var $DSCContainer = this.byId("sideContentContainer").$();
 			if (iValue) {
 				$DSCContainer.width(iValue + "%");
 			}
 		},
-		updateToggleButtonState: function (oEvent) {
-			var oToggleButton = this.getView().byId("toggleButton"),
-				sCurrentBreakpoint = oEvent.getParameter("currentBreakpoint");
-
-			if (sCurrentBreakpoint === "S") {
-				oToggleButton.setEnabled(true);
-			} else {
-				oToggleButton.setEnabled(false);
-			}
+		handleBreakpointChanged: function (oEvent) {
+			var sCurrentBreakpoint = oEvent.getParameter("currentBreakpoint");
+			this._updateToggleButtonState(sCurrentBreakpoint);
 		},
 		handleToggleClick: function () {
-			this.getView().byId("DynamicSideContent").toggle();
+			this._oDSC.toggle();
+		},
+		_updateToggleButtonState: function(sCurrentBreakpoint) {
+			if (sCurrentBreakpoint === "S") {
+				this._oToggleButton.setEnabled(true);
+			} else {
+				this._oToggleButton.setEnabled(false);
+			}
 		}
 	});
-
-	return DynamicSideContent;
 });

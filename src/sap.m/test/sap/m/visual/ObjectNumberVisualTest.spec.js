@@ -1,4 +1,9 @@
+/*global describe,it,element,by,takeScreenshot,browser,expect*/
+
 describe("sap.m.ObjectNumberVisualTest", function() {
+	"use strict";
+
+	browser.testrunner.currentSuite.meta.controlName = 'sap.m.ObjectNumber';
 
 	it("ObjectNumber",function() {
 		expect(takeScreenshot()).toLookAs("initial-rendering");
@@ -32,6 +37,11 @@ describe("sap.m.ObjectNumberVisualTest", function() {
 	it("Number change state to warning",function(){
 		element(by.id("change_stateW")).click();
 		expect(takeScreenshot()).toLookAs("number-state-warning");
+	});
+
+	it("Number change state to information",function(){
+		element(by.id("change_stateI")).click();
+		expect(takeScreenshot()).toLookAs("number-state-information");
 	});
 
 });

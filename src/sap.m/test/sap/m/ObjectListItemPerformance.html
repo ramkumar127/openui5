@@ -2,14 +2,12 @@
 <html>
 <head>
 	<title>Object List Item Performance - sap.m</title>
-	<meta http-equiv='X-UA-Compatible' content='IE=edge'>
 	<meta charset="utf-8">
+	<script src="shared-config.js"></script>
 	<script
 		id="sap-ui-bootstrap"
-		type="text/javascript"
 		src="../../../resources/sap-ui-core.js"
 		data-sap-ui-xx-bindingSyntax="complex"
-		data-sap-ui-theme="sap_bluecrystal"
 		data-sap-ui-libs="sap.m" >
 	</script>
 	<script>
@@ -32,7 +30,7 @@
 			var title = (this.getId().indexOf("-S") !== -1) ? "Short Title" : "This is my title which is kind of very long and needs a second line in the very worst case and it could be even long if you do not take care.";
 			var oData = { items : [] };
 			var iLength = parseInt(sap.ui.getCore().byId("input").getValue());
-			for (var i=0 ; i < iLength ; i++) {
+			for (var i = 0 ; i < iLength ; i++) {
 				oData.items.push({
 					title: title,
 					number: "00000000" + (i + 1)
@@ -40,7 +38,7 @@
 			}
 			var oModel = new sap.ui.model.json.JSONModel(oData);
 			oModel.setSizeLimit(iLength);
-			sap.ui.getCore().setModel(oModel);
+			sap.ui.getCore().byId("page").setModel(oModel);
 
 			// get item template
 			var oItemTemplate;
@@ -48,7 +46,7 @@
 				oItemTemplate = new sap.m.StandardListItem({
 					type: "Active",
 					title: "{title}"
-				})
+				});
 			} else {
 				oItemTemplate = new sap.m.ObjectListItem({
 					type: "Active",
@@ -61,7 +59,7 @@
 					],
 					firstStatus: new sap.m.ObjectStatus({text: "Status 1", state: "Success"}),
 					secondStatus: new sap.m.ObjectStatus({text: "Status 2", state: "Error"})
-				})
+				});
 			}
 
 			// add list

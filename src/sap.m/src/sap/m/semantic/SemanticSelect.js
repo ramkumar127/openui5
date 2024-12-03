@@ -2,7 +2,7 @@
  * ${copyright}
  */
 
-sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Select'], function (SemanticControl, Select) {
+sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Select', "sap/base/Log"], function(SemanticControl, Select, Log) {
 	"use strict";
 
 	/**
@@ -23,17 +23,16 @@ sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Select'], function (Sema
 	 * @public
 	 * @since 1.30
 	 * @alias sap.m.semantic.SemanticSelect
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 
 	var SemanticSelect = SemanticControl.extend("sap.m.semantic.SemanticSelect", /** @lends sap.m.semantic.SemanticSelect.prototype */ {
 		metadata: {
 
 			library: "sap.m",
-
+			"abstract" : true,
 			properties: {
 				/**
-				 * See {@link sap.m.Select#enabled}
+				 * See {@link sap.m.Select#getEnabled}
 				 */
 				enabled: {
 					type: "boolean",
@@ -42,7 +41,7 @@ sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Select'], function (Sema
 				},
 
 				/**
-				 * See {@link sap.m.Select#selectedKey}
+				 * See {@link sap.m.Select#getSelectedKey}
 				 */
 				selectedKey: {
 					type: "string",
@@ -53,20 +52,20 @@ sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Select'], function (Sema
 			defaultAggregation: "items",
 			aggregations: {
 				/**
-				 * See {@link sap.m.Select#items}
+				 * See {@link sap.m.Select#getItems}
 				 */
 				items: {type: "sap.ui.core.Item", multiple: true, singularName: "item", bindable: "bindable"}
 			},
 			associations: {
 				/**
-				 * See {@link sap.m.Select#selectedItem}
+				 * See {@link sap.m.Select#getSelectedItem}
 				 */
 				selectedItem: {type: "sap.ui.core.Item", multiple: false}
 			},
 			events: {
 
 				/**
-				 * See {@link sap.m.Select#change}
+				 * See {@link sap.m.Select#event:change}
 				 */
 				change: {
 					parameters: {
@@ -87,7 +86,7 @@ sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Select'], function (Sema
 				&& !SemanticSelect.getMetadata().getProperties()[sPropertyName]
 				&& !SemanticControl.getMetadata().getProperties()[sPropertyName]) {
 
-			jQuery.sap.log.error("unknown property: " + sPropertyName, this);
+			Log.error("unknown property: " + sPropertyName, this);
 			return this;
 		}
 		SemanticControl.prototype.setProperty.call(this, sPropertyName, oValue, bSuppressInvalidate);
@@ -149,4 +148,4 @@ sap.ui.define(['sap/m/semantic/SemanticControl', 'sap/m/Select'], function (Sema
 	};
 
 	return SemanticSelect;
-}, /* bExport= */ true);
+});

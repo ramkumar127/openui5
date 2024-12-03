@@ -1,63 +1,66 @@
+/*global QUnit*/
+
 sap.ui.define([
-		"sap/ui/test/opaQunit"
-	], function (opaTest) {
-		"use strict";
+	"sap/ui/test/opaQunit",
+	"./pages/Master",
+	"./pages/NotFound",
+	"./pages/Browser"
+], function (opaTest) {
+	"use strict";
 
-		QUnit.module("Desktop not found");
+	QUnit.module("Desktop not found");
 
-		opaTest("Should see the resource not found page and no selection in the master list when navigating to an invalid hash", function (Given, When, Then) {
-			//Arrangement
-			Given.iStartTheApp();
+	opaTest("Should see the resource not found page when navigating to an invalid hash", function (Given, When, Then) {
+		//Arrangement
+		Given.iStartMyApp();
 
-			//Actions
-			When.onTheMasterPage.iWaitUntilTheListIsLoaded()
-				.and.iWaitUntilTheFirstItemIsSelected();
-			When.onTheBrowserPage.iChangeTheHashToSomethingInvalid();
+		//Actions
+		When.onTheBrowserPage.iChangeTheHashToSomethingInvalid();
 
-			// Assertions
-			Then.onTheNotFoundPage.iShouldSeeTheNotFoundPage().
-				and.theNotFoundPageShouldSayResourceNotFound();
-			Then.onTheMasterPage.theListShouldHaveNoSelection().
-				and.iTeardownMyAppFrame();
-		});
+		// Assertions
+		Then.onTheNotFoundPage.iShouldSeeTheNotFoundPage().
+			and.theNotFoundPageShouldSayResourceNotFound();
 
-		opaTest("Should see the not found page if the hash is something that matches no route", function (Given, When, Then) {
-			// Arrangements
-			Given.iStartTheApp({ hash : "somethingThatDoesNotExist" });
+		// Cleanup
+		Then.iTeardownMyApp();
+	});
 
-			// Actions
-			When.onTheNotFoundPage.iLookAtTheScreen();
+	opaTest("Should see the not found page if the hash is something that matches no route", function (Given, When, Then) {
+		// Arrangements
+		Given.iStartMyApp({hash: "somethingThatDoesNotExist"});
 
-			// Assertions
-			Then.onTheNotFoundPage.iShouldSeeTheNotFoundPage().
-				and.theNotFoundPageShouldSayResourceNotFound().
-				and.iTeardownMyAppFrame();
-		});
+		// Assertions
+		Then.onTheNotFoundPage.iShouldSeeTheNotFoundPage().
+			and.theNotFoundPageShouldSayResourceNotFound();
 
-		opaTest("Should see the not found master and detail page if an invalid object id has been called", function (Given, When, Then) {
-			// Arrangements
-			Given.iStartTheApp({ hash : "/Objects/SomeInvalidObjectId" });
+		// Cleanup
+		Then.iTeardownMyApp();
+	});
 
-			//Actions
-			When.onTheNotFoundPage.iLookAtTheScreen();
+	opaTest("Should see the not found master and detail page if an invalid object id has been called", function (Given, When, Then) {
+		// Arrangements
+		Given.iStartMyApp({hash: "/Objects/SomeInvalidObjectId"});
 
-			// Assertions
-			Then.onTheNotFoundPage.iShouldSeeTheObjectNotFoundPage().
-				and.theNotFoundPageShouldSayObjectNotFound().
-				and.iTeardownMyAppFrame();
-		});
+		// Assertions
+		Then.onTheNotFoundPage.iShouldSeeTheObjectNotFoundPage().
+			and.theNotFoundPageShouldSayObjectNotFound();
 
-		opaTest("Should see the not found text for no search results", function (Given, When, Then) {
-			// Arrangements
-			Given.iStartTheApp();
+		// Cleanup
+		Then.iTeardownMyApp();
+	});
 
-			//Actions
-			When.onTheMasterPage.iSearchForSomethingWithNoResults();
+	opaTest("Should see the not found text for no search results", function (Given, When, Then) {
+		// Arrangements
+		Given.iStartMyApp();
 
-			// Assertions
-			Then.onTheMasterPage.iShouldSeeTheNoDataTextForNoSearchResults().
-				and.iTeardownMyAppFrame();
-		});
+		//Actions
+		When.onTheMasterPage.iSearchForNotFound();
 
-	}
-);
+		// Assertions
+		Then.onTheMasterPage.iShouldSeeTheNoDataText();
+
+		// Cleanup
+		Then.iTeardownMyApp();
+	});
+
+});

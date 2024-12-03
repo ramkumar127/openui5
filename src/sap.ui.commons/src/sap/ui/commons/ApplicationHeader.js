@@ -3,9 +3,30 @@
  */
 
 // Provides control sap.ui.commons.ApplicationHeader.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', './Image', './TextView', './Button'],
-	function(jQuery, library, Control, Image, TextView, Button) {
+sap.ui.define([
+    './library',
+    'sap/ui/core/Control',
+    './Image',
+    './TextView',
+    './Button',
+    './ApplicationHeaderRenderer',
+    'sap/ui/core/library'
+],
+	function(
+		library,
+		Control,
+		Image,
+		TextView,
+		Button,
+		ApplicationHeaderRenderer,
+		coreLibrary
+	) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.core.AccessibleRole
+	var AccessibleRole = coreLibrary.AccessibleRole;
 
 
 
@@ -22,12 +43,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', './Image
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38. Instead, use the <code>sap.tnt.ToolHeader</code> control.
 	 * @alias sap.ui.commons.ApplicationHeader
-	 * @ui5-metamodel This control/element also will be described in the UI5 design-time metamodel
 	 */
 	var ApplicationHeader = Control.extend("sap.ui.commons.ApplicationHeader", /** @lends sap.ui.commons.ApplicationHeader.prototype */ { metadata : {
 
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -106,7 +128,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', './Image
 		this.oLogo.setParent(this);
 		this.oLogoText && this.oLogoText.destroy();
 		this.oLogoText = new TextView(appHeaderId + "-logoText");
-		this.oLogoText.setAccessibleRole(sap.ui.core.AccessibleRole.Heading);
+		this.oLogoText.setAccessibleRole(AccessibleRole.Heading);
 		this.oLogoText.setParent(this);
 
 		//Log off button
@@ -118,14 +140,14 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', './Image
 		this.oLogoffBtn.attachPress(this.logoff,this);
 		this.oLogoffBtn.setParent(this);
 		this.oLogoffBtn.setLite(true);
-	}
+	};
 
 
 	/**
 	*  This event is fired when the user clicks on the Log Off button
 	*  @param oEvent The event triggered
 	*  @private
-	*/;
+	*/
 	ApplicationHeader.prototype.logoff = function(oEvent){
 		this.fireLogoff();
 	};
@@ -165,4 +187,4 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', './Image
 
 	return ApplicationHeader;
 
-}, /* bExport= */ true);
+});

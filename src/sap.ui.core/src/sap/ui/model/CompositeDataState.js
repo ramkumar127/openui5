@@ -1,58 +1,19 @@
 /*!
  * ${copyright}
  */
-
-sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState) {
+/*eslint-disable max-len */
+sap.ui.define(['./DataState', "sap/base/util/deepEqual", "sap/base/util/each"], function(DataState, deepEqual, each) {
 	"use strict";
 
 	/**
 	 * @class
-	 * Provides and update the status data of a binding.
-	 * Depending on the models state and controls state changes, the data state is used to propagated changes to a control.
-	 * The control can react on these changes by implementing the <code>refreshDataState</code> method for the control.
-	 * Here the the data state object is passed as a parameter.
-	 *
-	 * Using the {@link #getChanges getChanges} method the control can determine the changed properties and their old and new value.
-	 * <pre>
-	 *     //sample implementation to handle message changes
-	 *     myControl.prototype.refreshDataState = function(oDataState) {
-	 *        var aMessages = oDataState.getChanges().messages;
-	 *        if (aMessages) {
-	 *            for (var i = 0; i &lt; aMessages.length; i++) {
-	 *                console.log(aMessages.message);
-	 *            }
-	 *        }
-	 *     }
-	 *
-	 *     //sample implementation to handle laundering state
-	 *     myControl.prototype.refreshDataState = function(oDataState) {
-	 *        var bLaundering = oDataState.getChanges().laundering || false;
-	 *        this.setBusy(bLaundering);
-	 *     }
-	 *
-	 *     //sample implementation to handle dirty state
-	 *     myControl.prototype.refreshDataState = function(oDataState) {
-	 *        if (oDataState.isDirty()) console.log("Control " + this.getId() + " is now dirty");
-	 *     }
-	 * </pre>
-	 *
-	 * Using the {@link #getProperty getProperty} method the control can read the properties of the data state. The properties are
-	 * <ul>
-	 *     <li><code>value</code> The value formatted by the formatter of the binding
-	 *     <li><code>originalValue</code> The original value of the model formatted by the formatter of the binding
-	 *     <li><code>invalidValue</code> The control value that was tried to be applied to the model but was rejected by a type validation
-	 *     <li><code>modelMessages</code> The messages that were applied to the binding by the <code>sap.ui.model.MessageModel</code>
-	 *     <li><code>controlMessages</code> The messages that were applied due to type validation errors
-	 *     <li><code>messages</code> All messages of the data state
-	 *      <li><code>dirty</code> true if the value was not yet confirmed by the server
-	 * </ul>
+	 * Holds the status data of a composite binding.
 	 *
 	 * @extends sap.ui.model.DataState
 	 *
 	 * @author SAP SE
 	 * @version ${version}
 	 *
-	 * @constructor
 	 * @public
 	 * @alias sap.ui.model.CompositeDataState
 	 */
@@ -63,23 +24,28 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 			this.mProperties.originalValue = [];
 			this.mProperties.originalInternalValue = [];
 			this.mProperties.value = [];
-			this.mProperties.invalidValue = null;
+			this.mProperties.invalidValue = undefined;
 			this.mProperties.internalValue = [];
 
-			this.mChangedProperties = jQuery.extend({},this.mProperties);
+			this.mChangedProperties = Object.assign({},this.mProperties);
 
 			this.aDataStates = aDataStates;
+			aDataStates.forEach((oDataState) => {
+				oDataState.setParent(this);
+			});
 		}
 	});
 
 	/**
-	 * Returns true if there invalid values set on at least one of the inner datastates
+	 * Returns true if there are invalid values set on at least one of the inner datastates.
+	 *
+	 * @returns {boolean} Whether one of the inner datastates has an invalid value
 	 *
 	 * @private
 	 */
 	CompositeDataState.prototype._hasInnerInvalidValues = function() {
 		return this.aDataStates.reduce(function(bIsInvalid, oDataState) {
-			if (oDataState.getInvalidValue() !== null) {
+			if (oDataState.getInvalidValue() !== undefined) {
 				return true;
 			} else {
 				return bIsInvalid;
@@ -88,7 +54,10 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	};
 
 	/**
-	 * Returns an array of the properties set on the inner datastates
+	 * Returns an array of values for the given property in the inner datastates.
+	 *
+	 * @param {string} sProperty The property name
+	 * @returns {any[]} The array of property values in the inner datastates
 	 *
 	 * @protected
 	 */
@@ -109,10 +78,10 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	};
 
 	/**
-	 * Returns the current value of the property
+	 * Returns the current value of the given property.
 	 *
-	 * @param {string} the name of the property
-	 * @returns {any} the vaue of the property
+	 * @param {string} sProperty The name of the property
+	 * @returns {any} The value of the property
 	 * @private
 	 */
 	CompositeDataState.prototype.getProperty = function(sProperty) {
@@ -137,9 +106,10 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	};
 
 	/**
-	 * Returns the array of state messages of the model or undefined
+	 * Returns the array of current state messages of the model.
 	 *
-	 * @returns {sap.ui.core.Message[]} the array of messages of the model or null if no {link:sap.ui.core.messages.ModelManager ModelManager} is used.
+	 * @returns {sap.ui.core.message.Message[]} The array of messages of the model
+	 *
 	 * @public
 	 */
 	CompositeDataState.prototype.getModelMessages = function() {
@@ -147,21 +117,40 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	};
 
 	/**
-	 * Sets an array of control state messages.
+	 * Returns the array of current state messages of the control.
 	 *
-	 * @param {sap.ui.core.Message[]} the control messages
-	 * @return {sap.ui.model.DataState} <code>this</code> to allow method chaining
-	 * @protected
+	 * @return {sap.ui.core.message.Message[]} The array of control messages
+	 *
+	 * @public
 	 */
 	CompositeDataState.prototype.getControlMessages = function() {
 		return this.getProperty("controlMessages");
 	};
 
 	/**
-	 * Returns the array of all state messages or null.
-	 * This combines the model and control messages.
+	 * Returns an array of all model and control messages of all parts of the composite binding,
+	 * regardless of whether they are old or new.
 	 *
-	 * @returns {sap.ui.core.Message[]} the array of all messages or null if no {link:sap.ui.core.messages.ModelManager ModelManager} is used.
+	 * @returns {sap.ui.core.message.Message[]} The array of all messages
+	 *
+	 * @public
+	 * @since 1.98.0
+	 */
+	 CompositeDataState.prototype.getAllMessages = function () {
+		var oResultSet = new Set();
+
+		this.aDataStates.forEach(function(oDataState) {
+			oDataState.getAllMessages().forEach(oResultSet.add.bind(oResultSet));
+		});
+
+		return Array.from(oResultSet);
+	};
+
+	/**
+	 * Returns the array of all current state messages combining the model and control messages.
+	 *
+	 * @returns {sap.ui.core.message.Message[]} The array of all messages
+	 *
 	 * @public
 	 */
 	CompositeDataState.prototype.getMessages = function() {
@@ -180,7 +169,7 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	CompositeDataState.prototype.containsValues = function(vValue) {
 		if (Array.isArray(vValue)) {
 			for (var i = 0; i < vValue.length; i++) {
-				if (vValue[i] !== null && vValue[i] !== undefined) {
+				if (vValue[i] !== undefined) {
 					return true;
 				}
 			}
@@ -195,7 +184,7 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	 * A data state is dirty if the value was changed
 	 * but is not yet confirmed by a server or the entered value did not yet pass the type validation.
 	 *
-	 * @returns {boolean} true if the data state is dirty
+	 * @returns {boolean} Whether the data state is dirty
 	 * @public
 	 */
 	CompositeDataState.prototype.isDirty = function() {
@@ -209,20 +198,16 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	};
 
 	/**
-	 * Returns whether the data state is dirty in the UI control.
-	 * A data state is dirty in the UI control if the entered value did not yet pass the type validation.
+	 * Returns whether the data state is dirty in the UI control. A data state is dirty in the UI control if an entered
+	 * value did not pass the type validation.
 	 *
-	 * @returns {boolean} true if the data state is dirty
+	 * @returns {boolean}
+	 *   Whether this data state or at least one of the aggregated data states is dirty in the UI control
 	 * @public
 	 */
-	CompositeDataState.prototype.isControlDirty = function() {
-		return this.aDataStates.reduce(function(bIsInvalid, oDataState) {
-			if (oDataState.isControlDirty()) {
-				return true;
-			} else {
-				return bIsInvalid;
-			}
-		}, DataState.prototype.isControlDirty.apply(this, arguments));
+	CompositeDataState.prototype.isControlDirty = function () {
+		return DataState.prototype.isControlDirty.call(this)
+			|| this.aDataStates.some((oDataState) => oDataState.isControlDirtyInternal());
 	};
 
 	/**
@@ -230,7 +215,7 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	 * If data is send to the server the data state becomes laundering until the
 	 * data was accepted or rejected.
 	 *
-	 * @returns {boolean} true if the data is laundering
+	 * @returns {boolean} Whether the data state is laundering
 	 * @public
 	 */
 	CompositeDataState.prototype.isLaundering = function() {
@@ -249,7 +234,7 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	 * value was not rejected it will return null. In this case the current
 	 * model value can be accessed using the <code>getValue</code> method.
 	 *
-	 * @returns {any} the value that was rejected or null
+	 * @returns {any} The value that was rejected
 	 * @public
 	 */
 	CompositeDataState.prototype.getInvalidValue = function() {
@@ -267,13 +252,13 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	 * and the corresponding binding will fire data state change events.
 	 *
 	 * @param {boolean} [bNewState] the optional new state
-	 * @returns {boolean} whether the data state was changed.
+	 * @returns {boolean} Whether the data state was changed.
 	 * @protected
 	 */
 	CompositeDataState.prototype.changed = function(bNewState) {
 		if (bNewState === false) {
 			//clear the changed properties as changed was reset;
-			this.mProperties = jQuery.extend({},this.mChangedProperties);
+			this.mProperties = Object.assign({},this.mChangedProperties);
 
 			this.aDataStates.forEach(function(oDataState) {
 				oDataState.changed(false);
@@ -287,7 +272,7 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 			} else {
 				return oDataState.changed();
 			}
-		}, !jQuery.sap.equal(this.mProperties, this.mChangedProperties));
+		}, !deepEqual(this.mProperties, this.mChangedProperties));
 	};
 
 	/**
@@ -302,7 +287,7 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 	 * </pre>
 	 * The map only contains the changed properties.
 	 *
-	 * @returns {map} the changed of the data state
+	 * @returns {Object<string,{oldValue:any,value:any}>} the changed of the data state
 	 * @public
 	 */
 	CompositeDataState.prototype.getChanges = function() {
@@ -345,9 +330,9 @@ sap.ui.define([ 'jquery.sap.global', './DataState' ], function(jQuery, DataState
 			}
 		}
 
-		jQuery.each(this.mChangedProperties,function(sProperty, vValue) {
+		each(this.mChangedProperties,function(sProperty, vValue) {
 			if (this.mChangedProperties[sProperty] &&
-					!jQuery.sap.equal(this.mChangedProperties[sProperty],this.mProperties[sProperty])) {
+					!deepEqual(this.mChangedProperties[sProperty],this.mProperties[sProperty])) {
 				mAllChanges[sProperty] = {};
 				mAllChanges[sProperty].value = this.mChangedProperties[sProperty];
 				mAllChanges[sProperty].oldValue = this.mProperties[sProperty];

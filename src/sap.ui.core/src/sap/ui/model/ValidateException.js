@@ -2,28 +2,36 @@
  * ${copyright}
  */
 
-// Provides a filter for list bindings
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/Exception'],
-	function(jQuery, Exception) {
+// Provides class sap.ui.model.ValidateException
+sap.ui.define(['sap/ui/base/Exception'],
+	function (Exception) {
 	"use strict";
 
-
 	/**
-	 * ValidateException class
+	 * Creates a new ValidateException.
 	 *
-	 * This exception is thrown, when a validation error occurs while checking the
-	 * defined constraints for a type.
+	 * @param {string} message
+	 *   A message explaining why the validation failed; this message is language dependent as it
+	 *   may be displayed on the UI
+	 * @param {string[]} [violatedConstraints]
+	 *   Names of the constraints that are violated; the names should be the same as documented in
+	 *   the type's constructor
+	 *
 	 * @alias sap.ui.model.ValidateException
+	 * @class
+	 * @classdesc
+	 *   Instances of this exception are thrown when constraints of a type are violated.
+	 *
 	 * @public
+	 * @see sap.ui.model.SimpleType#validateValue
 	 */
-	var ValidateException = function(message, violatedConstraints) {
+	var ValidateException = function (message, violatedConstraints) {
 		this.name = "ValidateException";
 		this.message = message;
 		this.violatedConstraints = violatedConstraints;
 	};
-	ValidateException.prototype = jQuery.sap.newObject(Exception.prototype);
 
+	ValidateException.prototype = Object.create(Exception.prototype);
 
 	return ValidateException;
-
 }, /* bExport= */ true);

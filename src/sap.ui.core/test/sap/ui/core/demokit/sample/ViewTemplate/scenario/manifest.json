@@ -1,32 +1,19 @@
 {
-	"_version" : "1.1.0",
+	"_version" : "1.8.0",
 	"sap.app" : {
-		"_version" : "1.1.0",
 		"ach" : "CA-UI5-COR",
 		"applicationVersion" : {
 			"version" : "${version}"
 		},
-		"description": "{{sap.app.description}}",
+		"description": "Complete demo scenario for XML Templating based on OData V4 annotations",
 		"id" : "sap.ui.core.sample.ViewTemplate.scenario",
-		"i18n" : "i18n/i18n.properties",
-		"title" : "{{sap.app.title}}",
+		"title" : "XML Templating: demo scenario",
 		"type" : "application"
 	},
 	"sap.ui" : {
-		"_version" : "1.1.0",
-		"deviceTypes" : {
-			"desktop" : true,
-			"phone" : true,
-			"tablet" : true
-		},
-		"supportedThemes" : [
-			"sap_bluecrystal",
-			"sap_hcb"
-		],
 		"technology" : "UI5"
 	},
 	"sap.ui5": {
-		"_version": "1.1.0",
 		"config" : {
 			"sample" : {
 				"files" : [
@@ -37,29 +24,32 @@
 					"Facets.fragment.xml",
 					"Field.fragment.xml",
 					"FormFacet.fragment.xml",
+					"Helper.js",
 					"Identification.fragment.xml",
+					"LabeledField.fragment.xml",
 					"Main.controller.js",
 					"Main.view.xml",
 					"ODataMetaModel.json",
 					"Table.fragment.xml",
-					"TableFacet.fragment.xml"
+					"TableFacet.fragment.xml",
+					"../../common/Controller.js"
 				]
 			}
 		},
-		"contentDensities" : {
-			"compact" : true,
-			"cozy" : true
-		},
 		"dependencies": {
 			"libs": {
-				"sap.m": {}
+				"sap.m": {},
+				"sap.ui.core": {},
+				"sap.ui.layout": {}
 			},
 			"minUI5Version": "1.30"
 		},
 		"models": {
 			"@i18n": {
 				"settings": {
-					"bundleName": "sap.ui.core.sample.ViewTemplate.scenario.i18n.i18n"
+					"bundleName": "sap.ui.core.sample.ViewTemplate.scenario.i18n.i18n",
+					"fallbackLocale" : "",
+					"supportedLocales" : ["de", ""]
 				},
 				"type": "sap.ui.model.resource.ResourceModel"
 			}

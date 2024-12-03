@@ -3,9 +3,7 @@
 /* Belize theme                */
 /* =========================== */
 
-.sapMLnk {
-	font-size: 0.875rem;
-}
+@_sap_m_Link_TextShadowColor: none;
 
 .sapMLnkDsbl {
 	opacity: 0.5;
@@ -13,42 +11,9 @@
 	cursor: default;
 }
 
-/* Hover Decoration only for desktop clients*/
-.sap-desktop .sapMLnk:hover:not(.sapMLnkDsbl) {
-	text-decoration: underline;
-}
-
-.sap-desktop .sapMLnk:focus:not(.sapMLnkDsbl) {
-	outline: 0.0625rem dotted @sapUiContentFocusColor;
-	outline-offset: -0.0625rem;
-}
-
-/* IE ignores outline-offset. Use an overlay: */
-.sap-desktop[data-sap-ui-browser^="ie"] {
-	.sapMLnk:focus {
-		outline: none;
-		position: relative;
-	}
-	.sapMLnk:focus:before {
-		content: " ";
-		box-sizing: border-box;
-		width: 100%;
-		height: 100%;
-		position: absolute;
-		left: 0;
-		top: 0;
-		border: 0.0625rem dotted @sapUiContentFocusColor;
-		pointer-events: none;
-	}
-}
-
 .sapMLIBActive .sapMLnk {
 	color: @sapUiListActiveTextColor;
 	text-decoration: underline;
-}
-
-.sapUiFormEdit .sapMLnk {
-	line-height: 3rem;
 }
 
 .sapMLnkSubtle {
@@ -59,15 +24,6 @@
 	color: @sapUiContentFocusColor;
 }
 
-.sapMLnkEmphasized {
-	font-weight: bold;
-}
-
-/* Compact size */
-.sapUiSizeCompact .sapUiFormEdit .sapMLnk {
-	line-height: 2rem;
-}
-/* Condensed size */
-.sapUiSizeCondensed .sapUiTableCell>.sapMLnk {
-	.sapUiCondensedTableCellContent; /* see shared.css */
+.sapMLnk:not(.sapMLnkDsbl) {
+	text-shadow: @_sap_m_Link_TextShadowColor;
 }

@@ -3,10 +3,9 @@
 /* ============================================= */
 
 .sapUiSupportBody {
-	background-color: #F2F2F2;
 	color: #000000;
 	font-family: Arial, Helvetica, sans-serif;
-	font-size: 12px;
+	font-size: 14px;
 	margin: 0;
 	padding: 0;
 	height: 100%;
@@ -19,26 +18,71 @@
 }
 
 .sapUiSupportHdr {
-	position: relative;
-	border-top: 5px solid #009de0;
-	background-color: #646464;
-	height: 30px;
-	margin: 0;
+	background-color: rgb(47, 60, 72);
+	color: rgb(202, 228, 251);
+	font-weight: normal;
 }
 
-.sapUiSupportHdr > img {
-	position: absolute;
-	left: 10px;
-	height: 29px;
+button.sapUiSupportRoundedButton {
+	border-radius: 3px;
+	border: 1px solid;
+	text-align: center;
+	font-size: 14px;
+	padding: 0.25rem 0.5rem;
+	margin: 2px 0;
+	box-sizing: border-box;
+	background-color: #ffffff;
+	border-color: #bfbfbf;
+	color: #346187;
+}
+
+.sapUiSupportExportButton {
+	margin-top: 5px;
+	width: 180px;
+}
+
+button.sapUiSupportHelpButton {
+	text-align: center;
+	padding: 0.25rem 0.5rem;
+	margin: 0 0.25rem;
+	font-family: "SAP-icons";
+	font-size: 17px;
+	border: none;
+	background-color: rgb(47, 60, 72);
+	color: rgb(202, 228, 251);
+	cursor: pointer;
+}
+
+button.sapUiSupportHelpButton:hover {
+	background-color: rgba(99, 127, 153, 0.5);
+}
+
+.sapUiButtonsContainer {
+	padding: 0.4rem 0.25rem;
+	margin: 0;
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	justify-content: flex-end;
+	align-content: center;
+	align-items: center;
+}
+
+.sapUiButtonsContainer .title {
+	flex: 1 1 auto;
+	align-self: auto;
+}
+
+.sapUiButtonsContainer button.sapUiSupportRoundedButton {
+	flex: 0 1 auto;
 }
 
 .sapUiSupportHdr > div {
-	color: #999999;
+	color: rgb(202, 228, 251);
+	background-color: rgb(47, 60, 72);
 	font-size: 18px;
-	font-weight: bold;
-	left: 105px;
-	position: absolute;
-	top: 5px;
+	font-weight: normal;
+	margin-left: 8px;
 }
 
 .sapUiSupportPnl {
@@ -48,48 +92,48 @@
 }
 
 .sapUiSupportCntnt {
-	position: absolute;
-	top: 40px;
-	bottom: 0;
 	overflow: auto;
 	width: 100%;
 	min-width: 700px;
 }
 
 .sapUiSupportPnlHdr {
-	margin-top: 0;
-	margin-bottom: 5px;
-	color: #444444;
-	border-bottom: 2px solid #007DC0;
+	color: #555;
+	border-bottom: 1px solid #cbcbcb;
 	height: 25px;
-	font-weight: bold;
+	font-weight: normal;
 	font-size: 18px;
-	padding-left: 5px;
-	padding-right: 5px;
+	padding: 0.5rem;
 	position: relative;
 	cursor: pointer;
 }
 
 .sapUiSupportPnlHdr:hover {
-	background-color: #ddd; /* indicate it is clickable */
+	color: #427CAC; /* indicate it is clickable */
 }
 
 .sapUiSupportPnlHdrHdl {
-	border-color: #444444;
-	border-right: 1px solid #444444;
-	border-style: solid;
-	border-width: 3px 1px 1px;
 	cursor: pointer;
 	height: 7px;
-	position: absolute;
-	right: 5px;
-	top: 8px;
 	width: 10px;
+	display: inline-block;
 }
 
-.sapUiSupportPnlHdrHdl.sapUiSupportPnlHdrHdlClosed {
-	border-width: 3px 0px 0px;
-	width: 12px;
+.sapUiSupportPnlHdrHdl::before {
+	font-family: "SAP-icons";
+	speak: none;
+	content: "\e1e2";
+}
+
+.sapUiSupportPnlHdr .sapUiSupportPanelTitle {
+	display: inline-block;
+	padding: 0 0.7rem;
+}
+
+.sapUiSupportPnlHdrHdl.sapUiSupportPnlHdrHdlClosed:before {
+	font-family: "SAP-icons";
+	speak: none;
+	content: "\e0e3";
 }
 
 .sapUiSupportPnlCntnt {
@@ -111,9 +155,10 @@
 .sapUiSupportLink:focus,
 .sapUiSupportLink:visited,
 .sapUiSupportLink:hover {
-	color: #0078BB;
+	color: #0070b1;
 	text-decoration: none;
 	display: inline-block;
+	font-size: 0.875rem;
 }
 
 .sapUiSupportLink:hover {
@@ -131,25 +176,50 @@
 }
 
 .sapUiSupportLabel {
+	font-weight: normal;
+	color: #666666;
+	box-sizing: border-box;
+	display: inline-block;
+	padding: 0.25rem 0.5rem;
+}
+
+.sapUiSupportLabel img {
+	vertical-align: middle;
+	margin-left: 3px;
+}
+
+.sapUiSupportLabelBold {
 	font-weight: bold;
 }
 
 .sapUiSupportToolbar {
 	background-color: #F2F2F2;
-	height: 28px;
-	margin-bottom: 5px;
+	height: 31px;
+	padding-bottom: 5px;
 	padding-left: 5px;
 	padding-right: 5px;
+	box-sizing: border-box;
 }
 
-.sapUiSupportTxtFld,
-.sapUiSupportBtn {
+.sapUiSupportTxtFld {
 	border: 1px solid #BFBFBF;
 	font-size: 14px;
-	height: 22px;
-	-moz-box-sizing: border-box;
-	-webkit-box-sizing: border-box;
 	box-sizing: border-box;
+}
+
+.sapUiSupportTab {
+	border-width: 1px 1px 0 0;
+	padding: 0.3rem 0.7rem;
+	border-color: #ababab;
+}
+
+.sapUiSupportTabLeft {
+	border-width: 1px 1px 0 1px;
+	border-top-left-radius: 3px;
+}
+
+.sapUiSupportTabRight {
+	border-top-right-radius: 3px;
 }
 
 .sapUiSupportTxtFld {
@@ -159,31 +229,52 @@
 
 .sapUiSupportTxtFld:hover,
 .sapUiSupportTxtFld:focus {
-	border-color: #007DC0;
+	border-color: #427CAC;
 }
 
-.sapUiSupportBtn {
-	background-color: #E2E2E2;
-	border-color: #A3A3A3;
-	padding-bottom: 3px;
-	cursor: pointer;
+.sapUiSupportRoundedButton:hover,
+.sapUiSupportTab:hover {
+	color: #346187;
+	border-color: #bfbfbf;
+	background-color: #ebebeb;
 }
 
-.sapUiSupportBtn:hover,
-.sapUiSupportBtn:focus,
-.sapUiSupportBtn.active {
-	color: #FFFFFF;
-	border-color: #00689E;
-	background-color: #007DC0;
+.sapUiSupportRoundedButton:active {
+	color: #ffffff;
+	border-color: #427cac;
+	background-color: #427cac;
 }
 
-.sapUiSupportBtn.active {
-	cursor: default;
+.sapUiSupportRoundedButton:focus,
+.sapUiSupportTab:focus,
+.sapUiSupportTab:active {
+	color: #ffffff;
+	background-color: #346187;
 }
 
-.sapUiSupportToolbar > .sapUiSupportBtn,
+.sapUiSupportTechInfoBorder .sapUiSupportRoundedButton {
+	margin-left: 10px;
+}
+
+.sapUiSupportTechInfoBorder table {
+	width: 100%;
+}
+
+.sapUiSupportTechInfoXMLOutput {
+	margin-top:5px;
+}
+
+.sapUiSupportTechInfoXMLOutput textarea {
+	width: 100%;
+	height: 50px;
+	margin-top: 5px;
+	resize: none;
+	box-sizing: border-box;
+}
+
+.sapUiSupportPerfHeaderFilters .sapUiSupportTxtFld,
 .sapUiSupportToolbar > .sapUiSupportTxtFld {
-	margin-top: 3px;
+	margin-top: 2px;
 	vertical-align: top;
 }
 
@@ -192,15 +283,9 @@
 	vertical-align: top;
 }
 
-.sapUiSupportToolbar > .sapUiSupportLabel {
-	position: relative;
-	top: 6px;
-	vertical-align: top;
-}
-
 /** Plugins **/
 
-#sapUiSupportTechInfo {
+#sapUiSupportTechInfo, #sapUiSupportTrace {
 	height: 350px;
 }
 
@@ -215,26 +300,25 @@
 
 #sapUiSupportTechInfo-Refresh {
 	position: absolute;
-	right: 5px;
+	right: 15px;
 }
 
-.sapUiSupportTechInfoBorder {
-	border: 1px solid #E2E2E2;
-}
-
-#sapUiSupportTrace,
-#sapUiSupportMessageTest {
+#sapUiSupportTrace {
 	overflow: hidden;
 }
 
-#sapUiSupportMessageTest > .sapUiSupportToolbar > button {
-	margin-left: 5px;
+.infoTable {
+	border-collapse: collapse;
+	margin: 5px;
+}
+
+.infoTable td {
+	padding: 5px;
 }
 
 #sapUiSupportPerf .sapUiSupportPerfCntnt,
 #sapUiSupportTechInfo .sapUiSupportTechInfoCntnt,
-#sapUiSupportTrace .sapUiSupportTraceCntnt,
-#sapUiSupportMessageTest .sapUiSupportMessageCntnt {
+#sapUiSupportTrace .sapUiSupportTraceCntnt {
 	overflow: auto;
 	position: absolute;
 	top: 33px;
@@ -259,22 +343,42 @@
 	width: 70px;
 }
 
+.sapUiSupportTraceEntryLevel_unknown,
+.sapUiSupportTraceEntryLevel_unknown .sapUiSupportTraceEntryTime,
+.sapUiSupportTraceEntryLevel_TRACE,
+.sapUiSupportTraceEntryLevel_TRACE .sapUiSupportTraceEntryTime,
+.sapUiSupportTraceEntryLevel_DEBUG,
+.sapUiSupportTraceEntryLevel_DEBUG .sapUiSupportTraceEntryTime,
+.sapUiSupportTraceEntryLevel_INFO,
+.sapUiSupportTraceEntryLevel_INFO .sapUiSupportTraceEntryTime {
+	color: #000000
+}
+
+.sapUiSupportTraceEntryLevel_FATAL,
+.sapUiSupportTraceEntryLevel_FATAL .sapUiSupportTraceEntryTime,
+.sapUiSupportTraceEntryLevel_ERROR,
+.sapUiSupportTraceEntryLevel_ERROR .sapUiSupportTraceEntryTime {
+	color: #E60000;
+}
+
+.sapUiSupportTraceEntryLevel_WARNING,
+.sapUiSupportTraceEntryLevel_WARNING .sapUiSupportTraceEntryTime {
+	color: #FFAA00
+}
+
 #sapUiSupportTrace .sapUiSupportTraceEntry {
 	border-bottom: 1px solid #BFBFBF;
+	margin-top: 10px;
 }
 
 #sapUiSupportTrace .sapUiSupportTraceEntryTime {
 	width: 100px;
 }
 
-#sapUiSupportTrace > .sapUiSupportToolbar > .sapUiSupportLabel {
-	margin-left: 10px;
-	font-weight: normal;
-}
-
 #sapUiSupportTrace > .sapUiSupportToolbar > select,
 #sapUiSupportTrace > .sapUiSupportToolbar > input {
 	margin-left: 5px;
+	height: 26px;
 }
 
 #sapUiSupportControlTree {
@@ -282,17 +386,34 @@
 	overflow: hidden;
 }
 
-.sapUiSupportDottedContainer,
+.sapUiSupportControlTreeTitle {
+	padding: 0.5rem;
+}
+
+.sapUISupportLabel {
+	margin: 0.25rem auto;
+}
+
+.sapUiSupportContainer,
 #sapUiSupportControlTreeArea,
 #sapUiSupportControlPropertiesArea {
 	height: 454px;
 	width: 48%;
 	border: 1px dotted black;
 	background-color: white;
-	padding: 5px;
+	padding: 3px;
 	overflow: auto;
 	float: left;
 	position: relative;
+}
+
+#sapUiSupportControlPropertiesArea h2 {
+	padding-left: 5px;
+}
+
+.sapUiSupportContainer {
+	border: 0;
+	height: auto;
 }
 
 #sapUiSupportControlPropertiesArea {
@@ -311,30 +432,26 @@ ul.sapUiSupportControlTreeList li {
 	padding: 0;
 }
 
+ul.sapUiSupportControlTreeList .sapUiSupportLabel {
+	vertical-align: middle;
+}
+
 #sapUiSupportControlTreeArea li {
-	/*position: relative;*/
 	overflow: hidden;
 	cursor: pointer;
 }
 
-#sapUiSupportControlTreeArea li img.sapUiControlTreeIcon,
-#sapUiSupportControlTreeArea li img.sapUiControlPicture {
-	float: left;
-}
-
 #sapUiSupportControlTreeArea li img.sapUiControlTreeIcon {
-	margin-top: 7px;
-	margin-right: 4px;
-}
-
-#sapUiSupportControlTreeArea li img.sapUiControlPicture {
+	float: left;
 	margin-top: 5px;
-	margin-right: 5px;
+	margin-right: 3px;
+	width: 12px;
+	height: 12px;
 }
 
 #sapUiSupportControlTreeArea li div {
 	overflow: hidden;
-	padding: 7px;
+	padding: 2px 5px;
 }
 
 #sapUiSupportControlTreeArea li.sapUiControlTreeLink span {
@@ -343,7 +460,7 @@ ul.sapUiSupportControlTreeList li {
 }
 
 #sapUiSupportControlTreeArea .sapUiSupportControlTreeSelected {
-	background-color: #007DC0;
+	background-color: #427CAC;
 	color: white;
 }
 
@@ -361,10 +478,17 @@ ul.sapUiSupportControlTreeList li {
 
 #sapUiSupportControlTabs {
 	width: 48%;
-	height: 22px;
-	padding: 3px 12px 6px 0;
+	padding-right: 8px;
 	overflow: auto;
 	float: right;
+}
+
+.sapUiSupportControlTabsHidden {
+	visibility: hidden;
+}
+
+.sapUiSupportItemHidden {
+	display: none;
 }
 
 #sapUiSupportControlPropertiesArea ul.sapUiSupportControlTreeList li span {
@@ -400,20 +524,18 @@ ul.sapUiSupportControlTreeList li {
 	padding: 0 6px;
 }
 
-.sapUiSupportControlProperties td div {
-	/*padding: 0 5px;*/
-}
-
 .sapUiSupportControlProperties input[type="text"],
 .sapUiSupportControlProperties select {
 	width: 100%;
 	box-sizing: border-box;
-	-moz-box-sizing: border-box;
-	-webkit-box-sizing: border-box;
 }
 
-#sapUiSupportPerf > .sapUiSupportToolbar > .sapUiSupportLabel {
-	font-weight: normal;
+.sapUiSupportControlProperties .sapUiSupportModelPathInvalid {
+	color: red;
+}
+
+.sapUiSupportControlProperties .sapUiSupportModelPathUnverified {
+	color: orange;
 }
 
 #sapUiSupportPerf > .sapUiSupportToolbar > button {
@@ -464,15 +586,13 @@ html[data-sap-ui-browser^="sf"] #sapUiSupportControlPropertiesArea ul li .set {
 
 select.sapUiSupportAutocomplete {
 	width: 198px;
-	height: 22px;
-	padding: 1px;
+	box-sizing: border-box;
 }
 
-input[type="text"].sapUiSupportAutocomplete {
-	margin-left: -197px;
-	padding: 0 5px;
-	width: 168px;
-	height: 18px;
+input.sapUiSupportAutocomplete[type="text"] {
+	margin-left: -195px;
+	width: 174px;
+	height: 20px;
 	border: none;
 }
 
@@ -486,10 +606,6 @@ html[data-sap-ui-browser^="sf"] input[type="text"].sapUiSupportAutocomplete {
 
 html[data-sap-ui-browser^="ff"] .sapUiSupportControlMethods button {
 	margin-left: 26px;
-}
-
-html[data-sap-ui-browser^="ie"] .sapUiSupportControlMethods button {
-	margin-left: 24px;
 }
 
 html[data-sap-ui-browser^="sf"] .sapUiSupportControlMethods select.sapUiSupportAutocomplete {
@@ -547,110 +663,97 @@ ul.sapUiSupportBreakpointList li:hover img {
 	display: inline;
 }
 
-#sapUiSupportControlTabProperties,
-#sapUiSupportControlTabBindingInfos {
-	margin-right: 3px;
-}
 
 /* DEBUGGING */
 
-#sapUiSupportDebugging {
-	height: 400px;
-}
-
-#sapUiSupportDebugging > .sapUiSupportDottedContainer {
-	height: 278px;
-	margin: 6px 0;
-}
-
-#sapUiSupportDebugging > #sapUiSupportDebuggingRebootContainer {
+#sapUiSupportDebugging > #sapUiSupportDebugging-RebootContainer {
 	box-sizing: border-box;
 	width: 100%;
-	height: 82px;
 }
 
-#sapUiSupportDebuggingRebootSelect {
+#sapUiSupportDebugging-RebootSelect {
 	width: 100%;
 	margin: 6px 0;
 }
 
-#sapUiSupportDebuggingRebootInput {
-	width: 533px;
+#sapUiSupportDebugging-RebootInput {
+	font-size: 14px;
+	padding: 4px;
 	box-sizing: border-box;
-	width: calc(100% - 142px);
+	width: calc(100% - 161px);
+	margin-right: 5px;
+	border-width: 1px;
 }
 
-#sapUiSupportDebuggingMethodContainer {
+#sapUiSupportDebugging-MethodContainer {
 	float: right;
 }
 
-#sapUiSupportDebuggingClassSelect {
+#sapUiSupportDebugging-ClassSelect {
 	width: 228px;
 }
 
-#sapUiSupportDebuggingClassInput {
-	margin-left: -227px;
-	width: 198px;
+#sapUiSupportDebugging-ClassInput {
+	margin-left: -225px;
+	width: 204px;
 }
 
-#sapUiSupportDebuggingMethodSelect {
+#sapUiSupportDebugging-MethodSelect {
 	width: 150px;
 }
 
-html[data-sap-ui-browser^="sf"] #sapUiSupportDebuggingMethodSelect {
+html[data-sap-ui-browser^="sf"] #sapUiSupportDebugging-MethodSelect {
 	width: 140px;
 }
 
-#sapUiSupportDebuggingMethodInput {
-	margin-left: -149px;
-	width: 120px;
+#sapUiSupportDebugging-MethodInput {
+	margin-left: -148px;
+	width: 119px;
 }
 
-html[data-sap-ui-browser^="sf"] #sapUiSupportDebuggingMethodInput {
+html[data-sap-ui-browser^="sf"] #sapUiSupportDebugging-MethodInput {
 	margin-left: -139px;
 	width: 110px;
 }
 
-#sapUiSupportDebuggingAddClass,
-#sapUiSupportDebuggingAddBreakpoint {
+#sapUiSupportDebugging-AddBreakpoint {
 	margin-left: 32px;
 }
 
-html[data-sap-ui-browser^="ie"] #sapUiSupportDebuggingAddClass,
-html[data-sap-ui-browser^="ie"] #sapUiSupportDebuggingAddBreakpoint {
-	margin-left: 30px;
+#sapUiSupportDebugging-AddClass {
+	margin-left: 25px;
 }
 
-html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddClass,
-html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
+html[data-sap-ui-browser^="ff"] #sapUiSupportDebugging-AddClass,
+html[data-sap-ui-browser^="ff"] #sapUiSupportDebugging-AddBreakpoint {
 	margin-left: 28px;
 }
 
-#sapUiSupportDebuggingClassList li div {
+#sapUiSupportDebugging-ClassList li div {
 	padding: 7px 0 7px 10px;
 	margin-right: 35px;
 	font-weight: bold;
 }
 
-#sapUiSupportDebuggingClassList li img.remove-class {
+#sapUiSupportDebugging-ClassList li img.remove-class {
 	top: 7px;
 	right: 10px;
 	position: absolute;
 	display: none;
 }
 
-#sapUiSupportDebuggingClassList li.selected div,
-#sapUiSupportDebuggingClassList li div:hover {
+#sapUiSupportDebugging-ClassList li.selected div,
+#sapUiSupportDebugging-ClassList li div:hover {
 	color: #fff;
-	background-color: #007dc0;
+	background-color: #427CAC;
 	cursor: pointer;
 }
 
-#sapUiSupportDebuggingClassList li:hover img.remove-class {
+#sapUiSupportDebugging-ClassList li:hover img.remove-class {
 	display: inline;
 }
 
-#sapUiSupportDebuggingClassList li span.breakpoints {
+#sapUiSupportDebugging-ClassList li span.breakpoints {
 	float: right;
 	margin-right: 10px;
 }
@@ -662,21 +765,9 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 .sapUiSupportCntnt,
 .sapUiSupportPerf-PanelContent,
 #sapUiSupportPerf-Panel,
-#sapUiSupportPerf-PanelContent {
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
+#sapUiSupportPerf-PanelContent:not(.sapUiSupportHidden) {
 	display: flex;
-
-	-webkit-box-direction: normal;
-	-webkit-box-orient: vertical;
-	-webkit-flex-direction: column;
-	-ms-flex-direction: column;
 	flex-direction: column;
-
-	-webkit-box-flex: 1;
-	-webkit-flex-grow: 1;
-	-ms-flex: 1 1;
 	flex-grow: 1;
 }
 
@@ -709,9 +800,6 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 }
 
 .flex-spacer {
-	-webkit-box-flex: 1;
-	-webkit-flex-grow: 1;
-	-ms-flex: 1 1;
 	flex-grow: 1;
 }
 
@@ -719,15 +807,7 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
    Performance Header
    ========================================================================== */
 #sapUiSupportPerfHeader {
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
-
-	-webkit-box-direction: normal;
-	-webkit-box-orient: vertical;
-	-webkit-flex-direction: column;
-	-ms-flex-direction: column;
 	flex-direction: column;
 
 	height: 80px;
@@ -739,16 +819,12 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 
 	-webkit-user-select: none;
 	-moz-user-select: none;
-	-ms-user-select: none;
 	user-select: none;
 }
 
 .sapUiSupportPerfHeaderFilters {
 	background: #eee;
 	border-bottom: solid 1px #ddd;
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
 	height: 30px;
 	line-height: 30px;
@@ -764,18 +840,12 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 	border-bottom: solid 1px #ddd;
 	padding-left: 250px;
 	position: relative;
-	-webkit-box-flex: 1;
-	-webkit-flex-grow: 1;
-	-ms-flex: 1 1;
 	flex-grow: 1;
 }
 
 #sapUiSupportPerfHeaderTimelineOverview .timeline {
 	background: #fafafa;
 	bottom: 0;
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
 	left: 0;
 	position: absolute;
@@ -785,9 +855,6 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 
 #sapUiSupportPerfHeaderTimelineOverview .timeline ol {
 	bottom: 0;
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
 	left: 250px;
 	position: absolute;
@@ -796,9 +863,6 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 }
 
 #sapUiSupportPerfHeaderTimelineOverview .timeline li {
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
 	position: relative;
 	flex: 1;
@@ -808,9 +872,6 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 #sapUiSupportPerfHeaderTimelineOverview .timeline li .time {
 	display: flex;
 	flex-direction: column;
-	-webkit-box-pack: end;
-	-webkit-justify-content: flex-end;
-	-ms-flex-pack: end;
 	justify-content: flex-end;
 }
 
@@ -831,13 +892,7 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 	position: absolute;
 	right: 0;
 	top: 0;
-	-webkit-box-align: end;
-	-webkit-align-items: flex-end;
-	-ms-flex-align: end;
 	align-items: flex-end;
-	-webkit-box-pack: center;
-	-webkit-justify-content: center;
-	-ms-flex-pack: center;
 	justify-content: center;
 }
 
@@ -878,9 +933,6 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 }
 
 #categories {
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
 	max-width: 440px;
 	padding-right: 0;
@@ -951,7 +1003,11 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 }
 
 #sapUiSupportPerfHeaderFilterMinDuration {
+	box-sizing: border-box;
 	width: 50px;
+	height: 26px;
+	line-height: 2;
+	margin-top: 2px;
 }
 
 #sapUiSupportPerfHeaderFilterSort {
@@ -963,9 +1019,6 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
    ========================================================================== */
 
 #sapUiSupportPerfHeaderTimeline {
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
 	bottom: 0;
 	left: 0;
@@ -977,14 +1030,10 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 }
 
 #sapUiSupportPerfHeaderTimelineBarWrapper {
-	-webkit-box-flex: 1;
-	-webkit-flex-grow: 1;
-	-ms-flex-positive: 1;
 	flex-grow: 1;
 	position: relative;
 	-webkit-user-select: none;
 	-moz-user-select: none;
-	-ms-user-select: none;
 	user-select: none;
 }
 
@@ -1002,15 +1051,8 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 
 /* ================================================================================================================== */
 #sapUiSupportPerfHeaderTimelineBarInfoWrapper {
-	-webkit-box-flex: 0;
-	-webkit-flex-grow: 0;
-	-ms-flex-positive: 0;
 	flex-grow: 0;
-	-webkit-flex-shrink: 0;
-	-ms-flex-negative: 0;
 	flex-shrink: 0;
-	-webkit-flex-basis: 250px;
-	-ms-flex-preferred-size: 250px;
 	flex-basis: 250px;
 }
 
@@ -1055,9 +1097,6 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 }
 
 .timeline {
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
 	overflow: hidden;
 }
@@ -1123,7 +1162,6 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 	overflow: hidden;
 	-webkit-user-select: none;
 	-moz-user-select: none;
-	-ms-user-select: none;
 	user-select: none;
 }
 
@@ -1208,14 +1246,7 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 	right: 0;
 	bottom: 0;
 	left: 250px;
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
-	-webkit-box-orient: vertical;
-	-webkit-box-direction: normal;
-	-webkit-flex-direction: column;
-	-ms-flex-direction: column;
 	flex-direction: column;
 	pointer-events: none;
 	border-left: 1px solid #eee;
@@ -1223,35 +1254,19 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 
 #grid .header {
 	width: 100%;
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
 	box-sizing: border-box;
 }
 
 #grid .body {
-	display: -webkit-box;
-	display: -webkit-flex;
-	display: -ms-flexbox;
 	display: flex;
-	webkit-box-flex: 1;
-	-webkit-flex-grow: 1;
-	-ms-flex-positive: 1;
 	flex-grow: 1;
 }
 
 #grid .header > div,
 #grid .body > div {
-	webkit-box-flex: 1;
-	-webkit-flex-grow: 1;
-	-ms-flex-positive: 1;
 	flex-grow: 1;
-	-webkit-flex-shrink: 1;
-	-ms-flex-negative: 1;
 	flex-shrink: 1;
-	-webkit-flex-basis: 0;
-	-ms-flex-preferred-size: 0;
 	flex-basis: 0;
 	box-sizing: border-box;
 	position: relative;
@@ -1319,7 +1334,7 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 .sapUiSupportIntToggleRecordingBtn::before,
 #sapUiSupportPerfToggleRecordingBtn::before {
 	border: solid 5px #bf3020;
-	border-radius: 5px;
+	border-radius: 3px;
 	content: '';
 	display: inline-block;
 	height: 0;
@@ -1375,6 +1390,11 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 	float: right;
 }
 
+.sapUiSupportSelect {
+	height: 26px;
+	border-radius: 3px;
+}
+
 .sapUiFormResGridCont > .sapUiFormElementLbl.sapUiRespGridBreak {
 	min-height: 15px;
 }
@@ -1396,16 +1416,11 @@ html[data-sap-ui-browser^="ff"] #sapUiSupportDebuggingAddBreakpoint {
 .sapUiSupportIntFupInputMask > input { /* the real, but hidden file input */
 	position: absolute;
 	opacity: 0;
-	top: 0px;
-	bottom: 0px;
-	cursor: pointer;
+	top: 0;
+	bottom: 0;
 	cursor: hand;
 	left: -4em;       /* avoid the input field behind the file chooser */
 	font-size: 500px; /* to make the field high enough for most themes; for themes with very large fonts this needs to be increased further */
-}
-
-html[data-sap-ui-browser^="ie"] .sapUiSupportIntFup > form input {
-	display: block;
 }
 
 html[data-sap-ui-browser^="sf"] .sapUiSupportIntFupInputMask > input, /* for Safari and Chrome the file input is not clickable with opacity "0" */
@@ -1423,4 +1438,26 @@ html[data-sap-ui-browser^="cr"] .sapUiSupportIntFupInputMask > input {
 	position: relative;
 	vertical-align: middle;
 	bottom: 1px;
+}
+
+.remove-breakpoint,
+.remove-class {
+	cursor:pointer;
+	margin-left:5px;
+}
+
+.sapUiSupportRefreshBinding {
+	cursor: pointer;
+	margin-left: 5px;
+	vertical-align: middle;
+}
+
+#sapUiSupportDebugging-ClassContainer .sapUISupportLabel,
+#sapUiSupportDebugging-MethodContainer .sapUISupportLabel {
+	margin-right: 5px;
+}
+
+#sapUiSupportDebugging-MethodContainer p {
+	text-align: center;
+	font-weight: bold;
 }

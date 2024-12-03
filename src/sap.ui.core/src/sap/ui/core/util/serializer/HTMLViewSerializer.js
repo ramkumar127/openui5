@@ -15,13 +15,14 @@ sap.ui.define(['sap/ui/base/EventProvider', './Serializer', './delegate/HTML', '
 	 * @param {function} fnGetControlId delegate function which returns the control id
 	 * @param {function} fnGetEventHandlerName delegate function which returns the event handler name
 	 *
-	 * @public
 	 * @class HTMLViewSerializer class.
 	 * @extends sap.ui.base.EventProvider
 	 * @author SAP SE
 	 * @version ${version}
 	 * @alias sap.ui.core.util.serializer.HTMLViewSerializer
-	 * @experimental Since 1.15.1. The HTMLViewSerializer is still under construction, so some implementation details can be changed in future.
+	 * @private
+	 * @ui5-restricted sap.watt, com.sap.webide
+	 * @deprecated As of 1.108, together with the HTMLView
 	 */
 	var HTMLViewSerializer = EventProvider.extend("sap.ui.core.util.serializer.HTMLViewSerializer", /** @lends sap.ui.core.util.serializer.HTMLViewSerializer.prototype */
 	{
@@ -44,7 +45,7 @@ sap.ui.define(['sap/ui/base/EventProvider', './Serializer', './delegate/HTML', '
 		var that = this;
 		// a function to understand if to skip aggregations
 		var fnSkipAggregations = function (oControl) {
-			return oControl instanceof this._oWindow.sap.ui.core.mvc.View && oControl !== that._oView;
+			return oControl?.isA?.("sap.ui.core.mvc.View") && oControl !== that._oView;
 		};
 
 		// create serializer

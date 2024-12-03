@@ -3,9 +3,21 @@
  */
 
 // Provides control sap.ui.commons.HorizontalDivider.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
-	function(jQuery, library, Control) {
+sap.ui.define([
+	'./library',
+	'sap/ui/core/Control',
+	'./HorizontalDividerRenderer'
+],
+	function(library, Control, HorizontalDividerRenderer) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.commons.HorizontalDividerHeight
+	var HorizontalDividerHeight = library.HorizontalDividerHeight;
+
+	// shortcut for sap.ui.commons.HorizontalDividerType
+	var HorizontalDividerType = library.HorizontalDividerType;
 
 
 
@@ -22,12 +34,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38. Use the layout controls instead, e.g {@link sap.ui.layout.Splitter} or {@link sap.ui.layout.BlockLayout} among others.
 	 * @alias sap.ui.commons.HorizontalDivider
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var HorizontalDivider = Control.extend("sap.ui.commons.HorizontalDivider", /** @lends sap.ui.commons.HorizontalDivider.prototype */ { metadata : {
 
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 			/**
 			 * Defines the width of the divider.
@@ -37,12 +50,12 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 			/**
 			 * Defines the type of the divider.
 			 */
-			type : {type : "sap.ui.commons.HorizontalDividerType", group : "Appearance", defaultValue : sap.ui.commons.HorizontalDividerType.Area},
+			type : {type : "sap.ui.commons.HorizontalDividerType", group : "Appearance", defaultValue : HorizontalDividerType.Area},
 
 			/**
 			 * Defines the height of the divider.
 			 */
-			height : {type : "sap.ui.commons.HorizontalDividerHeight", group : "Appearance", defaultValue : sap.ui.commons.HorizontalDividerHeight.Medium}
+			height : {type : "sap.ui.commons.HorizontalDividerHeight", group : "Appearance", defaultValue : HorizontalDividerHeight.Medium}
 		}
 	}});
 
@@ -50,4 +63,4 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 
 	return HorizontalDivider;
 
-}, /* bExport= */ true);
+});

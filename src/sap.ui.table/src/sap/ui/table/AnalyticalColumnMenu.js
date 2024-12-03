@@ -3,11 +3,9 @@
  */
 
 // Provides control sap.ui.table.AnalyticalColumnMenu.
-sap.ui.define(['jquery.sap.global', './ColumnMenu', './library'],
-	function(jQuery, ColumnMenu, library) {
+sap.ui.define(['./ColumnMenu', "sap/ui/unified/MenuRenderer", './utils/TableUtils', './library', "sap/ui/thirdparty/jquery"],
+	function(ColumnMenu, MenuRenderer, TableUtils, library, jQuery) {
 	"use strict";
-
-
 
 	/**
 	 * Constructor for a new AnalyticalColumnMenu.
@@ -25,18 +23,16 @@ sap.ui.define(['jquery.sap.global', './ColumnMenu', './library'],
 	 * @constructor
 	 * @public
 	 * @experimental Since version 1.21.
-	 * The AnalyticalColumnMenu will be productized soon.
 	 * @alias sap.ui.table.AnalyticalColumnMenu
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
+	 *
+	 * @deprecated As of version 1.117, replaced by the <code>headerMenu</code> association of <code>sap.ui.table.Column</code>.
 	 */
-	var AnalyticalColumnMenu = ColumnMenu.extend("sap.ui.table.AnalyticalColumnMenu", /** @lends sap.ui.table.AnalyticalColumnMenu.prototype */ { metadata : {
-
-		library : "sap.ui.table"
-	}});
-
-	AnalyticalColumnMenu.prototype.init = function() {
-		ColumnMenu.prototype.init.apply(this);
-	};
+	const AnalyticalColumnMenu = ColumnMenu.extend("sap.ui.table.AnalyticalColumnMenu", /** @lends sap.ui.table.AnalyticalColumnMenu.prototype */ {
+		metadata: {
+			library: "sap.ui.table"
+		},
+		renderer: MenuRenderer
+	});
 
 	/**
 	 * Adds the menu items to the menu.
@@ -45,7 +41,7 @@ sap.ui.define(['jquery.sap.global', './ColumnMenu', './library'],
 	AnalyticalColumnMenu.prototype._addMenuItems = function() {
 		// when you add or remove menu items here, remember to update the hasItems function
 		ColumnMenu.prototype._addMenuItems.apply(this);
-		if (this._oColumn) {
+		if (this._getColumn()) {
 			this._addSumMenuItem();
 		}
 	};
@@ -55,23 +51,35 @@ sap.ui.define(['jquery.sap.global', './ColumnMenu', './library'],
 	 * @private
 	 */
 	AnalyticalColumnMenu.prototype._addGroupMenuItem = function() {
-		var oColumn = this._oColumn,
-			oTable = this._oTable;
+		const oColumn = this._getColumn();
+		const oTable = this._getTable();
 
 		if (oColumn.isGroupableByMenu()) {
 			this._oGroupIcon = this._createMenuItem(
 				"group",
 				"TBL_GROUP",
 				oColumn.getGrouped() ? "accept" : null,
-				jQuery.proxy(function(oEvent) {
-					var oMenuItem = oEvent.getSource(),
-						bGrouped = oColumn.getGrouped();
+				function(oEvent) {
+					const oMenuItem = oEvent.getSource();
+					const bGrouped = !oColumn.getGrouped();
 
-					oColumn.setGrouped(!bGrouped);
-					oTable.fireGroup({column: oColumn, groupedColumns: oTable._aGroupedColumns, type: sap.ui.table.GroupEventType.group});
-					oMenuItem.setIcon(!bGrouped ? "sap-icon://accept" : null);
-					oTable._getRowContexts();
-				}, this)
+					if (bGrouped && !oColumn.getShowIfGrouped()) {
+						let oDomRef;
+
+						if (TableUtils.isNoDataVisible(oTable)) {
+							oDomRef = oTable.getDomRef("noDataCnt");
+						} else {
+							oDomRef = oTable.getDomRef("rowsel0");
+						}
+
+						if (oDomRef) {
+							oDomRef.focus();
+						}
+					}
+
+					oColumn._setGrouped(bGrouped);
+					oMenuItem.setIcon(bGrouped ? "sap-icon://accept" : null);
+				}
 			);
 			this.addItem(this._oGroupIcon);
 		}
@@ -82,38 +90,33 @@ sap.ui.define(['jquery.sap.global', './ColumnMenu', './library'],
 	 * @private
 	 */
 	AnalyticalColumnMenu.prototype._addSumMenuItem = function() {
-		var oColumn = this._oColumn,
-			oTable = this._oTable,
-			oBinding = oTable.getBinding("rows"),
-			oResultSet = oBinding && oBinding.getAnalyticalQueryResult();
+		const oColumn = this._getColumn();
 
-		if (oTable && oResultSet && oResultSet.findMeasureByPropertyName(oColumn.getLeadingProperty())) {
+		if (oColumn._isAggregatableByMenu()) {
 			this._oSumItem = this._createMenuItem(
 				"total",
 				"TBL_TOTAL",
 				oColumn.getSummed() ? "accept" : null,
 				jQuery.proxy(function(oEvent) {
-					var oMenuItem = oEvent.getSource(),
-						bSummed = oColumn.getSummed();
+					const oMenuItem = oEvent.getSource();
+					const bSummed = oColumn.getSummed();
 
 					oColumn.setSummed(!bSummed);
 					oMenuItem.setIcon(!bSummed ? "sap-icon://accept" : null);
-					oTable._getRowContexts();
 				}, this)
 			);
 			this.addItem(this._oSumItem);
 		}
 	};
 
-
 	AnalyticalColumnMenu.prototype.open = function() {
 		ColumnMenu.prototype.open.apply(this, arguments);
 
-		var oColumn = this._oColumn;
+		const oColumn = this._getColumn();
 		this._oSumItem && this._oSumItem.setIcon(oColumn.getSummed() ? "sap-icon://accept" : null);
 		this._oGroupIcon && this._oGroupIcon.setIcon(oColumn.getGrouped() ? "sap-icon://accept" : null);
 	};
 
 	return AnalyticalColumnMenu;
 
-}, /* bExport= */ true);
+});

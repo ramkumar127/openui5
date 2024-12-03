@@ -3,38 +3,50 @@
  */
 
 // A bridge between the jQuery.sap plugin and the SAPUI5 Core
-sap.ui.define(['jquery.sap.global', 'sap/ui/Global' /* cyclic: , 'sap/ui/core/Core'*/],
-	function(jQuery/*, Global*/) {
+sap.ui.define([
+	'jquery.sap.global',
+	'sap/base/util/ObjectPath',
+	'sap/ui/core/UIArea',
+	'sap/ui/dom/jquery/control'
+	/* cyclic: 'sap/ui/core/Core' */
+], function(jQuery, ObjectPath, UIArea /* jQueryControl */) {
 	"use strict";
 
-	function fUIAreaFilter(idx){
-		return sap.ui.getCore().getUIArea(this.id) != null;
-	}
-	function fgetUIArea(idx, odomref){
-		return sap.ui.getCore().getUIArea(this.id);
-	}
-	function fgetUIAreaOfCtrl(oCtrl, idx){
+	function fgetUIAreaOfCtrl(oCtrl){
 		return oCtrl.getUIArea().getInterface();
 	}
 
+	function fUIAreaFilter(){
+		return UIArea.registry.get(this.id) != null;
+	}
+
+	function fgetUIArea(){
+		return UIArea.registry.get(this.id).getInterface();
+	}
+
 	/**
-	 * @param {object} oRootControl
+	 * @param {object} oRootControl The root control
+	 * @returns {jQuery} Returns itself
 	 * @name jQuery#root
 	 * @function
 	 * @public
+	 * @deprecated as of version 1.58. Use {@link sap.ui.core.Control#placeAt Control#placeAt} instead for adding a control, or use {@link sap.ui.core.UIArea#getContent} to retrieve a content control.
 	 */
 	jQuery.fn.root = function(oRootControl) {
 		// handle 'setRoot'
 		if (oRootControl) {
+			// @evo-todo: remove this global access (for now requiring the Core module would introduce a circular dependency)
 			sap.ui.getCore().setRoot(this.get(0), oRootControl);
 			return this;
 		}
 		// and 'getRoot' behavior.
+		// requires control dependency
 		var aControls = this.control();
 		if (aControls.length > 0) {
-			return jQuery.map(aControls, fgetUIAreaOfCtrl);
+			return aControls.map(fgetUIAreaOfCtrl);
 		}
 
+		// requires uiarea dependency
 		var aUIAreas = this.uiarea();
 
 		if (aUIAreas.length > 0) {
@@ -43,17 +55,25 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Global' /* cyclic: , 'sap/ui/core/Co
 		}
 
 		// create UIAreas
-		this.each(function(idx){
-			sap.ui.getCore().createUIArea(this);
+		this.each(function(){
+			UIArea.create(this);
 		});
 		return this;
 	};
 
 	/**
-	 * @param {int} iIdx
+	 * Returns a single UIArea if an index is provided or an array of UIAreas.
+	 *
+	 * @param {int} iIdx Index of the UIArea
+	 * @returns {Object|Array} The UIArea if an index is provided or an array of UIAreas
 	 * @name jQuery#uiarea
 	 * @function
 	 * @public
+	 * @deprecated As of version 1.58. Applications should
+	 *    not be interested in a certain <code>UIArea</code>. They should only
+	 *    assign controls by using {@link sap.ui.core.Control.prototype.placeAt
+	 *    Control.prototype.placeAt} or by the API of a <code>UIArea</code> as reachable
+	 *    via {@link sap.ui.core.Control.prototype.getUIArea Control.prototype.getUIArea}.
 	 */
 	jQuery.fn.uiarea = function(iIdx) {
 		// UIAreas need to have IDs... so reduce to those elements first
@@ -62,55 +82,16 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Global' /* cyclic: , 'sap/ui/core/Co
 	};
 
 	/**
-	 * Function identifying the closest SAPUI5 Control in the given jQuery context (provided via jQuery.map method).
-	 * @private
-	 */
-	function fgetControl() {
-		// as with jQuery 1.4.3 and 1.4.4 there is a big problem here, we increase checks here
-		if (!this || !this.nodeType || this.nodeType === 9) {
-			return null;
-		} // in this case, we are on the HTML Document and cannot do anything
-		// in IE8 'closest' might fail (e.g. when the element is not in the current document tree)
-		// The following line would probably also work for the 'try-catch' below but induce performance penalty in EVERY call of this method.
-		// if(jQuery(document.documentElement).has(this)) {
-		try {
-			var sId = jQuery(this).closest("[data-sap-ui]").attr("id");
-			return sId ? sap.ui.getCore().byId(sId) : null;
-		} catch (e) {
-			// probably IE8 case where element is not in current document tree... ==> there is no current control
-			return null;
-		}
-	}
-
-	/**
-	 * Extension function to the jQuery.fn which identifies SAPUI5 controls in the given jQuery context.
-	 *
-	 * @param {int} [idx] optional parameter to return the control instance at the given idx's position in the array.
-	 * @returns {sap.ui.core.Control[] | sap.ui.core.Control | null} depending on the given context and idx parameter an array of controls, an instance or null.
-	 * @name jQuery#control
-	 * @function
-	 * @public
-	 */
-	jQuery.fn.control = function(idx) {
-		var aControls = this.map(fgetControl);
-		if (idx === undefined || isNaN(idx)) {
-			return aControls.get();
-		} else {
-			return aControls.get(idx);
-		}
-	};
-
-
-	/**
 	 * EXPERIMENTAL!!
 	 * Creates a new control of the given type and places it into the first DOM object of the jQuery collection.
 	 * The type string is case sensitive.
 	 *
-	 * @param {string} sControlType the control type (fully qualified, like "sap.ui.dev.GoogleMap"; if no package is given, the package "sap.ui.commons" is assumed)
-	 * @param {string} [sId] optional id for the new control; generated automatically if no non-empty id is given
-	 * @param {object} [oConfiguration] optional map/JSON-object with initial values for the new control
+	 * @param {string} sControlType The control type (fully qualified, like <code>sap.ui.dev.GoogleMap</code>; if no package is given, the package <code>sap.ui.commons</code> is assumed)
+	 * @param {string} [sId] Optional ID for the new control; generated automatically if no non-empty ID is given
+	 * @param {object} [oConfiguration] Optional map/JSON-object with initial values for the new control
 	 * @returns {jQuery} the given jQuery object
 	 * @private
+	 * @deprecated since 1.58
 	 */
 	jQuery.fn.sapui = function(sControlType, sId, oConfiguration) {
 
@@ -124,20 +105,18 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Global' /* cyclic: , 'sap/ui/core/Co
 				}
 
 				// instantiate the control
-				var fnClass = jQuery.sap.getObject(sControlType);
+				var fnClass = ObjectPath.get(sControlType);
 				if (fnClass) {
 
 					// TODO: hack for Steffen; remove later
 					if (typeof oConfiguration == 'object' && typeof oConfiguration.press == 'function') {
-						oConfiguration.press = jQuery.proxy(oConfiguration.press,this);
+						oConfiguration.press = jQuery.proxy(oConfiguration.press, this);
 					}
 
 					oControl = new (fnClass)(sId, oConfiguration); // sId might actually contain oConfiguration, the Element constructor will take care of this
 
 					// placeAt first DomRef in collection
 					oControl.placeAt(this);
-					// TODO: avoid the direct call to applyChanges() in favor of a delayed version that potentially bundles several changes
-					//sap.ui.getCore().applyChanges();
 				}
 			}
 
@@ -145,5 +124,4 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Global' /* cyclic: , 'sap/ui/core/Co
 	};
 
 	return jQuery;
-
 });

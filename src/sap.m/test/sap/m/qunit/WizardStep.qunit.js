@@ -1,89 +1,150 @@
-(function () {
-    "use strict";
+/*global QUnit */
+sap.ui.define(["sap/m/WizardStep", "sap/ui/qunit/utils/nextUIUpdate", "sap/ui/core/Lib"], function(WizardStep, nextUIUpdate, Library) {
+	"use strict";
 
-    QUnit.module("WizardStep API", {
-        setup: function () {
-            this.wizardStep = new sap.m.WizardStep();
-        },
-        teardown: function () {
-            this.wizardStep.destroy();
-            this.wizardStep = null;
-        },
-        addSubSteps: function () {
-            this.wizardStep.addSubsequentStep(new sap.m.WizardStep());
-            this.wizardStep.addSubsequentStep(new sap.m.WizardStep());
-        }
-    });
+	var oRb = Library.getResourceBundleFor("sap.m");
 
-    QUnit.test("Default value for title", function (assert) {
-        assert.strictEqual(this.wizardStep.getTitle(), "", "should be an empty string");
-    });
+	QUnit.module("WizardStep API", {
+		beforeEach: function () {
+			this.wizardStep = new WizardStep();
+		},
+		afterEach: function () {
+			this.wizardStep.destroy();
+			this.wizardStep = null;
+		},
+		addSubSteps: function () {
+			this.wizardStep.addSubsequentStep(new WizardStep());
+			this.wizardStep.addSubsequentStep(new WizardStep());
+		}
+	});
 
-    QUnit.test("Default value for icon", function (assert) {
-        assert.strictEqual(this.wizardStep.getIcon(), "", "should be an empty string");
-    });
+	QUnit.test("Default value for title", function (assert) {
+		assert.strictEqual(this.wizardStep.getTitle(), "", "should be an empty string");
+	});
 
-    QUnit.test("Default value for validated", function (assert) {
-        assert.strictEqual(this.wizardStep.getValidated(), true, "should be TRUE");
-    });
+	QUnit.test("Default value for icon", function (assert) {
+		assert.strictEqual(this.wizardStep.getIcon(), "", "should be an empty string");
+	});
 
-    QUnit.test("Default accessibility values", function (assert) {
-        this.wizardStep.placeAt("qunit-fixture");
-        sap.ui.getCore().applyChanges();
-        assert.strictEqual(this.wizardStep.$().attr("role"), "region", "Role should be region");
-        assert.strictEqual(this.wizardStep.$().attr("aria-labelledby"),
-            this.wizardStep.getId() + "-Title", "Region should be labelled by the title");
-    });
+	QUnit.test("Default value for validated", function (assert) {
+		assert.strictEqual(this.wizardStep.getValidated(), true, "should be TRUE");
+	});
 
-    QUnit.test("_isLeaf() should return TRUE WHEN NO SUBSEQUENT step are defined", function (assert) {
-        assert.strictEqual(this.wizardStep._isLeaf(), true, "should be true");
-    });
+	QUnit.test("Default accessibility values", async function (assert) {
+		this.wizardStep.placeAt("qunit-fixture");
+		await nextUIUpdate();
+		assert.strictEqual(this.wizardStep.$().attr("role"), "region", "Role should be region");
+		assert.strictEqual(this.wizardStep.$().attr("aria-labelledby"),
+			this.wizardStep.getId() + "-NumberedTitle", "Region should be labelled by the title and position");
+	});
 
-    QUnit.test("_isLeaf() should return FALSE WHEN SUBSEQUENT steps are defined", function (assert) {
-        this.addSubSteps();
+	QUnit.test("_isLeaf() should return TRUE WHEN NO SUBSEQUENT step are defined", function (assert) {
+		assert.strictEqual(this.wizardStep._isLeaf(), true, "should be true");
+	});
 
-        assert.strictEqual(this.wizardStep._isLeaf(), false, "should be false");
-    });
+	QUnit.test("_isLeaf() should return FALSE WHEN SUBSEQUENT steps are defined", function (assert) {
+		this.addSubSteps();
 
-    QUnit.test("_isBranched() should return FALSE WHEN NO SUBSEQUENT step are defined", function (assert) {
-        assert.strictEqual(this.wizardStep._isBranched(), false, "should be false");
-    });
+		assert.strictEqual(this.wizardStep._isLeaf(), false, "should be false");
+	});
 
-    QUnit.test("_isBranched() should return TRUE WHEN SUBSEQUENT step are defined", function (assert) {
-        this.addSubSteps();
+	QUnit.test("_isBranched() should return FALSE WHEN NO SUBSEQUENT step are defined", function (assert) {
+		assert.strictEqual(this.wizardStep._isBranched(), false, "should be false");
+	});
 
-        assert.strictEqual(this.wizardStep._isBranched(), true, "should be true");
-    });
+	QUnit.test("_isBranched() should return TRUE WHEN SUBSEQUENT step are defined", function (assert) {
+		this.addSubSteps();
 
-    QUnit.test("_getNextStepReference() should return NULL WHEN NO NEXT step is defined", function (assert) {
-        assert.strictEqual(this.wizardStep._getNextStepReference(), null, "should be null");
-    });
+		assert.strictEqual(this.wizardStep._isBranched(), true, "should be true");
+	});
 
-    QUnit.module("WizardStep Events", {
-        setup: function () {
-            this.wizardStep = new sap.m.WizardStep();
-        },
-        teardown: function () {
-            this.wizardStep.destroy();
-            this.wizardStep = null;
-        }
-    });
+	QUnit.test("_getNextStepReference() should return NULL WHEN NO NEXT step is defined", function (assert) {
+		assert.strictEqual(this.wizardStep._getNextStepReference(), null, "should be null");
+	});
 
-    QUnit.test("_activate() is firing the activate event", function (assert) {
-        var spy = sinon.spy();
+	QUnit.module("WizardStep Events", {
+		beforeEach: function () {
+			this.wizardStep = new WizardStep();
+		},
+		afterEach: function () {
+			this.wizardStep.destroy();
+			this.wizardStep = null;
+		}
+	});
 
-        this.wizardStep.attachActivate(spy);
-        this.wizardStep._activate();
+	QUnit.test("_activate() is firing the activate event", function (assert) {
+		var spy = this.spy();
 
-        assert.strictEqual(spy.calledOnce, true, "activate event is fired once");
-    });
+		this.wizardStep.attachActivate(spy);
+		this.wizardStep._activate();
 
-    QUnit.test("_complete() is firing the complete event", function (assert) {
-        var spy = sinon.spy();
+		assert.strictEqual(spy.calledOnce, true, "activate event is fired once");
+	});
 
-        this.wizardStep.attachComplete(spy);
-        this.wizardStep._complete();
+	QUnit.test("_complete() is firing the complete event", function (assert) {
+		var spy = this.spy();
 
-        assert.strictEqual(spy.calledOnce, true, "complete event is fired once");
-    });
-}());
+		this.wizardStep.attachComplete(spy);
+		this.wizardStep._complete();
+
+		assert.strictEqual(spy.calledOnce, true, "complete event is fired once");
+	});
+
+	QUnit.test("_setNumberInvisibleText / _getNumberInvisibleText", function (assert) {
+		var sTitle = "Sample title",
+			iPosition = 1,
+			oStep = new WizardStep({
+				title: sTitle
+			});
+
+		assert.strictEqual(oStep._setNumberInvisibleText(iPosition).getText(),
+			oRb.getText("WIZARD_STEP") + iPosition + " " + sTitle,
+			"The invisible text is updated correctly.");
+
+		assert.strictEqual(oStep._setNumberInvisibleText(iPosition),
+			oStep._getNumberInvisibleText(),
+			"The correct object is returned from the getter.");
+
+		// Cleanup
+		oStep.destroy();
+	});
+
+	QUnit.module("Title ID propagation");
+
+	QUnit.test("_initTitlePropagationSupport is called on init", function (assert) {
+		// Arrange
+		var oSpy = this.spy(WizardStep.prototype, "_initTitlePropagationSupport"),
+			oControl;
+
+		// Act
+		oControl = new WizardStep();
+
+		// Assert
+		assert.strictEqual(oSpy.callCount, 1, "Method _initTitlePropagationSupport called on init of control");
+		assert.ok(oSpy.calledOn(oControl), "The spy is called on the tested control instance");
+
+		// Cleanup
+		oControl.destroy();
+	});
+
+	QUnit.module("Title change");
+
+	QUnit.test("calling setTitle should call _updateProgressNavigator on the parent wizard control", function (assert) {
+		// Arrange
+		var oControl = new WizardStep(),
+			oSpy = this.spy();
+
+		this.stub(oControl, "_getWizardParent").returns({
+			_updateProgressNavigator: oSpy
+		});
+
+		// Act
+		oControl.setTitle("test");
+
+		// Assert
+		assert.strictEqual(oSpy.callCount, 1, "Method _updateProgressNavigator was called once");
+
+		// Cleanup
+		oControl.destroy();
+	});
+});

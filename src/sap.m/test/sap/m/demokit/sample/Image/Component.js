@@ -5,21 +5,7 @@ sap.ui.define(['sap/ui/core/UIComponent'],
 	var Component = UIComponent.extend("sap.m.sample.Image.Component", {
 
 		metadata : {
-			rootView : "sap.m.sample.Image.ImageGroup",
-			dependencies : {
-				libs : [
-					"sap.m",
-					"sap.ui.layout"
-				]
-			},
-			config : {
-				sample : {
-					files : [
-						"ImageGroup.view.xml",
-						"ImageGroup.controller.js"
-					]
-				}
-			}
+			manifest: "json"
 		}
 	});
 

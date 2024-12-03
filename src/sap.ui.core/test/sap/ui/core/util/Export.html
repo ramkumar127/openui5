@@ -1,9 +1,9 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta charset="utf-8">
 	<title>Export - sap.ui.core.util</title>
+	<script src="../shared-config.js"></script>
 	<script id="sap-ui-bootstrap"
 			src="../../../../../resources/sap-ui-core.js"
 			data-sap-ui-theme="base">
@@ -65,6 +65,16 @@
 			<td><input id="separator-char" value="," maxlength="1"></td>
 		</tr>
 		<tr>
+			<td>Byte order mark</td>
+			<td>
+				<select id="byte-order-mark">
+					<option value="default">Default (utf-8 = true)</option>
+					<option value="false">false</option>
+					<option value="true">true</option>
+				</select>
+			</td>
+		</tr>
+		<tr>
 			<td></td>
 			<td><button id="export">Export</button><button id="download">Download</button></td>
 		</tr>
@@ -79,13 +89,15 @@ sap.ui.require(['jquery.sap.global', 'sap/ui/model/json/JSONModel', 'sap/ui/mode
 		var getSettings = function() {
 
 			var sExportType = $('#export-type').val(),
-				sSeparatorChar = $('#separator-char').val();
+				sSeparatorChar = $('#separator-char').val(),
+				bByteOrderMark = $('#byte-order-mark').val() === "default" ? undefined : $('#byte-order-mark').val() === "true";
 
 			var oExportType;
 
 			if (sExportType === 'csv') {
 				oExportType = new ExportTypeCSV({
-					separatorChar: sSeparatorChar
+					separatorChar: sSeparatorChar,
+					byteOrderMark: bByteOrderMark
 				});
 			}
 
@@ -102,7 +114,7 @@ sap.ui.require(['jquery.sap.global', 'sap/ui/model/json/JSONModel', 'sap/ui/mode
 				for (var i = 0; i < iRows; i++) {
 					var mRow = {};
 					for (var k = 0; k < iColumns; k++) {
-						mRow["column" + k] = (Math.random() + 1).toString(36).substring(7);
+						mRow["column" + k] = (Math.random() + 1).toString(36).substring(7) + " ✓ \t";
 					}
 					aData.push(mRow);
 				}
@@ -152,7 +164,7 @@ sap.ui.require(['jquery.sap.global', 'sap/ui/model/json/JSONModel', 'sap/ui/mode
 			return {};
 		}
 
-		$("#export").click(function() {
+		$("#export").on("click", function() {
 			var oExport = new Export(getSettings());
 
 			function destroyExportObject() {
@@ -166,7 +178,7 @@ sap.ui.require(['jquery.sap.global', 'sap/ui/model/json/JSONModel', 'sap/ui/mode
 			.then(destroyExportObject, destroyExportObject);
 		});
 
-		$("#download").click(function() {
+		$("#download").on("click", function() {
 			$("#result").html('');
 
 			var oExport = new Export(getSettings());
@@ -180,7 +192,7 @@ sap.ui.require(['jquery.sap.global', 'sap/ui/model/json/JSONModel', 'sap/ui/mode
 
 		var $json = $(".data-source-json"),
 			$odata = $(".data-source-odata");
-		$("#data-source").change(function() {
+		$("#data-source").on("change", function() {
 			if ($(this).val() === 'json') {
 				$odata.css('display', 'none');
 				$json.css('display', '');

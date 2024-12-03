@@ -1,37 +1,36 @@
 /*!
  * ${copyright}
  */
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer'],
-	function(jQuery, Renderer) {
+sap.ui.define([],
+	function() {
 	"use strict";
 
 	/**
 	 * DateTimeInput renderer.
 	 * @namespace
 	 */
-	var DateTimeInputRenderer = {};
+	var DateTimeInputRenderer = {
+		apiVersion: 2
+	};
 
 	DateTimeInputRenderer.render = function(oRm, oControl) {
 
-		oRm.write("<div");
-		oRm.writeControlData(oControl);
-		oRm.addClass("sapMDTI");
+		oRm.openStart("div", oControl);
+		oRm.class("sapMDTI");
 
 		var sWidth = oControl.getWidth();
 		if (sWidth) {
-			oRm.addStyle("width", sWidth);
+			oRm.style("width", sWidth);
 		}
 
-		oRm.writeStyles();
-		oRm.writeClasses();
-		oRm.write(">");
+		oRm.openEnd();
 
 		var oPicker = oControl.getAggregation("_picker");
 		if (oPicker) {
 			oRm.renderControl(oPicker);
 		}
 
-		oRm.write("</div>");
+		oRm.close("div");
 
 	};
 

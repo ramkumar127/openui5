@@ -9,16 +9,21 @@
 		<CheckBox text="Option c" selected="true" />
 		<CheckBox text="Option d" />
 		<CheckBox text="Option e" enabled="false" />
+		<CheckBox text="Option partially selected" selected="true" partiallySelected="true" />
+		<CheckBox text="Required option" required="true" />
 		<CheckBox text="Warning" valueState="Warning" />
 		<CheckBox text="Warning disabled" valueState="Warning" enabled="false" selected="true" />
 		<CheckBox text="Error" valueState="Error" />
 		<CheckBox text="Error disabled" valueState="Error" enabled="false" selected="true" />
+		<CheckBox text="Information" valueState="Information" />
+		<CheckBox text="Information disabled" valueState="Information" enabled="false" selected="true" />
+		<CheckBox text="Checkbox with wrapping='true' and long text" wrapping="true" width="150px"/>
 	</VBox>
 	<f:SimpleForm
 		editable="true"
-	  	layout="ResponsiveGridLayout"
-	  	labelSpanL="4"
-	  	labelSpanM="4">
+		layout="ResponsiveGridLayout"
+		labelSpanL="4"
+		labelSpanM="4">
 		<f:content>
 			<Label text="Clearing with Customer" />
 			<CheckBox text="Option" />
@@ -30,6 +35,13 @@
 				</layoutData>
 			</CheckBox>
 			<CheckBox id="focusMe" text="Option 3">
+				<layoutData>
+					<l:GridData linebreak="true"
+						indentL="4"
+						indentM="4" />
+				</layoutData>
+			</CheckBox>
+			<CheckBox text="Checkbox with wrapping='true' and long text placed in a form" wrapping="true" width="200px">
 				<layoutData>
 					<l:GridData linebreak="true"
 						indentL="4"

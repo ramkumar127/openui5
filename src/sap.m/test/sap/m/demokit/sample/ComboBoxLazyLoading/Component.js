@@ -2,27 +2,10 @@ sap.ui.define(['sap/ui/core/UIComponent'],
 	function(UIComponent) {
 	"use strict";
 
-	var Component = UIComponent.extend("sap.m.sample.ComboBoxLazyLoading.Component", {
+	return UIComponent.extend("sap.m.sample.ComboBoxLazyLoading.Component", {
 
 		metadata : {
-			rootView : "sap.m.sample.ComboBoxLazyLoading.Page",
-			dependencies : {
-				libs : [
-					"sap.m"
-				]
-			},
-			config : {
-				sample : {
-					stretch : true,
-					files : [
-						"Page.view.xml",
-						"Page.controller.js"
-					]
-				}
-			}
+			manifest: "json"
 		}
 	});
-
-	return Component;
-
 });

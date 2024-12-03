@@ -2,26 +2,33 @@
  * ${copyright}
  */
 
-// Provides a filter for list bindings
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/Exception'],
-	function(jQuery, Exception) {
+// Provides class sap.ui.model.ParseException
+sap.ui.define(['sap/ui/base/Exception'],
+	function (Exception) {
 	"use strict";
 
-
 	/**
-	 * ParseException class
+	 * Creates a new ParseException.
 	 *
-	 * This exception is thrown, when a parse error occurs while converting a
-	 * string value to a specific property type in the model.
+	 * @param {string} message
+	 *   A message explaining why the parsing of a value failed; this message is language dependent
+	 *   as it may be displayed on the UI
+	 *
 	 * @alias sap.ui.model.ParseException
+	 * @class
+	 * @classdesc
+	 *   Instances of this exception are thrown when converting a string value to its model
+	 *   representation fails.
+	 *
 	 * @public
+	 * @see sap.ui.model.SimpleType#formatValue
 	 */
-	var ParseException = function(message) {
+	var ParseException = function (message) {
 		this.name = "ParseException";
 		this.message = message;
 	};
-	ParseException.prototype = jQuery.sap.newObject(Exception.prototype);
+
+	ParseException.prototype = Object.create(Exception.prototype);
 
 	return ParseException;
-
 }, /* bExport= */ true);

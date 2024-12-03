@@ -1,17 +1,17 @@
-sap.ui.require([
+sap.ui.define([
 		'sap/ui/test/Opa5',
 		'sap/ui/test/matchers/AggregationLengthEquals',
-		'sap/ui/test/matchers/PropertyStrictEquals',
+		'sap/ui/test/matchers/I18NText',
 		'sap/ui/test/matchers/BindingPath',
-		'sap/ui/demo/bulletinboard/test/integration/pages/Common',
-		'sap/ui/test/actions/Press'
+		'sap/ui/test/actions/Press',
+		'sap/ui/test/actions/EnterText'
 	],
 	function (Opa5,
 			  AggregationLengthEquals,
-			  PropertyStrictEquals,
+			  I18NText,
 			  BindingPath,
-			  Common,
-			  Press) {
+			  Press,
+			  EnterText) {
 		"use strict";
 
 		var sViewName = "Worklist",
@@ -19,14 +19,14 @@ sap.ui.require([
 
 		Opa5.createPageObjects({
 			onTheWorklistPage: {
-				baseClass: Common,
 				actions: {
 					iPressOnMoreData: function () {
+						// Press action hits the "more" trigger on a table
 						return this.waitFor({
 							id: sTableId,
 							viewName: sViewName,
 							actions: new Press(),
-							errorMessage: "The Table does not have a trigger"
+							errorMessage: "The table does not have a trigger"
 						});
 					},
 
@@ -38,23 +38,64 @@ sap.ui.require([
 								path: "/Posts('" + sId + "')"
 							}),
 							actions: new Press(),
-							errorMessage: "No list item with the id " + sId + " was found."
+							errorMessage: "No list item with the ID " + sId + " was found."
+						});
+					},
+
+					iSearchFor: function (sSearchString) {
+						return this.waitFor({
+							id: "searchField",
+							viewName: sViewName,
+							actions: new EnterText({
+								text: sSearchString
+							}),
+							errorMessage: "SearchField was not found."
 						});
 					}
 				},
 				assertions: {
+					theTableHasOneItem: function () {
+						return this.waitFor({
+							id: sTableId,
+							viewName: sViewName,
+							matchers: new AggregationLengthEquals({
+								name: "items",
+								length: 1
+							}),
+							success: function () {
+								Opa5.assert.ok(true, "The table contains one corresponding item.");
+							},
+							errorMessage: "The table does not contain one item."
+						});
+					},
+
+					theTableShouldHavePagination: function () {
+						return this.waitFor({
+							id: sTableId,
+							viewName: sViewName,
+							matchers: new AggregationLengthEquals({
+								name: "items",
+								length: 20
+							}),
+							success: function () {
+								Opa5.assert.ok(true, "The table has 20 items on the first page");
+							},
+							errorMessage: "The table does not contain all items."
+						});
+					},
+
 					theTableShouldHaveAllEntries: function () {
 						return this.waitFor({
 							id: sTableId,
 							viewName: sViewName,
-							matchers:  new AggregationLengthEquals({
+							matchers: new AggregationLengthEquals({
 								name: "items",
 								length: 23
 							}),
 							success: function () {
 								Opa5.assert.ok(true, "The table has 23 items");
 							},
-							errorMessage: "Table does not have all entries."
+							errorMessage: "The table does not contain all items."
 						});
 					},
 
@@ -62,17 +103,15 @@ sap.ui.require([
 						return this.waitFor({
 							id: "tableHeader",
 							viewName: sViewName,
-							matchers: function (oPage) {
-								var sExpectedText = oPage.getModel("i18n").getResourceBundle().getText("worklistTableTitleCount", [23]);
-								return new PropertyStrictEquals({
-									name: "text",
-									value: sExpectedText
-								}).isMatching(oPage);
-							},
+							matchers: new I18NText({
+								key: "worklistTableTitleCount",
+								propertyName: "text",
+								parameters: [23]
+							}),
 							success: function () {
 								Opa5.assert.ok(true, "The table header has 23 items");
 							},
-							errorMessage: "The Table's header does not container the number of items: 23"
+							errorMessage: "The table header does not contain the number of items: 23"
 						});
 					},
 

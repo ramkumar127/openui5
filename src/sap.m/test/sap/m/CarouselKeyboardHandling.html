@@ -1,20 +1,17 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
 		<title>sap.m.Carousel Test</title>
+		<script src="shared-config.js"></script>
 		<script src="../../../resources/sap-ui-core.js"
-			type="text/javascript"
 			id="sap-ui-bootstrap"
 			data-sap-ui-libs="sap.m"
-			data-sap-ui-theme="sap_bluecrystal"
 			data-sap-ui-compatVersion="1.20">
 		</script>
 
 		<script id="mainView" type="sapui5/xmlview">
 			<mvc:View
-				controllerName="carousel.qunit.controller"
 				xmlns:core="sap.ui.core"
 				xmlns:mvc="sap.ui.core.mvc"
 				xmlns="sap.m">
@@ -43,7 +40,7 @@
 			</mvc:View>
 		</script>
 
-		<script type="text/javascript">
+		<script>
 
 
 		//Create demo page for mobile controls
@@ -64,7 +61,7 @@
 					iconInset : false,
 					type : "Navigation",
 					press : function() {
-						sap.m.MessageToast.show(title + " pressed");
+						sap.m.MessageToast.show(this.getTitle() + " pressed");
 					}
 				}, {
 					title : "Travel and expense report",
@@ -130,14 +127,14 @@
 				content : [ new sap.ui.core.HTML({
 					content : "<p>Do you want to start a new world domination campaign?</p>"
 				}) ],
-				leftButton : new sap.m.Button({
+				beginButton : new sap.m.Button({
 					text : "Reject",
 					type : sap.m.ButtonType.Reject,
 					press : function() {
 						oDialog1.close();
 					}
 				}),
-				rightButton : new sap.m.Button({
+				endButton : new sap.m.Button({
 					text : "Accept",
 					type : sap.m.ButtonType.Accept,
 					press : function() {
@@ -174,10 +171,10 @@
 					placement : sap.m.PlacementType.Bottom,
 					title : "Popover",
 					showHeader : true,
-					leftButton : new sap.m.Button({
+					beginButton : new sap.m.Button({
 						text : "Left"
 					}),
-					rightButton : new sap.m.Button({
+					endButton : new sap.m.Button({
 						text : "Right"
 					}),
 					footer : footer,
@@ -219,7 +216,7 @@
 
 			new sap.m.SearchField({
 				placeholder : "Search for...",
-				showMagnifier : true
+				showSearchButton : true
 			}),
 
 			createAList(true, "lins").setHeaderText("This is an inset List").setFooterText("This was an inset List") ];
@@ -241,14 +238,14 @@
 
 			footer : new sap.m.Bar({
 				contentMiddle : new sap.m.SegmentedButton('SegmentedBar', {
-					buttons : [ new sap.m.Button("sb1", {
+					items : [ new sap.m.SegmentedButtonItem("sb1", {
 						text : "Seg-"
-					}), new sap.m.Button({
+					}), new sap.m.SegmentedButtonItem({
 						text : "-men-"
-					}), new sap.m.Button({
+					}), new sap.m.SegmentedButtonItem({
 						text : "-ted"
 					}) ],
-					selectedButton : "sb1"
+					selectedItem : "sb1"
 				})
 			})
 		});
@@ -277,15 +274,7 @@
 		});
 
 
-		// Create Test View and Controller
-
-		sap.ui.controller("carousel.qunit.controller", {
-
-			onInit: function(oEvent) {
-
-			}
-
-		});
+		// Create Test View
 
 		var oView = sap.ui.xmlview({ viewContent: jQuery('#mainView').html() });
 		oView.setModel(new sap.ui.model.json.JSONModel({
@@ -299,6 +288,7 @@
 
 		jQuery.sap.require("sap.m.ImageRenderer");
 		/* poll control start */
+		var oDialog;
 		sap.m.Image.extend("Lightbox", {
 			metadata: {
 				properties: {
@@ -308,7 +298,7 @@
 			// set up the inner controls
 			init: function () {
 				var that = this;
-				this.attachTap(function () {
+				this.attachPress(function () {
 					that._open();
 				});
 			},
@@ -343,8 +333,8 @@
 				}).addStyleClass("lightboxDialog");
 				oDialog.open();
 			},
-			// render control with the image renderer
-			renderer: sap.m.ImageRenderer.render
+			// inherit image renderer
+			renderer: sap.m.ImageRenderer
 		});
 
 
@@ -500,11 +490,11 @@
 		);
 
 		var oSegmentedButton1 = new sap.m.SegmentedButton({
-			buttons:[new sap.m.Button({text:'Label'}), new sap.m.Button({text:'Label'}), new sap.m.Button({text:'Label'})]
+			items:[new sap.m.SegmentedButtonItem({text:'Label'}), new sap.m.SegmentedButtonItem({text:'Label'}), new sap.m.SegmentedButtonItem({text:'Label'})]
 		});
 
 		var oSegmentedButton2 = new sap.m.SegmentedButton({
-			buttons:[new sap.m.Button({text:'Label'}), new sap.m.Button({text:'Label'}), new sap.m.Button({text:'Label'})]
+			items:[new sap.m.SegmentedButtonItem({text:'Label'}), new sap.m.SegmentedButtonItem({text:'Label'}), new sap.m.SegmentedButtonItem({text:'Label'})]
 		});
 
 		carouselPage.addContent(oSegmentedButton1);
@@ -513,11 +503,9 @@
 		appCarousel.addPage(carouselPage);
 		appCarousel.placeAt("body");
 
-		sap.ui.getCore().applyChanges();
-
 		</script>
 
 	</head>
-	<body id="body" class="sapUiBody" role="application">
+	<body id="body" class="sapUiBody">
 	</body>
 </html>

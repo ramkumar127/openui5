@@ -1,123 +1,121 @@
-/* ======================================== */
-/* CSS for control sap.m/FeedContent.control */
-/* ======================================== */
+/* ================================== */
+/* CSS for control sap.m/FeedContent  */
+/* Base theme                         */
+/* ================================== */
+
 .sapMFC {
-	display: inline-block;
 	outline: none;
-}
-
-.sapUiMedia-Std-Desktop .sapMFC.Auto,
-.sapUiMedia-Std-Tablet .sapMFC.Auto,
-.sapMFC.L, .sapMFC.M {
-	width: 22.5rem;
-	height: 4.5rem;
-}
-
-.sapUiMedia-Std-Phone .sapMFC.Auto,
-.sapMFC.S, .sapMFC.XS {
-	width: 18rem;
-	height: 3.5rem;
+	position: relative;
+	width: 100%;
+	height: 3.875rem;
+	display: inline-block;
 }
 
 .sapMFCCTxt {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-family: @sapUiFontFamily;
-	font-weight: normal;
-	color: @sapUiDarkText;
-	padding: 0.125rem 0rem;
-	max-width: 22.5rem;
-}
+	height: 2.126rem;
+	max-width: 20.5rem;
+	margin-top: 0.3rem;
 
-.sapUiMedia-Std-Desktop .sapMFCCTxt.Auto,
-.sapUiMedia-Std-Tablet .sapMFCCTxt.Auto,
-.sapMFCCTxt.L, .sapMFCCTxt.M {
-	height: 3.12rem;
-}
-
-.sapUiMedia-Std-Phone .sapMFCCTxt.Auto,
-.sapMFCCTxt.S, .sapMFCCTxt.XS {
-	height: 2.41rem;
+	.sapMText {
+		display: inline;
+		line-height: 1.063rem;
+	}
 }
 
 .sapMFCSbh {
-	height: 1rem;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	font-family: @sapUiFontFamily;
-	font-weight: normal;
-	color: @sapUiLightText;
-	padding: 0.125rem 0rem;
-	max-width: 22.5rem;
-}
-
-.sapUiMedia-Std-Desktop .sapMFCSbh.Auto,
-.sapUiMedia-Std-Tablet .sapMFCSbh.Auto,
-.sapMFCSbh.L, .sapMFCSbh.M {
-	height: 1rem;
-}
-
-.sapUiMedia-Std-Phone .sapMFCSbh.Auto,
-.sapMFCSbh.S, .sapMFCSbh.XS {
-	height: 0.78rem;
+	max-width: 20.5rem;
+	line-height: 1.063rem;
+	font-size: var(--sapFontSmallSize);
+	color: var(--sapTile_TextColor);
 }
 
 .sapMFCValue {
 	position: relative;
-	float: right;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	padding-left: 1rem;
+	padding-top: 0.875rem;
+	font-size: 2.25rem;
+	line-height: 3rem;
+	max-width: 10.25rem;
+	min-width: 3rem;
+	float: right;
+	font-family: var(--sapFontHeaderFamily);
+	font-weight: @sapUiFontHeaderWeight;
 }
 
-.sapUiMedia-Std-Desktop .sapMFCValue.Auto,
-.sapUiMedia-Std-Tablet .sapMFCValue.Auto,
-.sapMFCValue.L, .sapMFCValue.M {
-	padding-top: 1rem;
-	font-size: 3rem;
-	height: 3.6rem;
-	max-width: 22.5rem;
-}
-
-.sapUiMedia-Std-Phone .sapMFCValue.Auto,
-.sapMFCValue.S, .sapMFCValue.XS {
-	padding-top: 1.3rem;
-	font-size: 2rem;
-	height: 2.45rem;
-	max-width: 18rem;
-}
-.sapMFCCTxt>.sapMText {
-	cursor:inherit;
+.sapMFCCTxt > .sapMText {
+	cursor: inherit;
 }
 
 .sapMFC:focus:not([tabindex]) {
 	outline: none;
 }
 
-.sapUiMedia-Std-Desktop .sapMFCCTxt.Auto > .sapMText,
-.sapUiMedia-Std-Tablet .sapMFCCTxt.Auto > .sapMText,
-.sapMFCCTxt.L > .sapMText, .sapMFCCTxt.M > .sapMText{
-	font-size: 0.875rem;
+.sapMFCCTxt .sapMText {
+	font-size: @sapFontSize;
+	color: var(--sapTile_TitleTextColor);
 }
 
-.sapUiMedia-Std-Phone .sapMFCCTxt.Auto > .sapMText,
-.sapMFCCTxt.S > .sapMText, .sapMFCCTxt.XS > .sapMText {
-	font-size: 0.625rem;
+.sapMGT.TwoByOne.sapMTileSmallPhone {
+
+	.sapMFCCTxt .sapMText {
+		font-size: var(--sapFontSmallSize);
+	}
 }
 
-.sapUiMedia-Std-Desktop .sapMFCSbh.Auto,
-.sapUiMedia-Std-Tablet .sapMFCSbh.Auto,
-.sapMFCSbh.L, .sapMFCSbh.M {
-	font-size: 0.875rem;
+.sapMFCValue.Neutral {
+	color: var(--sapNeutralTextColor);
 }
 
-.sapUiMedia-Std-Phone .sapMFCSbh.Auto,
-.sapMFCSbh.S, .sapMFCSbh.XS {
-	font-size: 0.625rem;
+.sapMFCValue.Good {
+	color: var(--sapPositiveTextColor);
 }
 
-.sapMFCValue {
-	font-family: @sapUiFontFamily;
-	font-weight: normal;
+.sapMFCValue.Critical {
+	color: var(--sapCriticalTextColor);
+}
+
+.sapMFCValue.Error {
+	color: var(--sapNegativeTextColor);
+}
+
+html.sap-desktop .sapMFC:focus {
+	outline: var(--sapContent_FocusColor) var(--sapContent_FocusStyle) var(--sapContent_FocusWidth);
+}
+
+html.sap-desktop .sapMFC:focus:not([tabindex]) {
+	outline: none;
+}
+
+.sapMTileSmallPhone {
+
+	.sapMFC {
+		width: 17.75rem;
+		height: 3.438rem;
+	}
+
+	.sapMFCCTxt {
+		max-width: 17.75rem;
+		margin-top: 0.1rem;
+	}
+
+	.sapMFCSbh {
+		max-width: 17.75rem;
+	}
+
+	.sapMFCValue {
+		padding-top: 1.188rem;
+		padding-left: 0.4rem;
+		font-size: 2rem;
+		line-height: 2.25rem;
+		max-width: 8.25rem;
+		min-width: 2.5rem
+	}
 }

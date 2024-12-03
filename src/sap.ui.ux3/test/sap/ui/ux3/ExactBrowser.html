@@ -1,15 +1,13 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<meta charset="utf-8">
 		<title>ExactBrowser - sap.ui.ux3</title>
 		<link rel="shortcut icon" type="image/x-icon" href="images/controls/sap.ui.ux3.Exact.gif">
+		<script src="shared-config.js"></script>
 		<script src="../../../../resources/sap-ui-core.js"
-			type="text/javascript"
 			id="sap-ui-bootstrap"
-			data-sap-ui-libs="sap.ui.core,sap.ui.ux3,sap.ui.commons"
-			data-sap-ui-theme="sap_goldreflection">
+			data-sap-ui-libs="sap.ui.core,sap.ui.ux3,sap.ui.commons">
 		</script>
 		<script src="resources/ExactData.js"></script>
 		<style>
@@ -110,7 +108,7 @@
 				var sFollowup = oAttribute.getAdditionalData() ? oAttribute.getAdditionalData().followup : null;
 				if(sFollowup){
 					jQuery.ajax({
-						  url: "resources/exactdata/"+sFollowup,
+						  url: "resources/exactdata/" + sFollowup + ".json",
 						  async: !bSyncCalls,
 						  dataType: 'json',
 						  type: "GET",
@@ -127,7 +125,7 @@
 			});
 
 			var oModel = new sap.ui.model.json.JSONModel();
-			oModel.loadData("resources/exactdata/lazy", null, !bSyncCalls);
+			oModel.loadData("resources/exactdata/lazy.json", null, !bSyncCalls);
 
 			oExactBrowser = createBrowserTest({title: "My Attributes", enableListClose: true}, 4);
 			oExactBrowser.bindAggregation("attributes", "/atts", oAttrTemplate);

@@ -1,36 +1,39 @@
-/*
- * ! ${copyright}
+/*!
+ * ${copyright}
  */
 
 // Provides control sap.m.P13nPanel.
 sap.ui.define([
-	'jquery.sap.global', './library', 'sap/ui/core/Control'
-], function(jQuery, library, Control) {
+	'./library', 'sap/ui/core/Control'
+], function(library, Control) {
 	"use strict";
 
 	/**
 	 * Constructor for a new P13nPanel.
 	 *
-	 * @param {string} [sId] id for the new control, generated automatically if no id is given
+	 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
 	 * @param {object} [mSettings] initial settings for the new control
-	 * @class Base type for <code>panels</code> aggregation in P13nDialog control.
+	 * @class An abstract base type for <code>panels</code> aggregation in <code>P13nDialog</code> control.
 	 * @extends sap.ui.core.Control
 	 * @version ${version}
 	 * @constructor
 	 * @public
+	 * @abstract
 	 * @since 1.26.0
 	 * @alias sap.m.P13nPanel
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
+	 * @deprecated As of 1.124, replaced by the artifacts in {@link sap.m.p13n}.
 	 */
 	var P13nPanel = Control.extend("sap.m.P13nPanel", /** @lends sap.m.P13nPanel.prototype */
 	{
 		metadata: {
+			"abstract": true,
 			library: "sap.m",
+			interfaces: [
+				"sap.m.p13n.IContent"
+			],
 			properties: {
 				/**
 				 * Title text appears in the panel.
-				 *
-				 * @since 1.26.0
 				 */
 				title: {
 					type: "string",
@@ -52,8 +55,6 @@ sap.ui.define([
 				/**
 				 * Panel type for generic use. Due to extensibility reason the type of <code>type</code> property should be <code>string</code>.
 				 * So it is feasible to add a custom panel without expanding the type.
-				 *
-				 * @since 1.26.0
 				 */
 				type: {
 					type: "string",
@@ -62,9 +63,7 @@ sap.ui.define([
 				},
 
 				/**
-				 * Enables the vertical Scrolling on the P13nDialog when the panel is shown.
-				 *
-				 * @since 1.26.0
+				 * Enables the vertical Scrolling on the <code>P13nDialog</code> when the panel is shown.
 				 */
 				verticalScrolling: {
 					type: "boolean",
@@ -100,9 +99,7 @@ sap.ui.define([
 			aggregations: {
 
 				/**
-				 * Aggregation of items
-				 *
-				 * @since 1.26.0
+				 * Defines personalization items (e.g. columns in the <code>P13nColumnsPanel</code>).
 				 */
 				items: {
 					type: "sap.m.P13nItem",
@@ -120,20 +117,24 @@ sap.ui.define([
 				beforeNavigationTo: {}
 			}
 		},
-		renderer: function(oRm, oControl) {
-			// write the HTML into the render manager
-			oRm.write("<span");
-			oRm.writeControlData(oControl);
-			oRm.addClass("sapMP13nPanel");
-			oRm.writeClasses();
-			oRm.write(">"); // span element
-			oRm.write("</span>");
+		renderer: {
+			apiVersion: 2,
+			render:function(oRm, oControl) {
+				oRm.openStart("span", oControl);
+				oRm.class("sapMP13nPanel");
+				oRm.openEnd();
+				oRm.close("span");
+			}
 		}
 	});
 
 	/**
 	 * This method can be overwritten by subclass in order to return a payload for Ok action
 	 *
+	 * @returns {object} Object which describes the state after Ok has been pressed
+	 * @deprecated As of version 1.50, replaced by the event of the respective inherited
+	 * control, for example {@link sap.m.P13nColumnsPanel#event:changeColumnsItems} of
+	 * <code>P13nColumnsPanel</code> control.
 	 * @public
 	 * @since 1.26.7
 	 */
@@ -152,6 +153,8 @@ sap.ui.define([
 	};
 
 	/**
+	 * This method defines the point in time before the panel becomes active.
+	 *
 	 * @public
 	 * @since 1.28.0
 	 */
@@ -178,9 +181,8 @@ sap.ui.define([
 	 * @since 1.28.0
 	 */
 	P13nPanel.prototype.onAfterNavigationFrom = function() {
-		return;
 	};
 
 	return P13nPanel;
 
-}, /* bExport= */true);
+});

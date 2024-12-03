@@ -2,7 +2,10 @@
  * ${copyright}
  */
 
-sap.ui.define(['sap/ui/base/ManagedObject'], function (fnManagedObject) {
+sap.ui.define([
+	"sap/ui/test/_OpaLogger",
+	"sap/ui/base/ManagedObject"
+], function (_OpaLogger, ManagedObject) {
 	"use strict";
 
 	/**
@@ -10,32 +13,72 @@ sap.ui.define(['sap/ui/base/ManagedObject'], function (fnManagedObject) {
 	 * @abstract
 	 * @extends sap.ui.base.ManagedObject
 	 * @public
-	 * @name sap.ui.test.matchers.Matcher
+	 * @alias sap.ui.test.matchers.Matcher
 	 * @author SAP SE
 	 * @since 1.23
 	 */
-	return fnManagedObject.extend("sap.ui.test.matchers.Matcher", {
+	var Matcher = ManagedObject.extend("sap.ui.test.matchers.Matcher", /** @lends sap.ui.test.matchers.Matcher.prototype */ {
 
 		metadata : {
 			publicMethods : [ "isMatching" ]
 		},
 
+		constructor: function () {
+			ManagedObject.prototype.constructor.apply(this, arguments);
+			this._oLogger = _OpaLogger.getLogger(this.getMetadata().getName());
+		},
+
 		/**
-		 * Checks if the matcher is matching - will get an instance of sap.ui.Control as parameter.
+		 * Checks if the matcher is matching - will get an instance of sap.ui.core.Control as parameter.
 		 *
 		 * Should be overwritten by subclasses
 		 *
 		 * @param {sap.ui.core.Control} oControl the control that is checked by the matcher
 		 * @return {boolean} true if the Control is matching the condition of the matcher
 		 * @protected
-		 * @name sap.ui.test.matchers.Matcher#isMatching
-		 * @function
 		 */
 		isMatching : function (oControl) {
 			return true;
 		},
 
-		_sLogPrefix : "Opa5 matcher"
+		/**
+		 * @returns {Window} window of the application under test, or the current window if Opa5 is not loaded
+		 * Note: declared matchers are instantiated in the app context (by MatcherFactory)
+		 * while users instantiate matchers in the test context (in a waitFor)
+		 * @private
+		 */
+		_getApplicationWindow: function () {
+			var Opa5 = sap.ui.require("sap/ui/test/Opa5");
+			if (Opa5) {
+				// matcher context === test context, because Opa5 is loaded
+				return Opa5.getWindow();
+			} else {
+				// matcher context === app context
+				return window;
+			}
+		},
+
+		_getApplicationWindowJQuery: function () {
+			var Opa5 = sap.ui.require("sap/ui/test/Opa5");
+			if (Opa5) {
+				// matcher context === test context, because Opa5 is loaded
+				return Opa5.getJQuery();
+			} else {
+				// matcher context === app context
+				return sap.ui.require("sap/ui/thirdparty/jquery");
+			}
+		},
+
+		_isInStaticArea: function(oDomElement) {
+			var oAppWindow = this._getApplicationWindow(),
+				oAppWindowJQuery = this._getApplicationWindowJQuery(),
+				oStaticArea = oAppWindow.sap.ui.require("sap/ui/test/OpaPlugin")
+					.getStaticAreaDomRef();
+
+			return oAppWindowJQuery.contains(oStaticArea, oDomElement);
+		}
+
 	});
 
-}, /* bExport= */ true);
+	return Matcher;
+});

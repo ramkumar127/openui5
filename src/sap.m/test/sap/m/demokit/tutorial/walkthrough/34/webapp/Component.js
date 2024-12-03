@@ -1,36 +1,30 @@
 sap.ui.define([
 	"sap/ui/core/UIComponent",
-	"sap/ui/model/json/JSONModel",
-	"sap/ui/demo/wt/controller/HelloDialog"
-], function (UIComponent, JSONModel, HelloDialog) {
+	"sap/ui/model/json/JSONModel"
+], (UIComponent, JSONModel) => {
 	"use strict";
 
-	return UIComponent.extend("sap.ui.demo.wt.Component", {
-
+	return UIComponent.extend("ui5.walkthrough.Component", {
 		metadata: {
+			interfaces: ["sap.ui.core.IAsyncContentCreation"],
 			manifest: "json"
 		},
 
-		init: function () {
-
+		init() {
 			// call the init function of the parent
 			UIComponent.prototype.init.apply(this, arguments);
 
-			// set data model
-			var oData = {
+			// set data model on view
+			const oData = {
 				recipient: {
 					name: "World"
 				}
 			};
-			var oModel = new JSONModel(oData);
+			const oModel = new JSONModel(oData);
 			this.setModel(oModel);
-
-			// set dialog
-			this.helloDialog = new HelloDialog();
 
 			// create the views based on the url/hash
 			this.getRouter().initialize();
 		}
 	});
-
 });

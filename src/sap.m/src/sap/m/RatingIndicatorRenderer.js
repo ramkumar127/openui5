@@ -1,175 +1,290 @@
 /*!
  * ${copyright}
  */
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/theming/Parameters'],
-	function(jQuery, Parameters) {
-	"use strict";
+sap.ui.define(
+	["sap/ui/core/IconPool", "sap/ui/Device", "sap/ui/core/Theming", "sap/ui/core/Lib"],
+	function(IconPool, Device, Theming, Library) {
+		"use strict";
+
+		/* =========================================================== */
+		/*           temporary flags for jslint syntax check           */
+		/* =========================================================== */
+		/*jslint nomen: false */
+
+		/**
+		 * RatingIndicator renderer.
+		 * @namespace
+		 */
+		var RatingIndicatorRenderer = {
+				apiVersion: 2
+			},
+			sIconSizeMeasure = "px";
+
+		// shortcut for library resource bundle
+		var oResourceBundle = Library.getResourceBundleFor("sap.m");
+
+		/**
+		 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
+		 *
+		 * @param {sap.ui.core.RenderManager} oRm the RenderManager that can be used for writing to the render output buffer
+		 * @param {sap.n.RatingIndicator} oControl an object representation of the control that should be rendered
+		 */
+		RatingIndicatorRenderer.render = function(oRm, oControl) {
+			var that = this;
+
+			this.initSharedState(oControl);
+			this.renderControlContainer(oRm, oControl, function() {
+				that.renderSelectedItems(oRm, oControl);
+				that.renderUnselectedItems(oRm, oControl);
+				that.renderHoverItems(oRm, oControl);
+				that.renderSelectorDiv(oRm, oControl);
+			});
+		};
+
+		RatingIndicatorRenderer.renderControlContainer = function(oRm, oControl, innerRenderer) {
+			var bEnabled = oControl.getEnabled(),
+				bEditable = oControl.getEditable(),
+				bDisplayOnly = oControl.getDisplayOnly();
+
+			oRm.openStart("div", oControl);
+
+			oRm.style("width", this._iWidth + "px");
+			oRm.style("font-size", this._iHeight + "px");
+			oRm.style("line-height", ++this._iHeight + "px");
 
 
-	/* =========================================================== */
-	/*           temporary flags for jslint syntax check           */
-	/* =========================================================== */
-	/*jslint nomen: false */
-
-	/**
-	 * RatingIndicator renderer.
-	 * @namespace
-	 */
-	var RatingIndicatorRenderer = {
-	};
-
-	/**
-	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
-	 *
-	 * @param {sap.ui.core.RenderManager} oRm the RenderManager that can be used for writing to the render output buffer
-	 * @param {sap.ui.core.Control} oControl an object representation of the control that should be rendered
-	 */
-	RatingIndicatorRenderer.render = function (oRm, oControl) {
-
-		var fRatingValue = oControl._roundValueToVisualMode(oControl.getValue()),
-			iSymbolCount = oControl.getMaxValue(),
-			fIconSize = oControl._iPxIconSize,
-			fIconPadding = oControl._iPxPaddingSize,
-			sIconSizeMeasure = 'px',
-			iSelectedWidth = fRatingValue * fIconSize + (Math.round(fRatingValue) - 1) * fIconPadding,
-			iWidth = iSymbolCount * (fIconSize + fIconPadding) - fIconPadding,
-			oIconSel,
-			oIconUnsel,
-			oIconHov,
-			i = 0,
-			sTooltip = oControl.getTooltip_AsString(),
-			// gradients in combination with background-clip: text are not supported by ie, android < 4.2 or blackberry
-			bUseGradient = sap.ui.Device.browser.chrome || sap.ui.Device.browser.safari,
-			sLabelID;
-
-		if (iSelectedWidth < 0) { //width should not be negative
-			iSelectedWidth = 0;
-		}
-
-		// render the control container div
-		oRm.write("<div");
-		oRm.writeControlData(oControl);
-		oRm.writeAttribute("style", "width: " + iWidth + sIconSizeMeasure);
-		if (!oControl.getEnabled()) {
-			oRm.writeAttribute("tabindex", "-1");
-		} else {
-			oRm.writeAttribute("tabindex", "0");
-		}
-		oRm.addClass("sapMRI");
-		if (oControl.getEnabled()) {
-			oRm.addClass("sapMPointer");
-		} else {
-			oRm.addClass("sapMRIDisabled");
-		}
-		oRm.writeClasses();
-		// add tooltip if available
-		if (sTooltip) {
-			oRm.writeAttributeEscaped("title", sTooltip);
-		}
-
-		// ARIA
-		sLabelID = oControl.getId() + "-ariaLabel";
-
-		oRm.writeAccessibilityState(oControl, {
-			"role": "slider",
-			"orientation": "horizontal",
-			"live": "assertive",
-			"valuemin": 0,
-			"disabled": !oControl.getEnabled(),
-			"labelledby": {
-				value: sLabelID,
-				append: true
-			}
-		});
-
-		oRm.write(">");
-
-		// ARIA
-		oRm.write("<label id='" + sLabelID + "' style='display:none;' aria-hidden='true'>" + oControl._oResourceBundle.getText("RATING_ARIA_NAME") + "</label>");
-
-		// render selected items div
-		oRm.write("<div class='sapMRISel");
-		if (bUseGradient) {
-			oRm.write(" sapMRIGrd");
-		}
-		oRm.write("'");
-		oRm.writeAttribute("id", oControl.getId() + "-sel");
-		oRm.writeAttribute("style", "width: " + iSelectedWidth + sIconSizeMeasure);
-		oRm.write(">");
-		// for defined count of icons, create selected icons with oControl._getIcon(0)
-		for (i = 0; i < iSymbolCount; i++) {
-			oIconSel = oControl._getIcon(0);
-			//check if icon is icon or image
-			if (oIconSel instanceof sap.ui.core.Icon) {
-				oIconSel.setSize(fIconSize + sIconSizeMeasure);
-			}
-			// always set width and height because icon fonts can have different dimensions
-			oIconSel.setWidth(fIconSize + sIconSizeMeasure);
-			oIconSel.setHeight(fIconSize + sIconSizeMeasure);
-
-			oIconSel.addStyleClass("sapMRIIconSel");
-			oRm.renderControl(oIconSel);
-		}
-		oRm.write("</div>");
-
-		// render unselected items div (container and relative child)
-		oRm.write("<div class='sapMRIUnselWrapper'");
-		oRm.writeAttribute("id", oControl.getId() + "-unsel-wrapper");
-		oRm.writeAttribute("style", "width: " + (iWidth - iSelectedWidth) + sIconSizeMeasure);
-		oRm.write(">");
-		oRm.write("<div class='sapMRIUnsel");
-		if (bUseGradient && oControl.getEnabled()) { // see the specification for read only rating indicator
-			oRm.write(" sapMRIGrd");
-		}
-		oRm.write("' id='" + oControl.getId() + "-unsel'>");
-		// for defined count of icons, create unselected icons with oControl._getIcon(1)
-		for (i = 0; i < iSymbolCount; i++) {
-			oIconUnsel = oControl._getIcon(1);
-			//check if icon is icon or image
-			if (oIconUnsel instanceof sap.ui.core.Icon) {
-				oIconUnsel.setSize(fIconSize + sIconSizeMeasure);
-			}
-			// always set width and height because icon fonts can have different dimensions
-			oIconUnsel.setWidth(fIconSize + sIconSizeMeasure);
-			oIconUnsel.setHeight(fIconSize + sIconSizeMeasure);
-
-			oIconUnsel.addStyleClass("sapMRIIconUnsel");
-			if (fIconSize <= 1) {
-				oIconUnsel.addStyleClass("sapMRIIconUnselSmall");
-			}
-			oRm.renderControl(oIconUnsel);
-		}
-		oRm.write("</div>");
-		oRm.write("</div>");
-
-		// render hovered item div
-		if (oControl.getEnabled()) {
-			oRm.write("<div class='sapMRIHov' id='" + oControl.getId() + "-hov'>");
-			// for defined count of icons, create hovered icons with oControl._getIcon(2)
-			for (i = 0; i < iSymbolCount; i++) {
-				oIconHov = oControl._getIcon(2);
-				//check if icon is icon or image
-				if (oIconHov instanceof sap.ui.core.Icon) {
-					oIconHov.setSize(fIconSize + sIconSizeMeasure);
+			if (bEnabled && !bDisplayOnly) {
+				// Interactive
+				oRm.attr("tabindex", "0");
+				oRm.class("sapMPointer");
+				if (!bEditable) {
+					oRm.class("sapMRIReadOnly");
 				}
-				// always set width and height because icon fonts can have different dimensions
-				oIconHov.setWidth(fIconSize + sIconSizeMeasure);
-				oIconHov.setHeight(fIconSize + sIconSizeMeasure);
-
-				oIconHov.addStyleClass("sapMRIIconHov");
-				oRm.renderControl(oIconHov);
+			} else {
+				// DisplayOnly or disabled
+				oRm.attr("tabindex", "-1");
+				bEnabled ? oRm.class("sapMRIDisplayOnly") : oRm.class("sapMRIDisabled");
 			}
-			oRm.write("</div>");
 
-			// render selector items div
-			oRm.write("<div class='sapMRISelector' id='" + oControl.getId() + "-selector'>");
-			oRm.write("</div>");
-		}
+			if (!oControl.getIconSize()) {
+				oRm.class("sapMRINoCustomIconSize");
+			}
 
-		// close control div
-		oRm.write("</div>");
-	};
+			oRm.class("sapMRI");
 
-	return RatingIndicatorRenderer;
+			if (oControl.getIconSize()) {
+				oRm.class("sapUiRatingIndicator" + oControl._getIconSizeLabel(this._fIconSize));
+			}
 
-}, /* bExport= */ true);
+			if (oControl._isRequired()) {
+				oRm.attr("aria-description", oResourceBundle.getText("ELEMENT_REQUIRED"));
+			}
+
+			this.writeTooltip(oRm, oControl);
+			this.writeAccessibility(oRm, oControl);
+
+			oRm.openEnd();
+
+			innerRenderer();
+
+			oRm.close("div");
+		};
+
+		RatingIndicatorRenderer.initSharedState = function(oControl) {
+			var fRatingValue = oControl._roundValueToVisualMode(oControl.getValue()),
+				fIconSize = oControl._iPxIconSize,
+				fIconPadding = oControl._iPxPaddingSize,
+				iSelectedWidth = fRatingValue * fIconSize + (Math.round(fRatingValue) - 1) * fIconPadding;
+
+			if (iSelectedWidth < 0) {
+				//width should not be negative
+				iSelectedWidth = 0;
+			}
+
+			// gradients in combination with background-clip: text are not supported by ie, android < 4.2 or blackberry
+			this._bUseGradient = Device.browser.chrome || Device.browser.safari;
+			this._sLabelID = oControl.getId() + "-ariaLabel";
+			this._iSymbolCount = oControl.getMaxValue();
+			this._iWidth = this._iSymbolCount * (fIconSize + fIconPadding) - fIconPadding;
+			this._iHeight = fIconSize;
+			this._iSelectedWidth = iSelectedWidth;
+			this._fIconSize = fIconSize;
+		};
+
+		RatingIndicatorRenderer.writeTooltip = function(oRm, oControl) {
+			var sTooltip = oControl.getTooltip_AsString();
+
+			if (sTooltip) {
+				oRm.attr("title", sTooltip);
+			}
+		};
+
+		RatingIndicatorRenderer.writeAccessibility = function(oRm, oControl) {
+			oRm.accessibilityState(oControl, {
+				role: "slider",
+				orientation: "horizontal",
+				valuemin: 0,
+				disabled: !oControl.getEnabled() || oControl.getDisplayOnly(),
+				roledescription: oResourceBundle.getText("RATING_INDICATOR_ARIA_ROLEDESCRIPTION"),
+				required: null
+			});
+		};
+
+		RatingIndicatorRenderer.renderSelectedItems = function(oRm, oControl) {
+			oRm.openStart("div", oControl.getId() + "-sel");
+			oRm.class("sapMRISel");
+
+			if (this._bUseGradient) {
+				oRm.class("sapMRIGrd");
+			}
+
+			oRm.style("width", this._iSelectedWidth + sIconSizeMeasure);
+			oRm.openEnd();
+
+			for (var i = 0; i < this._iSymbolCount; i++) {
+				this.renderIcon("SELECTED", oRm, oControl, i);
+			}
+
+			oRm.close("div");
+		};
+
+		RatingIndicatorRenderer.renderUnselectedItems = function(oRm, oControl) {
+			// render unselected items div (container and relative child)
+			oRm.openStart("div", oControl.getId() + "-unsel-wrapper");
+			oRm.class("sapMRIUnselWrapper");
+			oRm.style("width", this._iWidth - this._iSelectedWidth + sIconSizeMeasure);
+			oRm.openEnd();
+
+			oRm.openStart("div", oControl.getId() + "-unsel");
+			oRm.class("sapMRIUnsel");
+
+			if (this._bUseGradient && (oControl.getEnabled() || !oControl.getDisplayOnly())) {
+				// see the specification for read only rating indicator
+				oRm.class("sapMRIGrd");
+			}
+			oRm.openEnd();
+
+			for (var i = 0; i < this._iSymbolCount; i++) {
+				this.renderIcon("UNSELECTED", oRm, oControl, i);
+			}
+
+			oRm.close("div");
+			oRm.close("div");
+		};
+
+		RatingIndicatorRenderer.renderHoverItems = function(oRm, oControl) {
+			if (oControl.getEnabled() || !oControl.getDisplayOnly()) {
+				oRm.openStart("div", oControl.getId() + "-hov");
+				oRm.class("sapMRIHov");
+				oRm.openEnd();
+
+				for (var i = 0; i < this._iSymbolCount; i++) {
+					this.renderIcon("HOVERED", oRm, oControl, i);
+				}
+				oRm.close("div");
+			}
+		};
+
+		RatingIndicatorRenderer.renderSelectorDiv = function(oRm, oControl) {
+			oRm.openStart("div", oControl.getId() + "-selector");
+			oRm.class("sapMRISelector");
+			oRm.openEnd();
+
+			oRm.close("div");
+		};
+
+		RatingIndicatorRenderer.renderIcon = function(iconType, oRm, oControl, iValue) {
+			var sIconURI = this.getIconURI(iconType, oControl),
+				sTagName = this.getIconTag(sIconURI),
+				bIsIconURI = IconPool.isIconURI(sIconURI),
+				sSize = this._fIconSize + sIconSizeMeasure;
+
+			if (sTagName === "img") {
+				oRm.voidStart(sTagName);
+			} else {
+				oRm.openStart(sTagName);
+			}
+
+			if (iconType === "UNSELECTED" && !oControl.getEditable()) {
+				iconType = "READONLY";
+			}
+
+			oRm.class("sapUiIcon");
+			oRm.class(this.getIconClass(iconType));
+
+			if (iValue >= Math.ceil(oControl.getValue())) {
+				oRm.class("sapMRIunratedIcon");
+			}
+
+			oRm.style("width", sSize);
+			oRm.style("height", sSize);
+			oRm.style("line-height", sSize);
+			oRm.style("font-size", sSize);
+
+			if (!bIsIconURI) {
+				oRm.attr("src", sIconURI);
+			}
+
+			if (sTagName === "img") {
+				oRm.voidEnd();
+			} else {
+				oRm.openEnd();
+
+				if (bIsIconURI) {
+					oRm.text(IconPool.getIconInfo(sIconURI).content);
+				}
+				oRm.close(sTagName);
+			}
+		};
+
+		RatingIndicatorRenderer.getIconClass = function(iconType) {
+			switch (iconType) {
+				case "SELECTED":
+					return "sapMRIIconSel";
+				case "UNSELECTED":
+					return "sapMRIIconUnsel";
+				case "HOVERED":
+					return "sapMRIIconHov";
+				case "READONLY":
+					return "sapMRIIconReadOnly";
+			}
+		};
+
+		RatingIndicatorRenderer.getIconURI = function(sState, oControl) {
+			if (
+				Theming
+					.getTheme() === "sap_hcb"
+			) {
+				if (sState === "UNSELECTED" && (oControl.getEnabled() && !oControl.getDisplayOnly())) {
+					return IconPool.getIconURI("unfavorite");
+				}
+
+				return IconPool.getIconURI("favorite");
+			}
+
+			switch (sState) {
+				case "SELECTED":
+					return oControl.getIconSelected() || IconPool.getIconURI("favorite");
+				case "UNSELECTED":
+					if (oControl.getEditable() && !oControl.getDisplayOnly() && oControl.getEnabled()) {
+						return oControl.getIconUnselected() || IconPool.getIconURI("unfavorite");
+					} else {
+						return oControl.getIconUnselected() || IconPool.getIconURI("favorite");
+					}
+				case "HOVERED":
+					return oControl.getIconHovered() || IconPool.getIconURI("favorite");
+			}
+		};
+
+		RatingIndicatorRenderer.getIconTag = function(sIconURI) {
+			if (IconPool.isIconURI(sIconURI)) {
+				return "span";
+			}
+
+			return "img";
+		};
+
+		return RatingIndicatorRenderer;
+	},
+	/* bExport= */ true
+);

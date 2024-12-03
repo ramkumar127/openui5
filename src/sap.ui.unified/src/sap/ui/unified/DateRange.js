@@ -3,8 +3,8 @@
  */
 
 //Provides control sap.ui.unified.DateRange.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', './library'],
-		function(jQuery, Element, library) {
+sap.ui.define(['sap/ui/core/Element', './library', 'sap/ui/unified/calendar/CalendarUtils'],
+	function(Element, library, CalendarUtils) {
 	"use strict";
 
 
@@ -24,7 +24,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', './library'],
 	 * @public
 	 * @since 1.22.0
 	 * @alias sap.ui.unified.DateRange
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var DateRange = Element.extend("sap.ui.unified.DateRange", /** @lends sap.ui.unified.DateRange.prototype */ { metadata : {
 
@@ -32,54 +31,58 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', './library'],
 		properties : {
 
 			/**
-			 * Start date for a date range. This must be a JavaScript date object.
+			 * Start date for a date range. This must be a UI5Date or JavaScript Date object.
 			 */
 			startDate : {type : "object", group : "Misc", defaultValue : null},
 
 			/**
-			 * Start date for a date range. If empty only a single date is presented by this DateRange element. This must be a JavaScript date object.
+			 * End date for a date range. If empty only a single date is presented by this DateRange element. This must be a UI5Date or JavaScript Date object.
 			 */
 			endDate : {type : "object", group : "Misc", defaultValue : null}
 		}
 	}});
 
-	///**
-	// * This file defines behavior for the control,
-	// */
-
-	DateRange.prototype.setStartDate = function(oDate){
+	/**
+	 * Set start date for a date range.
+	 *
+	 * @param {Date|module:sap/ui/core/date/UI5Date} [oDate] A date instance
+	 * @param {boolean} [bInvalidate] If true, <code>startDate</code> is not marked as changed
+	 * @returns {this} Reference to <code>this</code> for method chaining
+	 * @public
+	 */
+	DateRange.prototype.setStartDate = function(oDate, bInvalidate){
 
 		if (oDate) {
-			if (!(oDate instanceof Date)) {
-				throw new Error("Date must be a JavaScript date object; " + this);
-			}
+			CalendarUtils._checkJSDateObject(oDate);
 
 			var iYear = oDate.getFullYear();
-			if (iYear < 1 || iYear > 9999) {
-				throw new Error("Date must not be in valid range (between 0001-01-01 and 9999-12-31); " + this);
-			}
+			CalendarUtils._checkYearInValidRange(iYear);
 		}
 
-		this.setProperty("startDate", oDate);
+		this.setProperty("startDate", oDate, bInvalidate);
 
 		return this;
 
 	};
 
-	DateRange.prototype.setEndDate = function(oDate){
+	/**
+	 * Set end date for a date range.
+	 *
+	 * @param {Date|module:sap/ui/core/date/UI5Date} [oDate] A date instance
+	 * @param {boolean} [bInvalidate] If true, <code>endDate</code> is not marked as changed
+	 * @returns {this} Reference to <code>this</code> for method chaining
+	 * @public
+	 */
+	DateRange.prototype.setEndDate = function(oDate, bInvalidate){
 
 		if (oDate) {
-			if (!(oDate instanceof Date)) {
-				throw new Error("Date must be a JavaScript date object; " + this);
-			}
+			CalendarUtils._checkJSDateObject(oDate);
 
 			var iYear = oDate.getFullYear();
-			if (iYear < 1 || iYear > 9999) {
-				throw new Error("Date must not be in valid range (between 0001-01-01 and 9999-12-31); " + this);
-			}
+			CalendarUtils._checkYearInValidRange(iYear);
 		}
 
-		this.setProperty("endDate", oDate);
+		this.setProperty("endDate", oDate, bInvalidate);
 
 		return this;
 
@@ -87,4 +90,4 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', './library'],
 
 	return DateRange;
 
-}, /* bExport= */ true);
+});

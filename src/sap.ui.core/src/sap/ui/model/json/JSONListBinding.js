@@ -1,86 +1,46 @@
 /*!
  * ${copyright}
  */
-
+/*eslint-disable max-len */
 // Provides the JSON model implementation of a list binding
-sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/ClientListBinding'],
-	function(jQuery, ChangeReason, ClientListBinding) {
+sap.ui.define([
+	"sap/base/Log",
+	"sap/base/util/deepEqual",
+	"sap/base/util/deepExtend",
+	"sap/base/util/each",
+	"sap/base/util/extend",
+	"sap/ui/model/ChangeReason",
+	"sap/ui/model/ClientListBinding"
+], function(Log, deepEqual, deepExtend, each, extend, ChangeReason, ClientListBinding) {
 	"use strict";
 
-
-
 	/**
+	 * Creates a new JSONListBinding.
+	 *
+	 * This constructor should only be called by subclasses or model implementations, not by application or control code.
+	 * Such code should use {@link sap.ui.model.json.JSONModel#bindList JSONModel#bindList} on the corresponding model instance instead.
+	 *
+	 * @param {sap.ui.model.json.JSONModel} oModel Model instance that this binding is created for and that it belongs to
+	 * @param {string} sPath Binding path to be used for this binding
+	 * @param {sap.ui.model.Context} oContext Binding context relative to which a relative binding path will be resolved
+	 * @param {sap.ui.model.Sorter[]|sap.ui.model.Sorter} [aSorters=[]]
+	 *   The sorters used initially; call {@link #sort} to replace them
+	 * @param {sap.ui.model.Filter[]|sap.ui.model.Filter} [aFilters=[]]
+	 *   The filters to be used initially with type {@link sap.ui.model.FilterType.Application}; call {@link #filter} to
+	 *   replace them
+	 * @param {object} [mParameters] Map of optional parameters as defined by subclasses; this class does not introduce any own parameters
+	 * @throws {Error} If one of the filters uses an operator that is not supported by the underlying model
+	 *   implementation or if the {@link sap.ui.model.Filter.NONE} filter instance is contained in <code>aFilters</code>
+	 *   together with other filters
 	 *
 	 * @class
-	 * List binding implementation for JSON format
+	 * List binding implementation for JSON format.
 	 *
-	 * @param {sap.ui.model.json.JSONModel} oModel
-	 * @param {string} sPath
-	 * @param {sap.ui.model.Context} oContext
-	 * @param {sap.ui.model.Sorter|sap.ui.model.Sorter[]} [aSorters] initial sort order (can be either a sorter or an array of sorters)
-	 * @param {sap.ui.model.Filter|sap.ui.model.Filter[]} [aFilters] predefined filter/s (can be either a filter or an array of filters)
-	 * @param {object} [mParameters]
 	 * @alias sap.ui.model.json.JSONListBinding
 	 * @extends sap.ui.model.ClientListBinding
-	 */
-	var JSONListBinding = ClientListBinding.extend("sap.ui.model.json.JSONListBinding");
-
-	/**
-	 * Return contexts for the list or a specified subset of contexts
-	 * @param {int} [iStartIndex=0] the startIndex where to start the retrieval of contexts
-	 * @param {int} [iLength=length of the list] determines how many contexts to retrieve beginning from the start index.
-	 * Default is the whole list length.
-	 *
-	 * @return {Array} the contexts array
 	 * @protected
 	 */
-	JSONListBinding.prototype.getContexts = function(iStartIndex, iLength) {
-		this.iLastStartIndex = iStartIndex;
-		this.iLastLength = iLength;
-
-		if (!iStartIndex) {
-			iStartIndex = 0;
-		}
-		if (!iLength) {
-			iLength = Math.min(this.iLength, this.oModel.iSizeLimit);
-		}
-
-		var aContexts = this._getContexts(iStartIndex, iLength),
-			oContextData = {};
-
-		if (this.bUseExtendedChangeDetection) {
-
-			for (var i = 0; i < aContexts.length; i++) {
-				oContextData[aContexts[i].getPath()] = aContexts[i].getObject();
-			}
-
-			//Check diff
-			if (this.aLastContexts && iStartIndex < this.iLastEndIndex) {
-				var that = this;
-				var aDiff = jQuery.sap.arrayDiff(this.aLastContexts, aContexts, function(oOldContext, oNewContext) {
-					return jQuery.sap.equal(
-							oOldContext && that.oLastContextData && that.oLastContextData[oOldContext.getPath()],
-							oNewContext && oContextData && oContextData[oNewContext.getPath()]
-						);
-				});
-				aContexts.diff = aDiff;
-			}
-
-			this.iLastEndIndex = iStartIndex + iLength;
-			this.aLastContexts = aContexts.slice(0);
-			this.oLastContextData = jQuery.extend(true, {}, oContextData);
-		}
-
-		return aContexts;
-	};
-
-	JSONListBinding.prototype.getCurrentContexts = function() {
-		if (this.bUseExtendedChangeDetection) {
-			return this.aLastContexts || [];
-		} else {
-			return this.getContexts(this.iLastStartIndex, this.iLastLength);
-		}
-	};
+	var JSONListBinding = ClientListBinding.extend("sap.ui.model.json.JSONListBinding");
 
 	/**
 	 * Get indices of the list
@@ -89,7 +49,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 		var i;
 
 		this.aIndices = [];
-		if (jQuery.isArray(this.oList)) {
+		if (Array.isArray(this.oList)) {
 			for (i = 0; i < this.oList.length; i++) {
 				this.aIndices.push(i);
 			}
@@ -107,14 +67,15 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 	JSONListBinding.prototype.update = function(){
 		var oList = this.oModel._getObject(this.sPath, this.oContext);
 		if (oList) {
-			if (jQuery.isArray(oList)) {
+			if (Array.isArray(oList)) {
 				if (this.bUseExtendedChangeDetection) {
-					this.oList = jQuery.extend(true, [], oList);
+					this.oList = deepExtend([], oList);
 				} else {
 					this.oList = oList.slice(0);
 				}
 			} else {
-				this.oList = jQuery.extend(this.bUseExtendedChangeDetection, {}, oList);
+				this.oList = this.bUseExtendedChangeDetection
+					? deepExtend({}, oList) : extend({}, oList);
 			}
 			this.updateIndices();
 			this.applyFilter();
@@ -128,21 +89,23 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 	};
 
 	/**
-	 * Check whether this Binding would provide new values and in case it changed,
-	 * inform interested parties about this.
+	 * Check whether this Binding would provide new values and in case it changed, fire a change
+	 * event with change reason <code>sap.ui.model.ChangeReason.Change</code>.
 	 *
-	 * @param {boolean} bForceupdate
+	 * @param {boolean} [bForceupdate]
+	 *   Whether the change event will be fired regardless of the bindings state
 	 *
 	 */
 	JSONListBinding.prototype.checkUpdate = function(bForceupdate){
+		var oList;
 
 		if (this.bSuspended && !this.bIgnoreSuspend && !bForceupdate) {
 			return;
 		}
 
 		if (!this.bUseExtendedChangeDetection) {
-			var oList = this.oModel._getObject(this.sPath, this.oContext);
-			if (!jQuery.sap.equal(this.oList, oList) || bForceupdate) {
+			oList = this.oModel._getObject(this.sPath, this.oContext) || [];
+			if (!deepEqual(this.oList, oList) || bForceupdate) {
 				this.update();
 				this._fireChange({reason: ChangeReason.Change});
 			}
@@ -151,11 +114,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 			var that = this;
 
 			//If the list has changed we need to update the indices first
-			var oList = this.oModel._getObject(this.sPath, this.oContext);
-			if (oList && this.oList.length != oList.length) {
+			oList = this.oModel._getObject(this.sPath, this.oContext) || [];
+			if (this.oList.length != oList.length) {
 				bChangeDetected = true;
 			}
-			if (!jQuery.sap.equal(this.oList, oList)) {
+			if (!deepEqual(this.oList, oList)) {
 				this.update();
 			}
 
@@ -165,11 +128,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 				if (this.aLastContexts.length != aContexts.length) {
 					bChangeDetected = true;
 				} else {
-					jQuery.each(this.aLastContexts, function(iIndex, oContext) {
-						if (!jQuery.sap.equal(aContexts[iIndex].getObject(), that.oLastContextData[oContext.getPath()])) {
+					each(this.aLastContextData, function(iIndex, oLastData) {
+						var oCurrentData = that.getContextData(aContexts[iIndex]);
+						if (oCurrentData !== oLastData) {
 							bChangeDetected = true;
 							return false;
 						}
+						return true;
 					});
 				}
 			} else {
@@ -181,7 +146,5 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 		}
 	};
 
-
 	return JSONListBinding;
-
 });

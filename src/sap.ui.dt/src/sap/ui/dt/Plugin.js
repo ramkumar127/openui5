@@ -2,23 +2,27 @@
  * ${copyright}
  */
 
-// Provides class sap.ui.dt.Plugin.
 sap.ui.define([
-	'sap/ui/base/ManagedObject'
-],
-function(ManagedObject) {
+	"sap/ui/base/ManagedObject",
+	"sap/ui/core/Lib",
+	"sap/ui/dt/OverlayRegistry"
+], function(
+	ManagedObject,
+	Lib,
+	OverlayRegistry
+) {
 	"use strict";
-
 	/**
 	 * Constructor for a new Plugin.
 	 *
 	 * @param {string} [sId] id for the new object, generated automatically if no id is given
 	 * @param {object} [mSettings] initial settings for the new object
 	 *
+	 * @abstract
 	 * @class
 	 * The Plugin allows to handle the overlays and aggregation overlays from the DesignTime
-	 * The Plugin should be overriden by the real plugin implementations, which define some actions through events attached to an overlays
-	 * @extends sap.ui.core.ManagedObject
+	 * The Plugin should be overridden by the real plugin implementations, which define some actions through events attached to an overlays
+	 * @extends sap.ui.base.ManagedObject
 	 *
 	 * @author SAP SE
 	 * @version ${version}
@@ -27,31 +31,38 @@ function(ManagedObject) {
 	 * @private
 	 * @since 1.30
 	 * @alias sap.ui.dt.Plugin
-	 * @experimental Since 1.30. This class is experimental and provides only limited functionality. Also the API might be changed in future.
 	 */
 
 	var Plugin = ManagedObject.extend("sap.ui.dt.Plugin", /** @lends sap.ui.dt.Plugin.prototype */ {
-		metadata : {
-			"abstract" : true,
-			// ---- object ----
-
-			// ---- control specific ----
-			library : "sap.ui.dt",
-			properties : {
+		metadata: {
+			"abstract": true,
+			library: "sap.ui.dt",
+			properties: {
 				/**
 				 * DesignTime where this plugin will be used
 				 */
-				designTime : { // its defined as a property because spa.ui.dt.designTime is a managed object and UI5 only allows associations for elements
-					type : "sap.ui.dt.DesignTime",
-					multiple : false
+				designTime: { // its defined as a property because spa.ui.dt.designTime is a managed object and UI5 only allows associations for elements
+					type: "object",
+					multiple: false
+				},
+				busy: {
+					type: "boolean",
+					defaultValue: false
 				}
 			},
-			associations : {
-			},
-			events : {
+			events: {
+				processingStatusChange: {
+					parameters: {
+						processing: {type: "boolean"}
+					}
+				}
 			}
 		}
 	});
+
+	Plugin.prototype._bProcessingCounter = 0;
+
+	Plugin.prototype._oBusyPromise = {};
 
 	/**
 	 * Called when the Plugin is initialized
@@ -69,7 +80,7 @@ function(ManagedObject) {
 
 	/**
 	 * Function is called initially for every overlay in the DesignTime and then when any new overlay is created inside of the DesignTime
-	 * This function should be overriden by the plugins to handle the overlays (attach events and etc.)
+	 * This function should be overridden by the plugins to handle the overlays (attach events and etc.)
 	 * @function
 	 * @name sap.ui.dt.Plugin.prototype.registerElementOverlay
 	 * @param {sap.ui.dt.ElementOverlay} an oElementOverlay which should be registered
@@ -79,7 +90,7 @@ function(ManagedObject) {
 
 	/**
 	 * Function is called for every overlay in the DesignTime when the Plugin is deactivated.
-	 * This function should be overriden by the plugins to rollback the registration and cleanup attached event etc.
+	 * This function should be overridden by the plugins to rollback the registration and cleanup attached event etc.
 	 * @function
 	 * @name sap.ui.dt.Plugin.prototype.deregisterElementOverlay
 	 * @param {sap.ui.dt.ElementOverlay} an oElementOverlay which should be deregistered
@@ -89,7 +100,7 @@ function(ManagedObject) {
 
 	/**
 	 * Function is called initially for every aggregation overlay in the DesignTime and then when any new aggregation overlay is created inside of the DesignTime
-	 * This function should be overriden by the plugins to handle the aggregation overlays (attach events and etc.)
+	 * This function should be overridden by the plugins to handle the aggregation overlays (attach events and etc.)
 	 * @function
 	 * @name sap.ui.dt.Plugin.prototype.registerAggregationOverlay
 	 * @param {sap.ui.dt.AggregationOverlay} oAggregationOverlay which should be registered
@@ -99,7 +110,7 @@ function(ManagedObject) {
 
 	/**
 	 * Function is called for every aggregation overlay in the DesignTime when the Plugin is deactivated.
-	 * This function should be overriden by the plugins to rollback the registration and cleanup attached event etc.
+	 * This function should be overridden by the plugins to rollback the registration and cleanup attached event etc.
 	 * @function
 	 * @name sap.ui.dt.Plugin.prototype.deregisterAggregationOverlay
 	 * @param {sap.ui.dt.AggregationOverlay} oAggregationOverlay which should be deregistered
@@ -117,15 +128,12 @@ function(ManagedObject) {
 		var oOldDesignTime = this.getDesignTime();
 		if (oOldDesignTime) {
 			this._deregisterOverlays(oOldDesignTime);
-			oOldDesignTime.detachEvent("elementOverlayCreated", this._onElementOverlayCreated, this);
 		}
 
 		this.setProperty("designTime", oDesignTime);
 
 		if (oDesignTime) {
 			this._registerOverlays(oDesignTime);
-
-			oDesignTime.attachEvent("elementOverlayCreated", this._onElementOverlayCreated, this);
 		}
 
 		return this;
@@ -138,7 +146,9 @@ function(ManagedObject) {
 	Plugin.prototype._registerOverlays = function(oDesignTime) {
 		if (this.registerElementOverlay || this.registerAggregationOverlay) {
 			var aElementOverlays = oDesignTime.getElementOverlays();
-			aElementOverlays.forEach(this._callElementOverlayRegistrationMethods.bind(this));
+			this.setProcessingStatus(true);
+			aElementOverlays.forEach(this.callElementOverlayRegistrationMethods.bind(this));
+			this.setProcessingStatus(false);
 		}
 	};
 
@@ -154,29 +164,30 @@ function(ManagedObject) {
 	};
 
 	/**
-	 * @private
+	 * @param {sap.ui.dt.Overlay} oElementOverlay to call registration methods for
+	 * @protected
 	 */
-	Plugin.prototype._callAggregationOverlayRegistrationMehods = function(oElementOverlay) {
+	Plugin.prototype.callAggregationOverlayRegistrationMethods = function(oElementOverlay) {
 		if (this.registerAggregationOverlay) {
-			var aAggregationOverlays = oElementOverlay.getAggregationOverlays();
+			var aAggregationOverlays = oElementOverlay.getChildren();
 			aAggregationOverlays.forEach(this.registerAggregationOverlay.bind(this));
 		}
 	};
 
 	/**
 	 * @param {sap.ui.dt.Overlay} oElementOverlay to call registration methods for
-	 * @private
+	 * @protected
 	 */
-	Plugin.prototype._callElementOverlayRegistrationMethods = function(oElementOverlay) {
+	Plugin.prototype.callElementOverlayRegistrationMethods = function(oElementOverlay) {
 		if (this.registerElementOverlay) {
 			this.registerElementOverlay(oElementOverlay);
 		}
 
-		this._callAggregationOverlayRegistrationMehods(oElementOverlay);
+		this.callAggregationOverlayRegistrationMethods(oElementOverlay);
 	};
 
 	/**
-	 * @param {sap.ui.dt.Overlay} oOverlay to callde registration methods for
+	 * @param {sap.ui.dt.ElementOverlay} oElementOverlay to callde registration methods for
 	 * @private
 	 */
 	Plugin.prototype._callElementOverlayDeregestrationMethods = function(oElementOverlay) {
@@ -185,7 +196,7 @@ function(ManagedObject) {
 		}
 
 		if (this.deregisterAggregationOverlay) {
-			var aAggregationOverlays = oElementOverlay.getAggregationOverlays();
+			var aAggregationOverlays = oElementOverlay.getChildren();
 			aAggregationOverlays.forEach(this.deregisterAggregationOverlay.bind(this));
 		}
 	};
@@ -197,8 +208,258 @@ function(ManagedObject) {
 	Plugin.prototype._onElementOverlayCreated = function(oEvent) {
 		var oOverlay = oEvent.getParameter("elementOverlay");
 
-		this._callElementOverlayRegistrationMethods(oOverlay);
+		this.callElementOverlayRegistrationMethods(oOverlay);
+	};
+
+	/**
+	 * Called to retrieve a context menu item for the plugin.
+	 * Needs to be overriden by extending plugins.
+	 * @returns {array} Empty array
+	 * @protected
+	 */
+	Plugin.prototype.getMenuItems = function() {
+		return [];
+	};
+
+	/**
+	 * Retrieve the action name related to the plugin
+	 * Method to be overwritten by the different plugins
+	 *
+	 * @public
+	 */
+	Plugin.prototype.getActionName = function() {};
+
+	/**
+	 * Indicate if a plugin is currently busy
+	 *
+	 * @returns {boolean} Returns whether the plugin is currently busy
+	 */
+	Plugin.prototype.isBusy = Plugin.prototype.getBusy;
+
+	/**
+	 * Setter for the busy property. Sets a promise internally to be able to wait for a busy plugin
+	 *
+	 * @param {boolean} bBusy - Value for the busy state
+	 * @returns {this} Returns <code>this</code>
+	 */
+	Plugin.prototype.setBusy = function(bBusy) {
+		if (bBusy && !this.getBusy()) {
+			this._oBusyPromise.promise = new Promise(function(resolve) {
+				this._oBusyPromise.resolveFunction = resolve;
+			}.bind(this));
+		} else if (!bBusy && this.getBusy() && this._oBusyPromise.resolveFunction) {
+			this._oBusyPromise.resolveFunction();
+		}
+		this.setProperty("busy", bBusy);
+		return this;
+	};
+
+	/**
+	 * Waits for the busy promise and resolves as soon as the plugin is not busy anymore
+	 *
+	 * @returns {Promise<undefined>} Resolves with undefined
+	 */
+	Plugin.prototype.waitForBusyAction = function() {
+		return this._oBusyPromise.promise || Promise.resolve();
+	};
+
+	/**
+	 * @param {boolean} bProcessing - processing state to set
+	 */
+	Plugin.prototype.setProcessingStatus = function(bProcessing) {
+		this._bProcessingCounter = bProcessing ? this._bProcessingCounter + 1 : this._bProcessingCounter - 1;
+		if (
+			(bProcessing === true && this._bProcessingCounter === 1)
+			|| (bProcessing === false && this._bProcessingCounter === 0)
+		) {
+			this.fireProcessingStatusChange({
+				processing: bProcessing
+			});
+		}
+	};
+
+	/**
+	 * Retrieve the action data from the Designtime Metadata
+	 * @param  {sap.ui.dt.ElementOverlay} oOverlay Overlay containing the Designtime Metadata
+	 * @return {object}          Returns an object with the action data from the Designtime Metadata
+	 */
+	Plugin.prototype.getAction = function(oOverlay) {
+		return oOverlay.getDesignTimeMetadata() ?
+			oOverlay.getDesignTimeMetadata().getAction(this.getActionName(), oOverlay.getElement())
+			: null;
+	};
+
+	/**
+	 * Asks the Design Time which overlays are selected
+	 *
+	 * @return {sap.ui.dt.ElementOverlay[]} selected overlays
+	 */
+	Plugin.prototype.getSelectedOverlays = function() {
+		return this.getDesignTime().getSelectionManager().get();
+	};
+
+	/**
+	 * Retrieve the action text (for context menu item) from the Designtime Metadata
+	 * @param  {sap.ui.dt.ElementOverlay} oOverlay Overlay containing the Designtime Metadata
+	 * @param  {object} mAction The action data from the Designtime Metadata
+	 * @param  {string} sPluginId The ID of the plugin
+	 * @return {string}         Returns the text for the menu item
+	 */
+	Plugin.prototype.getActionText = function(oOverlay, mAction, sPluginId) {
+		var vName = mAction.name;
+		var oElement = oOverlay.getElement();
+		if (vName) {
+			if (typeof vName === "function") {
+				return vName(oElement);
+			}
+			return oOverlay.getDesignTimeMetadata() ? oOverlay.getDesignTimeMetadata().getLibraryText(oElement, vName) : "";
+		}
+		return Lib.getResourceBundleFor("sap.ui.rta").getText(sPluginId);
+	};
+
+	/**
+	 * Checks if the plugin is available for an overlay
+	 * Method to be overwritten by the different plugins
+	 * @param {sap.ui.dt.ElementOverlay[]} aElementOverlays - Overlays to be checked
+	 * @returns {boolean} <code>false</code> by default
+	 */
+	Plugin.prototype.isAvailable = function() {
+		return false;
+	};
+
+	/**
+	 * Executes the plugin action
+	 * Method to be overwritten by the different plugins
+	 * @param {sap.ui.dt.ElementOverlay[]} aElementOverlays - Target overlays
+	 * @override
+	 * @public
+	 */
+	Plugin.prototype.handler = function() {};
+
+	/**
+	 * Checks if the plugin is enabled for a set of overlays
+	 * Method can be overwritten by the different plugins
+	 * @param {sap.ui.dt.ElementOverlay[]} aElementOverlays - Target overlays
+	 * @returns {boolean} <code>true</code> if plugin is enabled
+	 */
+	Plugin.prototype.isEnabled = function(aElementOverlays) {
+		// The default implementation considers only one overlay
+		if (!Array.isArray(aElementOverlays) || aElementOverlays.length > 1) {
+			return false;
+		}
+		var oElementOverlay = aElementOverlays[0];
+		var vAction = this.getAction(oElementOverlay);
+		if (!vAction) {
+			return false;
+		}
+
+		var oElement = oElementOverlay.getElement();
+		if (vAction.isEnabled === undefined) {
+			return true;
+		}
+		if (typeof vAction.isEnabled === "function") {
+			return vAction.isEnabled(oElement);
+		}
+		return vAction.isEnabled;
+	};
+
+	/**
+	 * Generic function to return the menu items for a context menu.
+	 * The text for the item can be defined in the control Designtime Metadata;
+	 * otherwise the default text is used.
+	 * @param {sap.ui.dt.ElementOverlay[]} aElementOverlays - Target overlays
+	 * @param {object} mPropertyBag Additional properties for the menu item
+	 * @param {string} mPropertyBag.pluginId The ID of the plugin
+	 * @param {number} mPropertyBag.rank The rank deciding the position of the action in the context menu
+	 * @param {string} mPropertyBag.icon an icon for the Button inside the context menu
+	 * @return {object[]} Returns an array with the object containing the required data for a context menu item
+	 */
+	Plugin.prototype._getMenuItems = async function(aElementOverlays, mPropertyBag) {
+		var oMenuItem = this.enhanceItemWithResponsibleElement({
+			id: mPropertyBag.pluginId,
+			handler: this.handler.bind(this),
+			enabled: this.isEnabled.bind(this),
+			rank: mPropertyBag.rank,
+			icon: mPropertyBag.icon
+		}, aElementOverlays);
+
+		var aResponsibleElementOverlays = oMenuItem.responsible || aElementOverlays;
+		var oResponsibleElementOverlay = aResponsibleElementOverlays[0];
+
+		if (this._isEditableByPlugin(oResponsibleElementOverlay) === undefined) {
+			// The responsibleElement editableByPlugin state was not evaluated yet e.g. because it
+			// has no visible geometry, thus evaluateEditable now
+			await this.evaluateEditable(aResponsibleElementOverlays, { onRegistration: false });
+		}
+		var mAction = this.getAction(oResponsibleElementOverlay);
+		// For most plugins, the action must be available on the responsible element and the element overlay
+		// because the element overlay is where the action is executed, e.g. rename in anchor bar
+		if (!mAction || !this.isAvailable(aResponsibleElementOverlays) || !this.isAvailable(aElementOverlays)) {
+			return [];
+		}
+
+		oMenuItem.text = this.getActionText(oResponsibleElementOverlay, mAction, mPropertyBag.pluginId);
+		return [oMenuItem];
+	};
+
+	/**
+	 * Returns true if the plugin action from a responsible element is available on the element overlay
+	 *
+	 * @param {sap.ui.dt.ElementOverlay} oElementOverlay - Element overlay
+	 * @param {string} [sActionName] - Action name
+	 * @return {boolean} Indicates if the action is enabled
+	 */
+	Plugin.prototype.isResponsibleElementActionAvailable = function(oElementOverlay, sActionName) {
+		var oDesignTimeMetadata = oElementOverlay.getDesignTimeMetadata();
+		if (oDesignTimeMetadata) {
+			// TODO: support for sub actions required
+			return oDesignTimeMetadata.isResponsibleActionAvailable(sActionName || this.getActionName());
+		}
+		return false;
+	};
+
+	/**
+	 * Generic function to retrieve the responsible element overlay
+	 * from design time metadata of a source element overlay
+	 *
+	 * @param {sap.ui.dt.ElementOverlay} oElementOverlay - Source element overlay
+	 * @return {sap.ui.dt.ElementOverlay} Returns the element overlay of the responsible element
+	 */
+	Plugin.prototype.getResponsibleElementOverlay = function(oElementOverlay) {
+		var oElement = oElementOverlay.getElement();
+		var oDesignTimeMetadata = oElementOverlay.getDesignTimeMetadata();
+		if (oDesignTimeMetadata) {
+			var oResponsibleElement = oDesignTimeMetadata.getResponsibleElement(oElement);
+			if (oResponsibleElement) {
+				try {
+					return OverlayRegistry.getOverlay(oResponsibleElement);
+				} catch (oError) {
+					return oElementOverlay;
+				}
+			}
+		}
+		return oElementOverlay;
+	};
+
+	/**
+	 * Enhances a context menu item with the responsible element overlay if applicable
+	 *
+	 * @param {object} oMenuItem - Menu item
+	 * @param {sap.ui.dt.ElementOverlay[]} aElementOverlays - Source element overlays
+	 * @param {string[]} [aActionNames] - Action names
+	 * @return {object} Enhanced menu item
+	 */
+	Plugin.prototype.enhanceItemWithResponsibleElement = function(oMenuItem, aElementOverlays, aActionNames) {
+		var aResponsibleElementOverlays = [];
+		var aActionsFromResponsibleElement = aActionNames || [this.getActionName()];
+		var bEnhanceMenuItem = aActionsFromResponsibleElement.some(function(sActionName) {
+			if (this.isResponsibleElementActionAvailable(aElementOverlays[0], sActionName)) {
+				aResponsibleElementOverlays = aElementOverlays.map(this.getResponsibleElementOverlay.bind(this));
+				return true;
+			}
+		}.bind(this));
+		return { ...oMenuItem, ...(bEnhanceMenuItem && {responsible: aResponsibleElementOverlays}) };
 	};
 
 	return Plugin;
-}, /* bExport= */ true);
+});

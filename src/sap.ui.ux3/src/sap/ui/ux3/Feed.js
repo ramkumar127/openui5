@@ -3,9 +3,38 @@
  */
 
 // Provides control sap.ui.ux3.Feed.
-sap.ui.define(['jquery.sap.global', 'sap/ui/commons/DropdownBox', 'sap/ui/commons/MenuButton', 'sap/ui/commons/SearchField', 'sap/ui/commons/ToggleButton', 'sap/ui/core/Control', './Feeder', './library'],
-	function(jQuery, DropdownBox, MenuButton, SearchField, ToggleButton, Control, Feeder, library) {
+sap.ui.define([
+    'sap/ui/commons/DropdownBox',
+    'sap/ui/commons/MenuButton',
+    'sap/ui/commons/SearchField',
+    'sap/ui/commons/ToggleButton',
+    'sap/ui/core/Control',
+    './Feeder',
+    './library',
+    './FeedRenderer',
+    'sap/ui/commons/Menu',
+    'sap/ui/core/theming/Parameters',
+    './FeedChunk'
+],
+	function(
+	    DropdownBox,
+		MenuButton,
+		SearchField,
+		ToggleButton,
+		Control,
+		Feeder,
+		library,
+		FeedRenderer,
+		Menu,
+		Parameters,
+		FeedChunk
+	) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.ux3.FeederType
+	var FeederType = library.FeederType;
 
 
 
@@ -26,11 +55,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/DropdownBox', 'sap/ui/common
 	 * @public
 	 * @experimental Since version 1.2.
 	 * The whole Feed/Feeder API is still under discussion, significant changes are likely. Especially text presentation (e.g. @-references and formatted text) is not final. Also the Feed model topic is still open.
+	 * @deprecated Since version 1.38. Instead, use <b>any</b> <code>sap.ui.layout</code> container control.
 	 * @alias sap.ui.ux3.Feed
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Feed = Control.extend("sap.ui.ux3.Feed", /** @lends sap.ui.ux3.Feed.prototype */ { metadata : {
 
+		deprecated: true,
 		library : "sap.ui.ux3",
 		properties : {
 
@@ -146,10 +176,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/DropdownBox', 'sap/ui/common
 	}});
 
 
-	///**
-	// * This file defines behavior for the control,
-	// */
-
 	Feed.prototype.init = function(){
 
 		this.rb = sap.ui.getCore().getLibraryResourceBundle("sap.ui.ux3");
@@ -158,7 +184,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/DropdownBox', 'sap/ui/common
 
 		// init sub-controls
 		this.oFeeder = new Feeder( this.getId() + '-Feeder', {
-			type: sap.ui.ux3.FeederType.Medium
+			type: FeederType.Medium
 		}).setParent(this);
 		this.oFeeder.attachEvent('submit', this.handleFeederSubmit, this); // attach event this way to have the right this-reference in handler
 
@@ -188,18 +214,17 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/DropdownBox', 'sap/ui/common
 			this.oToolsButton = new MenuButton( this.getId() + '-toolsButton', {
 				tooltip: this.rb.getText('FEED_TOOLS'),
 				lite: true,
-				menu: new sap.ui.commons.Menu(this.getId() + '-toolsMenu')
+				menu: new Menu(this.getId() + '-toolsMenu')
 			}).setParent(this);
 			this.oToolsButton.attachEvent('itemSelected', this.handleLtoolsButtonSelected, this); // attach event this way to have the right this-reference in handler
 
-			var sIcon = sap.ui.core.theming.Parameters.get('sap.ui.ux3.Feed:sapUiFeedToolsIconUrl');
-			var sIconHover = sap.ui.core.theming.Parameters.get('sap.ui.ux3.Feed:sapUiFeedToolsIconHoverUrl');
-			var sThemeModuleName = "sap.ui.ux3.themes." + sap.ui.getCore().getConfiguration().getTheme();
+			var sIcon = Parameters._getThemeImage('_sap_ui_ux3_Feed_ToolsIconUrl');
+			var sIconHover = Parameters._getThemeImage('_sap_ui_ux3_Feed_ToolsIconHoverUrl');
 			if (sIcon) {
-				this.oToolsButton.setProperty('icon', jQuery.sap.getModulePath(sThemeModuleName, sIcon), true);
+				this.oToolsButton.setProperty('icon', sIcon, true);
 			}
 			if (sIconHover) {
-				this.oToolsButton.setProperty('iconHovered', jQuery.sap.getModulePath(sThemeModuleName, sIconHover), true);
+				this.oToolsButton.setProperty('iconHovered', sIconHover, true);
 			}
 		}
 
@@ -239,10 +264,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/DropdownBox', 'sap/ui/common
 	Feed.prototype.handleFeederSubmit = function(oEvent){
 
 		var oDate = new Date();
-	//	var sDate = String(oDate.getFullYear()) + String(oDate.getMonth()) + String(oDate.getDate()) + String(oDate.getHours()) + String(oDate.getMinutes()) + String(oDate.getSeconds());
 		var sDate = String(oDate);
 
-		var oNewChunk = new sap.ui.ux3.FeedChunk(this.getId() + '-new-' + this.getChunks().length, {
+		var oNewChunk = new FeedChunk(this.getId() + '-new-' + this.getChunks().length, {
 			text: oEvent.getParameter('text'),
 			commentChunk: false,
 			deletionAllowed: true,
@@ -255,19 +279,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/DropdownBox', 'sap/ui/common
 		this.insertChunk(oNewChunk, 0);
 		this.fireChunkAdded({chunk: oNewChunk});
 
-	};
-
-	/*
-	 * overwrite of setLive
-	 */
-	Feed.prototype.setLive = function(bLive) {
-		this.setProperty("live", bLive, true); //no re-rendering because only ToggleButton is changed
-
-		if (this.oLiveButton) {
-			// update ToggleButton
-			this.oLiveButton.setPressed(bLive);
-		}
-		return this;
 	};
 
 	/**
@@ -491,4 +502,4 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/DropdownBox', 'sap/ui/common
 
 	return Feed;
 
-}, /* bExport= */ true);
+});

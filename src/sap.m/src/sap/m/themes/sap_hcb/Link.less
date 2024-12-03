@@ -1,49 +1,18 @@
-/* ============================================= */
-/* CSS for control sap.m/Link.control            */
-/* High Contrast Black theme                     */
-/* ============================================= */
-
-.sapMLnk {
-	font-size: @sapMFontMediumSize;
-	color: @sapHCStandardFG;
-	text-decoration: underline;
-}
+/* =========================== */
+/* CSS for control sap.m/Link  */
+/* High Contrast Black theme   */
+/* =========================== */
 
 .sapMLnkDsbl, .sapMLnkDsbl:visited {
 	outline: none;
 	cursor: default;
-	color: @sapHCReducedFG;
-	text-decoration: underline;
+	color: @sapUiContentDisabledTextColor;
 }
 
-.sapMLnk:focus:not(.sapMLnkDsbl) {
-	text-decoration: none;
-	outline: 0.125rem dotted @sapHCStandardFG;
-}
-
-.sap-desktop .sapMLnk:hover:not(.sapMLnkDsbl) {
-	text-decoration: none;
+html.sap-desktop .sapMLnk:focus:not(.sapMLnkDsbl) {
+	outline: 0.125rem dotted @sapUiContentFocusColor;
 }
 
 .sapMLnk:hover.sapMLnkDsbl, .sapMLnk:focus.sapMLnkDsbl {
 	outline: none;
 }
-
-.sapUiFormEdit .sapMLnk {
-	line-height: 3rem;
-}
-
-.sapMLnkEmphasized {
-	font-weight: bold;
-}
-
-/* Compact size */
-.sapUiSizeCompact .sapUiFormEdit .sapMLnk {
-	line-height: 2rem;
-}
-
-/* Condensed size */
-.sapUiSizeCondensed .sapUiTableCell>.sapMLnk {
-	.sapUiCondensedTableCellContent; /* see shared.css */
-}
-

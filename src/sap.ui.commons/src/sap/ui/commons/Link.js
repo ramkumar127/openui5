@@ -3,8 +3,14 @@
  */
 
 // Provides control sap.ui.commons.Link.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/core/EnabledPropagator', 'sap/ui/core/LabelEnablement'],
-	function(jQuery, library, Control, EnabledPropagator, LabelEnablement) {
+sap.ui.define([
+	'./library',
+	'sap/ui/core/Control',
+	'sap/ui/core/EnabledPropagator',
+	'sap/ui/core/LabelEnablement',
+	'./LinkRenderer'
+],
+	function(library, Control, EnabledPropagator, LabelEnablement, LinkRenderer) {
 	"use strict";
 
 
@@ -20,23 +26,25 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * Provides an absolute or relative reference to an internal or external URL. The classical target parameters are supported.
 	 * Another usage scenario is triggering an action, for example to open a popup window. In both cases, the link is a hypertext link.
 	 * @extends sap.ui.core.Control
-	 * @implements sap.ui.commons.ToolbarItem,sap.ui.commons.FormattedTextViewControl
+	 * @implements sap.ui.commons.ToolbarItem,sap.ui.commons.FormattedTextViewControl, sap.ui.core.IFormContent
 	 *
 	 * @author SAP SE
 	 * @version ${version}
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38. Instead, use the <code>sap.m.Link</code> control.
 	 * @alias sap.ui.commons.Link
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Link = Control.extend("sap.ui.commons.Link", /** @lends sap.ui.commons.Link.prototype */ { metadata : {
 
 		interfaces : [
 			"sap.ui.commons.ToolbarItem",
-			"sap.ui.commons.FormattedTextViewControl"
+			"sap.ui.commons.FormattedTextViewControl",
+			"sap.ui.core.IFormContent"
 		],
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -103,7 +111,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * @function
 	 * @type void
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 
 
@@ -138,7 +145,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	Link.prototype.onclick = function(oEvent) {
 		if (this.getEnabled()) {
 			// the default behavior will be supressed, when oEvent.preventDefault() is
-			// called or when the link doesn't contain a valid href (javascript:void(0)).
+			// called or when the link doesn't contain a valid href (#)).
 			// The last thing will trigger the onbeforeunload event in IE when not
 			// preventing the default behavior
 			if (!this.firePress() || !this.getHref()) {
@@ -157,6 +164,22 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		oEvent.stopPropagation();
 	};
 
+	/**
+	 * @see sap.ui.core.Control#getAccessibilityInfo
+	 * @returns {sap.ui.core.AccessibilityInfo}
+	 * The object contains the accessibility information of <code>sap.ui.commons.Link</code>
+	 * @protected
+	 */
+	Link.prototype.getAccessibilityInfo = function() {
+		return {
+			role: "link",
+			type: sap.ui.getCore().getLibraryResourceBundle("sap.ui.commons").getText("ACC_CTR_TYPE_LINK"),
+			description: this.getText() || this.getHref() || "",
+			focusable: this.getEnabled(),
+			enabled: this.getEnabled()
+		};
+	};
+
 	return Link;
 
-}, /* bExport= */ true);
+});

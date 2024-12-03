@@ -1,11 +1,10 @@
-/*global history*/
-
 sap.ui.define([
-	'sap/ui/demo/bulletinboard/controller/BaseController',
+	'./BaseController',
 	'sap/ui/model/json/JSONModel',
-	'sap/ui/demo/bulletinboard/model/formatter',
-	'sap/ui/demo/bulletinboard/model/FlaggedType'
-], function (BaseController, JSONModel, formatter, FlaggedType) {
+	'../model/formatter',
+	'../model/FlaggedType',
+	'sap/m/library'
+], function(BaseController, JSONModel, formatter, FlaggedType, mobileLibrary) {
 	"use strict";
 
 	return BaseController.extend("sap.ui.demo.bulletinboard.controller.Worklist", {
@@ -80,13 +79,26 @@ sap.ui.define([
 			this.getModel("worklistView").setProperty("/worklistTableTitle", sTitle);
 		},
 
+		/**
+		 * Event handler when a table item gets pressed
+		 * @param {sap.ui.base.Event} oEvent the table selectionChange event
+		 * @public
+		 */
+		onPress: function (oEvent) {
+			this.getRouter().navTo("post", {
+				// The source is the list item that got pressed
+				postId: oEvent.getSource().getBindingContext().getProperty("PostID")
+			});
+
+		},
+
 		/* =========================================================== */
 		/* internal methods                                            */
 		/* =========================================================== */
 
 		/**
 		 * Sets the item count on the worklist view header
-		 * @param {integer} iTotalItems the total number of items in the table
+		 * @param {int} iTotalItems the total number of items in the table
 		 * @private
 		 */
 		_updateListItemCount: function (iTotalItems) {
@@ -104,12 +116,11 @@ sap.ui.define([
 		 */
 		onShareEmailPress: function () {
 			var oViewModel = this.getModel("worklistView");
-			sap.m.URLHelper.triggerEmail(
+			mobileLibrary.URLHelper.triggerEmail(
 				null,
 				oViewModel.getProperty("/shareSendEmailSubject"),
 				oViewModel.getProperty("/shareSendEmailMessage")
 			);
 		}
 	});
-
 });

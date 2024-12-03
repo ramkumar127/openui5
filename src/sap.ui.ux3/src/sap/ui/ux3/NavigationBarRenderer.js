@@ -3,8 +3,8 @@
  */
 
 // Provides default renderer for the sap.ui.ux3.NavigationBar
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define(["sap/base/security/encodeXML"],
+	function(encodeXML) {
 	"use strict";
 
 
@@ -19,12 +19,11 @@ sap.ui.define(['jquery.sap.global'],
 	/**
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
-	 * @param {sap.ui.core.RenderManager} oRenderManager the RenderManager that can be used for writing to the Render-Output-Buffer
+	 * @param {sap.ui.core.RenderManager} rm the RenderManager that can be used for writing to the Render-Output-Buffer
 	 * @param {sap.ui.core.Control} oControl an object representation of the control that should be rendered
 	 */
-	NavigationBarRenderer.render = function(oRenderManager, oControl) {
+	NavigationBarRenderer.render = function(rm, oControl) {
 		// convenience variable
-		var rm = oRenderManager;
 		var sId = oControl.getId();
 
 		// write the HTML into the render manager
@@ -43,9 +42,9 @@ sap.ui.define(['jquery.sap.global'],
 		rm.write(">");
 		NavigationBarRenderer.renderItems(rm, oControl);
 		rm.write("</ul>");
-		rm.write("<a id='" + sId + "-ofb' role='presentation' class='sapUiUx3NavBarBack' href='javascript:void(0)'>");
-		rm.write("<a id='" + sId + "-off' role='presentation' class='sapUiUx3NavBarForward' href='javascript:void(0)'>");
-		rm.write("<a id='" + sId + "-ofl' role='presentation' class='sapUiUx3NavBarOverflowBtn' href='javascript:void(0)'>");
+		rm.write("<a id='" + sId + "-ofb' role='presentation' class='sapUiUx3NavBarBack' href='#'></a>");
+		rm.write("<a id='" + sId + "-off' role='presentation' class='sapUiUx3NavBarForward' href='#'></a>");
+		rm.write("<a id='" + sId + "-ofl' role='presentation' class='sapUiUx3NavBarOverflowBtn' href='#'>");
 		rm.writeIcon("sap-icon://overflow", [], { id : sId + "-oflt" });
 		rm.write("</a>");
 		rm.write("</nav>");
@@ -94,9 +93,7 @@ sap.ui.define(['jquery.sap.global'],
 				// TL;DR: Not correct, won't fix - because it works and things might depend on the DOM
 				//        being this way.
 				oRm.writeElementData(item);
-				/* eslint-disable no-script-url */
-				oRm.writeAttributeEscaped("href", item.getHref() || "javascript:void(0);");
-				/* eslint-enable no-script-url */
+				oRm.writeAttributeEscaped("href", item.getHref() || '#');
 				oRm.write(" aria-setsize='" + iNoOfItems + "' aria-posinset='" + (i + 1) + "' role='menuitemradio' class='sapUiUx3NavBarItem'");
 				if (bIsSelected) {
 					oRm.write(" tabindex='0'");
@@ -105,11 +102,11 @@ sap.ui.define(['jquery.sap.global'],
 
 				var tooltip = item.getTooltip_AsString();
 				if (tooltip) {
-					oRm.write(" title='" + jQuery.sap.encodeHTML(tooltip) + "'");
+					oRm.write(" title='" + encodeXML(tooltip) + "'");
 				}
 
 				oRm.write(">");
-				oRm.write(jQuery.sap.encodeHTML(item.getText()));
+				oRm.write(encodeXML(item.getText()));
 				oRm.write("</a></li>");
 			}
 		}

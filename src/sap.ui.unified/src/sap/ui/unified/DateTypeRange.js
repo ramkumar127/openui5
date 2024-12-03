@@ -3,9 +3,14 @@
  */
 
 // Provides control sap.ui.unified.DateTypeRange.
-sap.ui.define(['jquery.sap.global', './DateRange', './library'],
-	function(jQuery, DateRange, library) {
+sap.ui.define(['./DateRange', './library'],
+	function(DateRange, library) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.unified.CalendarDayType
+	var CalendarDayType = library.CalendarDayType;
 
 
 
@@ -24,7 +29,6 @@ sap.ui.define(['jquery.sap.global', './DateRange', './library'],
 	 * @public
 	 * @since 1.24.0
 	 * @alias sap.ui.unified.DateTypeRange
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var DateTypeRange = DateRange.extend("sap.ui.unified.DateTypeRange", /** @lends sap.ui.unified.DateTypeRange.prototype */ { metadata : {
 
@@ -34,18 +38,24 @@ sap.ui.define(['jquery.sap.global', './DateRange', './library'],
 			/**
 			 * Type of the date range.
 			 */
-			type : {type : "sap.ui.unified.CalendarDayType", group : "Appearance", defaultValue : sap.ui.unified.CalendarDayType.Type01}
+			type : {type : "sap.ui.unified.CalendarDayType", group : "Appearance", defaultValue : CalendarDayType.Type01},
+
+			/**
+			 * Applies additional <code>sap.ui.unified.CalendarDayType</code>, with which <code>sap.ui.unified.CalendarDayType.NonWorking</code>
+			 * or <code>sap.ui.unified.CalendarDayType.Working</code> types could be represented as well.
+			 * @since 1.81.0
+			 */
+			secondaryType : {type : "sap.ui.unified.CalendarDayType", group : "Appearance", defaultValue : CalendarDayType.None},
+
+			/**
+			 * Background color of the <code>Calendar</code> <code>specialDates</code> aggregation.
+			 * If set, this color will override the default background color defined in <code>Calendar</code> <code>specialDates</code> aggregation
+			 * @since 1.76.0
+			 */
+			color : {type : "sap.ui.core.CSSColor", group : "Appearance", defaultValue : null}
 		}
 	}});
 
-	///**
-	// * This file defines behavior for the control,
-	// */
-	//sap.ui.unified.DateTypeRange.prototype.init = function(){
-	//   // do something for initialization...
-	//};
-
-
 	return DateTypeRange;
 
-}, /* bExport= */ true);
+});

@@ -3,10 +3,13 @@
  */
 
 // Provides control sap.m.List.
-sap.ui.define(['jquery.sap.global', './ListBase', './library'],
-	function(jQuery, ListBase, library) {
+sap.ui.define(["./library", "./ListBase", "./ListRenderer"],
+	function(library, ListBase, ListRenderer) {
 	"use strict";
 
+
+	// shortcut for sap.m.BackgroundDesign
+	var BackgroundDesign = library.BackgroundDesign;
 
 
 	/**
@@ -18,6 +21,10 @@ sap.ui.define(['jquery.sap.global', './ListBase', './library'],
 	 * @class
 	 * The List control provides a container for all types of list items.
 	 * For mobile devices, the recommended limit of list items is 100 to assure proper performance. To improve initial rendering of large lists, use the "growing" feature. Please refer to the SAPUI5 Developer Guide for more information..
+	 *
+	 * See section "{@link topic:1da158152f644ba1ad408a3e982fd3df Lists}"
+	 * in the documentation for an introduction to <code>sap.m.List</code> control.
+	 *
 	 * @extends sap.m.ListBase
 	 *
 	 * @author SAP SE
@@ -26,64 +33,47 @@ sap.ui.define(['jquery.sap.global', './ListBase', './library'],
 	 * @constructor
 	 * @public
 	 * @alias sap.m.List
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
+	 * @see {@link fiori:/list-overview/ List}
 	 */
-	var List = ListBase.extend("sap.m.List", /** @lends sap.m.List.prototype */ { metadata : {
+	var List = ListBase.extend("sap.m.List", /** @lends sap.m.List.prototype */ {
+		metadata : {
 
-		library : "sap.m",
-		properties : {
+			library : "sap.m",
+			properties : {
 
-			/**
-			 * Sets the background style of the list. Depending on the theme, you can change the state of the background from <code>Solid</code> to <code>Translucent</code> or to <code>Transparent</code>.
-			 * @since 1.14
-			 */
-			backgroundDesign : {type : "sap.m.BackgroundDesign", group : "Appearance", defaultValue : sap.m.BackgroundDesign.Solid}
+				/**
+				 * Sets the background style of the list. Depending on the theme, you can change the state of the background from <code>Solid</code> to <code>Translucent</code> or to <code>Transparent</code>.
+				 * @since 1.14
+				 */
+				backgroundDesign : {type : "sap.m.BackgroundDesign", group : "Appearance", defaultValue : BackgroundDesign.Solid}
+			}
 		},
-		aggregations : {
 
-			/**
-			 * Defines columns of the list.
-			 * @deprecated Since version 1.16. Instead, use the <code>sap.m.Table</code> control.
-			 */
-			columns : {type : "sap.m.Column", multiple : true, singularName : "column", deprecated: true}
-		}
-	}});
+		renderer: ListRenderer
+	});
 
-	List.prototype.onBeforeRendering = function() {
-		if (ListBase.prototype.onBeforeRendering) {
-			ListBase.prototype.onBeforeRendering.call(this);
-		}
-
-		// if "columns" aggregation is not in use or incompatible then ignore
-		if (!this.getColumns().length || this._isColumnsIncompatible()) {
-			return;
-		}
-
-		/**
-		 * FIXME: Here to support old API if columns are set
-		 * We are trying to extend renderer to render list as table
-		 * This is so ugly and we need to get rid of it ASAP
-		 */
-		jQuery.sap.require("sap.m.Table");
-		var proto = sap.m.Table.prototype;
-		Object.keys(proto).forEach(function(key) {
-			this[key] = proto[key];
-		}, this);
-
-		/**
-		 * FIXME: Handle different default backgroundDesign value for Table
-		 */
-		if (!this.mProperties.hasOwnProperty("backgroundDesign")) {
-			this.setBackgroundDesign("Translucent");
-		}
-
+	List.prototype.getAriaRole = function() {
+		return this._sAriaRole || "list";
 	};
 
-	// checks if "columns" usage is not compatible anymore
-	List.prototype._isColumnsIncompatible = function() {
-		return sap.ui.getCore().getConfiguration().getCompatibilityVersion("sapMListAsTable").compareTo("1.16") >= 0;
+	/**
+	 * Applies the aria <code>role</code> attribute to the control.
+	 *
+	 * Supported values are:
+	 * <ul>
+	 * <li><code>list</code>: This is the default since version 1.105. The rendered items will have the <code>role="listitem"</code>.</li>
+	 * <li><code>listbox</code>: Legacy support. The rendererd items will have the <code>role="option"</code>.</li>
+	 * </ul>
+	 * <b>Note:</b> This method must be called before the control renders.
+	 * @param {string} sRole role attribute for the control
+	 * @protected
+	 * @ui5-restricted
+	 * @since 1.105
+	 */
+	List.prototype.applyAriaRole = function(sRole) {
+		this._sAriaRole = sRole;
 	};
 
 	return List;
 
-}, /* bExport= */ true);
+});

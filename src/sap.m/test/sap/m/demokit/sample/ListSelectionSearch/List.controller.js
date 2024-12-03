@@ -1,40 +1,38 @@
 sap.ui.define([
-		'jquery.sap.global',
-		'sap/ui/core/mvc/Controller',
-		'sap/ui/model/Filter',
-		'sap/ui/model/json/JSONModel'
-	], function(jQuery, Controller, Filter, JSONModel) {
+	"sap/ui/core/mvc/Controller",
+	"sap/ui/model/Filter",
+	"sap/ui/model/FilterOperator",
+	"sap/ui/model/json/JSONModel"
+], function (Controller, Filter, FilterOperator, JSONModel) {
 	"use strict";
 
-	var ListController = Controller.extend("sap.m.sample.ListSelectionSearch.List", {
+	return Controller.extend("sap.m.sample.ListSelectionSearch.List", {
 
-		onInit : function (evt) {
+		onInit: function () {
 			// set explored app's demo model on this sample
-			var oModel = new JSONModel(jQuery.sap.getModulePath("sap.ui.demo.mock", "/products.json"));
+			var oModel = new JSONModel(sap.ui.require.toUrl("sap/ui/demo/mock/products.json"));
 			this.getView().setModel(oModel);
 		},
 
-		onSearch : function (oEvt) {
-
+		onSearch: function (oEvent) {
 			// add filter for search
 			var aFilters = [];
-			var sQuery = oEvt.getSource().getValue();
+			var sQuery = oEvent.getSource().getValue();
 			if (sQuery && sQuery.length > 0) {
-				var filter = new Filter("Name", sap.ui.model.FilterOperator.Contains, sQuery);
+				var filter = new Filter("Name", FilterOperator.Contains, sQuery);
 				aFilters.push(filter);
 			}
 
 			// update list binding
-			var list = this.getView().byId("idList");
-			var binding = list.getBinding("items");
-			binding.filter(aFilters, "Application");
+			var oList = this.byId("idList");
+			var oBinding = oList.getBinding("items");
+			oBinding.filter(aFilters, "Application");
 		},
 
-		onSelectionChange : function (oEvt) {
-
-			var oList = oEvt.getSource();
-			var oLabel = this.getView().byId("idFilterLabel");
-			var oInfoToolbar = this.getView().byId("idInfoToolbar");
+		onSelectionChange: function (oEvent) {
+			var oList = oEvent.getSource();
+			var oLabel = this.byId("idFilterLabel");
+			var oInfoToolbar = this.byId("idInfoToolbar");
 
 			// With the 'getSelectedContexts' function you can access the context paths
 			// of all list items that have been selected, regardless of any current
@@ -47,9 +45,6 @@ sap.ui.define([
 			oInfoToolbar.setVisible(bSelected);
 			oLabel.setText(sText);
 		}
+
 	});
-
-
-	return ListController;
-
 });

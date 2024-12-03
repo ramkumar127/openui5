@@ -6,30 +6,58 @@
 sap.ui.define([
 	"sap/m/Link",
 	"sap/m/Select",
-	"sap/m/Text",
 	"sap/ui/core/Control",
+	"sap/ui/core/Element",
+	"sap/ui/core/Lib",
 	"sap/ui/core/ResizeHandler",
 	"sap/ui/core/delegate/ItemNavigation",
 	"sap/ui/core/Item",
 	"sap/ui/core/Icon",
 	"sap/ui/Device",
-	"./library"
-], function (Link, Select, Text, Control, ResizeHandler, ItemNavigation, Item, Icon, Device, library) {
+	"./library",
+	"sap/ui/core/InvisibleText",
+	"sap/ui/util/openWindow",
+	"./BreadCrumbsRenderer",
+	"sap/ui/thirdparty/jquery"
+], function(
+	Link,
+	Select,
+	Control,
+	Element,
+	Library,
+	ResizeHandler,
+	ItemNavigation,
+	Item,
+	Icon,
+	Device,
+	library,
+	InvisibleText,
+	openWindow,
+	BreadCrumbsRenderer,
+	jQuery
+) {
 	"use strict";
 
 	/**
-	 * Constructor for a new BreadCrumbs.
+	 * Constructor for a new <code>BreadCrumbs</code>.
 	 *
-	 * @param {string} [sId] id for the new control, generated automatically if no id is given
-	 * @param {object} [mSettings] initial settings for the new control
+	 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
+	 * @param {object} [mSettings] Initial settings for the new control
 	 *
 	 * @class
+	 * Represents the navigation steps up to the current location in the app.
 	 *
-	 * The BreadCrumbs control represents the navigation steps up to the current location in the application and allows
-	 * the user to quickly navigate to a previous location on the path that got him to the current location.
-	 * It has two main modes of operation. One is a trail of links followed by separators (when there's enough space
-	 * for the control to fit on one line), and the other is a dropdown list with the links (when the trail of links
-	 * wouldn't fit on one line).
+	 * <h3>Overview</h3>
+	 *
+	 * The <code>BreadCrumbs</code> control allows the users to quickly navigate to a previous
+	 * location on the path that got them to the current location by choosing the displayed
+	 * navigation steps.
+	 *
+	 * It has two main modes of operation:
+	 * <ul>
+	 * <li>A trail of links followed by separators, when there's enough space for the control to fit on one line.</li>
+	 * <li>A dropdown list with the links, when the trail of links wouldn't fit on one line.</li>
+	 * </ul>
 	 * @extends sap.ui.core.Control
 	 *
 	 * @author SAP SE
@@ -38,7 +66,6 @@ sap.ui.define([
 	 * @public
 	 * @since 1.30
 	 * @alias sap.uxap.BreadCrumbs
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var BreadCrumbs = Control.extend("sap.uxap.BreadCrumbs", /** @lends sap.uxap.BreadCrumbs.prototype */ {
 		metadata: {
@@ -76,13 +103,15 @@ sap.ui.define([
 				 */
 				_overflowSelect: {type: "sap.m.Select", multiple: false, visibility: "hidden"}
 			}
-		}
+		},
+
+		renderer: BreadCrumbsRenderer
 	});
 
 	BreadCrumbs.PAGEUP_AND_PAGEDOWN_JUMP_SIZE = 5;
 
 	BreadCrumbs.prototype.init = function () {
-		this._iREMSize = parseInt(jQuery("body").css("font-size"), 10);
+		this._iREMSize = parseInt(jQuery("body").css("font-size"));
 		this._iContainerMaxHeight = this._iREMSize * 2;
 	};
 
@@ -96,10 +125,10 @@ sap.ui.define([
 	};
 
 	/**
-	 * Handles the the initial mode selection between overflowSelect and normal mode
+	 * Handles the initial mode selection between overflowSelect and normal mode
 	 *
 	 * @private
-	 * @returns {object} this
+	 * @returns {this} this
 	 */
 	BreadCrumbs.prototype._handleInitialModeSelection = function () {
 		if (this._bOnPhone) {
@@ -209,7 +238,7 @@ sap.ui.define([
 	 */
 	BreadCrumbs.prototype._overflowSelectChangeHandler = function (oEvent) {
 		var oSelectedKey = oEvent.getParameter("selectedItem").getKey(),
-			oControl = sap.ui.getCore().byId(oSelectedKey),
+			oControl = Element.getElementById(oSelectedKey),
 			sLinkHref,
 			sLinkTarget;
 
@@ -219,7 +248,7 @@ sap.ui.define([
 			if (sLinkHref) {
 				sLinkTarget = oControl.getTarget();
 				if (sLinkTarget) {
-					window.open(sLinkHref, sLinkTarget);
+					openWindow(sLinkHref, sLinkTarget);
 				} else {
 					window.location.href = sLinkHref;
 				}
@@ -278,7 +307,7 @@ sap.ui.define([
 	/**
 	 * Retrieves the Breadcrumbs jQuery object
 	 *
-	 * @returns {jQuery.Object} breadcrumbs jQuery instance
+	 * @returns {jQuery} breadcrumbs jQuery instance
 	 * @private
 	 */
 	BreadCrumbs.prototype._getBreadcrumbsAsJQueryObject = function () {
@@ -292,7 +321,7 @@ sap.ui.define([
 	/**
 	 * Retrieves the overflowSelect jQuery object
 	 *
-	 * @returns {jQuery.Object} jQuery select object
+	 * @returns {jQuery} jQuery select object
 	 * @private
 	 */
 	BreadCrumbs.prototype._getOverflowSelectAsJQueryObject = function () {
@@ -307,7 +336,7 @@ sap.ui.define([
 	 * Sets the visibility of the Breadcrumbs
 	 *
 	 * @param {boolean} bVisible visibility of breadcrumbs
-	 * @returns {jQuery.Object} $this
+	 * @returns {jQuery} $this
 	 * @private
 	 */
 	BreadCrumbs.prototype._setBreadcrumbsVisible = function (bVisible) {
@@ -331,7 +360,7 @@ sap.ui.define([
 	 * Sets the visibility of the overflowSelect
 	 *
 	 * @param {boolean} bVisible select visibility state
-	 * @returns {*} this
+	 * @returns {this} this
 	 * @private
 	 */
 	BreadCrumbs.prototype._setSelectVisible = function (bVisible) {
@@ -350,7 +379,7 @@ sap.ui.define([
 	/**
 	 * Resets all of the internally cached values used by the control
 	 *
-	 * @returns {object} this
+	 * @returns {this} this
 	 * @private
 	 */
 	BreadCrumbs.prototype._resetControl = function () {
@@ -374,8 +403,8 @@ sap.ui.define([
 	 */
 	BreadCrumbs.prototype._getAriaLabelledBy = function () {
 		if (!this._oAriaLabelledBy) {
-			BreadCrumbs.prototype._oAriaLabelledBy = new sap.ui.core.InvisibleText({
-				text: library.i18nModel.getResourceBundle().getText("BREADCRUMB_TRAIL_LABEL")
+			BreadCrumbs.prototype._oAriaLabelledBy = new InvisibleText({
+				text: Library.getResourceBundleFor("sap.uxap").getText("BREADCRUMB_TRAIL_LABEL")
 			}).toStatic();
 		}
 
@@ -418,7 +447,7 @@ sap.ui.define([
 	 * Configures the Keyboard handling for the control
 	 *
 	 * @private
-	 * @returns {object} this
+	 * @returns {this} this
 	 */
 	BreadCrumbs.prototype._configureKeyboardHandling = function () {
 		var oItemNavigation = this._getItemNavigation(),
@@ -428,7 +457,7 @@ sap.ui.define([
 			aNavigationDomRefs = [];
 
 		aItemsToNavigate.forEach(function (oItem) {
-			oItem.$().attr("tabIndex", "-1");
+			oItem.$().attr("tabindex", "-1");
 			aNavigationDomRefs.push(oItem.getDomRef());
 		});
 

@@ -3,10 +3,15 @@
  */
 
 // Provides class sap.ui.core.util.LibraryInfo
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
-	function(jQuery, BaseObject/* , jQuerySap */) {
+sap.ui.define([
+	'sap/ui/base/Object',
+	"sap/base/Log",
+	"sap/base/util/fetch",
+	"sap/base/util/Version",
+	"sap/ui/thirdparty/jquery"
+],
+	function(BaseObject, Log, fetch, Version, jQuery) {
 	"use strict";
-
 
 	/**
 	 * Provides library information.
@@ -15,7 +20,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
 	 * @extends sap.ui.base.Object
 	 * @author SAP SE
 	 * @version ${version}
-	 * @constructor
 	 * @private
 	 * @alias sap.ui.core.util.LibraryInfo
 	 */
@@ -40,37 +44,50 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
 		sLibraryName = sLibraryName.replace(/\//g, ".");
 
 		if (this._oLibInfos[sLibraryName]) {
-			jQuery.sap.delayedCall(0, window, fnCallback, [this._oLibInfos[sLibraryName]]);
+			setTimeout(fnCallback.bind(window, this._oLibInfos[sLibraryName]), 0);
 			return;
 		}
 
 		var that = this,
 		    sUrl,
 		    sLibraryType,
-		    aParts = /themelib_(.*)/i.exec(sLibraryName);
+		    aParts = /themelib_(.*)/i.exec(sLibraryName),
+		    sRequestUrl;
+
 		if (!aParts) {
 			// UI library
 			sLibraryType = ".library";
-			sUrl = jQuery.sap.getModulePath(sLibraryName, '/');
+			sUrl = sap.ui.require.toUrl(sLibraryName.replace(/\./g, "/")) + "/";
 		} else {
 			// theme library
 			sLibraryType = ".theme";
-			sUrl = jQuery.sap.getModulePath("sap.ui.core", '/themes/' + aParts[1] + "/");
+			sUrl = sap.ui.require.toUrl("sap/ui/core/themes/" + aParts[1] + "/");
 		}
 
-		jQuery.ajax({
-			url : sUrl + sLibraryType,
-			dataType : "xml",
-			error : function(xhr, status, e) {
-				jQuery.sap.log.error("failed to load library details from '" + sUrl + sLibraryType + ": " + status + ", " + e);
-				that._oLibInfos[sLibraryName] = {name: sLibraryName, data: null, url: sUrl};
-				fnCallback(that._oLibInfos[sLibraryName]);
-			},
-			success : function(oData, sStatus, oXHR) {
-				that._oLibInfos[sLibraryName] = {name: sLibraryName, data: oData, url: sUrl};
-				fnCallback(that._oLibInfos[sLibraryName]);
+		sRequestUrl = typeof that.getResourceUrl === "function" ? that.getResourceUrl(sUrl) : sUrl;
+
+		function fnErrorCallback(error) {
+			Log.error("failed to load library details from '" + sUrl + sLibraryType + ": " + error.message + ", " + error);
+			that._oLibInfos[sLibraryName] = {name: sLibraryName, data: null, url: sUrl};
+			fnCallback(that._oLibInfos[sLibraryName]);
+		}
+
+		fetch(sRequestUrl + sLibraryType, {
+			headers: {
+				Accept: fetch.ContentTypes.XML
 			}
-		});
+		}).then(function(response) {
+			if (response.ok) {
+				return response.text().then(function(responseText) {
+					var parser = new DOMParser();
+					var oData = parser.parseFromString(responseText, "text/xml");
+					that._oLibInfos[sLibraryName] = {name: sLibraryName, data: oData, url: sUrl};
+					fnCallback(that._oLibInfos[sLibraryName]);
+				});
+			} else {
+				throw new Error(response.statusText || response.status);
+			}
+		}).catch(fnErrorCallback);
 	};
 
 
@@ -122,6 +139,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
 
 
 	LibraryInfo.prototype._getDocuIndex = function(sLibraryName, fnCallback) {
+		var that = this;
 		this._loadLibraryMetadata(sLibraryName, function(oData){
 			var lib = oData.name,
 				libUrl = oData.url,
@@ -144,23 +162,33 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
 				sUrl = oData.url + sUrl;
 			}
 
-			jQuery.ajax({
-				url : sUrl,
-				dataType : "json",
-				error : function(xhr, status, e) {
-					jQuery.sap.log.error("failed to load library docu from '" + sUrl + "': " + status + ", " + e);
-					fnCallback(result);
-				},
-				success : function(oData, sStatus, oXHR) {
-					oData.library = lib;
-					oData.libraryUrl = libUrl;
-					fnCallback(oData);
+			if (typeof that.getResourceUrl === "function") {
+				sUrl = that.getResourceUrl(sUrl);
+			}
+
+			fetch(sUrl, {
+				headers: {
+					Accept: fetch.ContentTypes.JSON
 				}
+			}).then(function(response) {
+				if (response.ok) {
+					response.json().then(function(oData) {
+						oData.library = lib;
+						oData.libraryUrl = libUrl;
+						fnCallback(oData);
+					});
+				} else {
+					throw new Error(response.statusText || response.status);
+				}
+			}).catch(function(error) {
+				Log.error("failed to load library docu from '" + sUrl + "': " + error.message + ", " + error);
+				fnCallback(result);
 			});
 		});
 	};
 
 	LibraryInfo.prototype._getReleaseNotes = function(sLibraryName, sVersion, fnCallback) {
+		var that = this;
 		this._loadLibraryMetadata(sLibraryName, function(oData){
 
 			if (!oData.data) {
@@ -168,7 +196,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
 				return;
 			}
 
-			var oVersion = jQuery.sap.Version(sVersion);
+			var bIsNeoAppJsonPresent = (sVersion.split(".").length === 3) && !(/-SNAPSHOT/.test(sVersion));
+
+			var oVersion = Version(sVersion);
 
 			var iMajor = oVersion.getMajor();
 			var iMinor = oVersion.getMinor();
@@ -177,8 +207,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
 			var $Doc = jQuery(oData.data).find("appData").find("releasenotes");
 			var sUrl = $Doc.attr("url");
 
+			var bResourceUrlAvailable = typeof that.getResourceUrl === "function";
+
 			if (!sUrl) {
-				jQuery.sap.log.warning("failed to load release notes for library " + sLibraryName );
+				Log.warning("failed to load release notes for library " + sLibraryName );
 				fnCallback({});
 				return;
 			}
@@ -193,44 +225,61 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
 				sVersion = iMajor + "." + iMinor + "." + iPatch;
 			}
 
-			// replace the placeholders for major, minor and patch
-			sUrl = sUrl.replace("{major}", iMajor);
-			sUrl = sUrl.replace("{minor}", iMinor);
-			sUrl = sUrl.replace("{patch}", iPatch);
-
 			// if the URL should be resolved against the library the URL
 			// is relative to the library root path
+
+			var sBaseUrl = bResourceUrlAvailable ? that.getResourceUrl("") : window.location.href,
+				regexBaseUrl = /\/\d\.\d+\.\d+\//;
+
 			if ($Doc.attr("resolve") == "lib") {
-				sUrl = oData.url + sUrl;
+				if (regexBaseUrl.test(sBaseUrl) || bIsNeoAppJsonPresent === false) {
+					sUrl = oData.url + sUrl;
+				} else {
+					sUrl = "{major}.{minor}.{patch}/" + oData.url + sUrl;
+				}
 			}
 
-			// load the changelog/releasenotes
-			jQuery.ajax({
-				url : sUrl,
-				dataType : "json",
-				error : function(xhr, status, e) {
-					if (status === "parsererror") {
-						jQuery.sap.log.error("failed to parse release notes for library '" + sLibraryName + ", " + e);
-					} else {
-						jQuery.sap.log.warning("failed to load release notes for library '" + sLibraryName + ", " + e);
-					}
-					fnCallback({});
-				},
-				success : function(oData, sStatus, oXHR) {
-					// in case of a version is specified we return only the content
-					// of the specific version instead of the full data of the release notes file.
-					fnCallback(oData, sVersion);
-				}
-			});
+			// replace the placeholders for major, minor and patch
+			sUrl = sUrl.replace(/\{major\}/g, iMajor);
+			sUrl = sUrl.replace(/\{minor\}/g, iMinor);
+			sUrl = sUrl.replace(/\{patch\}/g, iPatch);
 
+
+			if (bResourceUrlAvailable) {
+				sUrl = that.getResourceUrl(sUrl);
+			}
+
+			// load the changelog
+			fetch(sUrl, {
+				headers: {
+					Accept: fetch.ContentTypes.JSON
+				}
+			}).then(function(response) {
+				if (response.ok) {
+					return response.json().then(function(oData) {
+						// in case of a version is specified we return only the content
+						// of the specific version instead of the full data of the release notes file.
+						fnCallback(oData, sVersion);
+					});
+				} else {
+					throw new Error(response.statusText || response.status);
+				}
+			}).catch(function(error) {
+				if (error.name === "SyntaxError") {
+					Log.error("failed to parse release notes for library '" + sLibraryName + ", " + error);
+				} else {
+					Log.warning("failed to load release notes for library '" + sLibraryName + ", " + error);
+				}
+				fnCallback({});
+			});
 		});
 	};
 
 	/**
-	*Collect components from .library file
-	*@param {object} oData xml formatted object of .library file
-	*@return {array.<Object>} library component info or empty string
-	*/
+	 *Collect components from .library file
+	 *@param {object} oData xml formatted object of .library file
+	 *@return {Array.<Object>} library component info or empty string
+	 */
 
 	LibraryInfo.prototype._getLibraryComponentInfo = function(oData) {
 		var oAllLibComponents = {};
@@ -246,18 +295,19 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
 					vCurrentComponentName = vCurrentComponentName[0].textContent;
 					var vCurrentModules = oCurrentComponent.getElementsByTagName("module");
 					if (vCurrentComponentName && vCurrentModules && vCurrentModules.length > 0) {
-						var sConcatenatedModules = "";
+						var aModules = [];
 						for (var i = 0; i < vCurrentModules.length; i++) {
 							var sModule = vCurrentModules[i].textContent.replace(/\//g, ".");
 							if (sModule) {
-								sConcatenatedModules = sConcatenatedModules + "," + sModule;
+								aModules.push(sModule);
 							}
 						}
 
-						if (sConcatenatedModules) {
-							sConcatenatedModules = sConcatenatedModules.replace(/^,/, ''); // remove first comma
-							var oTemp = { "component" : vCurrentComponentName, "modules" : sConcatenatedModules };
-							aComponentModules.push(oTemp);
+						if (aModules.length > 0) {
+							aComponentModules.push({
+								"component": vCurrentComponentName,
+								"modules" : aModules
+							});
 						}
 					}
 				}
@@ -273,59 +323,70 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Object', 'jquery.sap.script'],
 	};
 
 	/**
-	* Return the control's component for Ownership app (TeamApp) & Explored app (Demokit)
-	*
-	* @param {array.<Object>} oComponentInfos object for each library with the default component and special cases
-	* @param {string} sModuleName control name, e.g. sap.m.Button
-	* @return {string} component
-	* @private
-	*/
+	 * Return the control's component for Ownership app (TeamApp) & Explored app (Demokit)
+	 *
+	 * @param {Array.<Object>} oComponentInfos object for each library with the default component and special cases
+	 * @param {string} sModuleName control name, e.g. sap.m.Button
+	 * @return {string} component
+	 * @private
+	 */
 	LibraryInfo.prototype._getActualComponent = function(oComponentInfos, sModuleName) {
+
+		function match(sModuleName, sPattern) {
+			sModuleName = sModuleName.toLowerCase();
+			sPattern = sPattern.toLowerCase();
+			return (
+				sModuleName === sPattern
+				|| sPattern.match(/\*$/) && sModuleName.indexOf(sPattern.slice(0,-1)) === 0 // simple prefix match
+				|| sPattern.match(/\.\*$/) && sModuleName === sPattern.slice(0,-2) // directory pattern also matches directory itself
+			);
+		}
+
 		if (sModuleName) {
 			for (var key in oComponentInfos) {
 				if (!oComponentInfos[key]) {
-					// If no data wasn't found for the current component.
+					// check whether no data was found for the current component.
 					// This might be the case if the corresponding library info isn't deployed on the current server.
-					jQuery.sap.log.error("No library information deployed for " + key);
+					Log.error("No library information deployed for " + key);
+					continue;
 				}
 
-				if (sModuleName.indexOf(key) === 0 && oComponentInfos[key]) {
-					//check for special modules
-					var bSpecialModule = false;
-					var oSpecCases = oComponentInfos[key].specialCases;
-					var sSpecComponent = "";
-					var aSpecModules = [];
+				var sComponent;
 
-					if (oSpecCases) {
-						for (var i = 0; i < oSpecCases.length; i++) {
-							aSpecModules = oSpecCases[i].modules.split(",");
+				// when the module name starts with the library name, then the default component applies
+				if ( sModuleName.indexOf(key) === 0 ) {
+					sComponent = oComponentInfos[key].defaultComponent;
+				}
 
-							for (var j = 0; j < aSpecModules.length; j++) {
-								if (sModuleName === aSpecModules[j]) {
-									sSpecComponent = oSpecCases[i].component;
-									bSpecialModule = true;
-									break;
-								}
+				// always check the special rules
+				var oSpecCases = oComponentInfos[key].specialCases;
+				if (oSpecCases) {
+					for (var i = 0; i < oSpecCases.length; i++) {
+
+						var aSpecModules = oSpecCases[i].modules;
+						for (var j = 0; j < aSpecModules.length; j++) {
+							if ( match(sModuleName, aSpecModules[j]) ) {
+								sComponent = oSpecCases[i].component;
 							}
 						}
-					}
 
-					if (bSpecialModule) {
-						return sSpecComponent;
-					} else {
-						return oComponentInfos[key].defaultComponent;
 					}
 				}
+
+				if ( sComponent ) {
+					// if any component (default or special) was found, return it
+					return sComponent;
+				}
+
 			}
 		}
 	};
 
 	/**
-	*Return the default library's component for Version Info (Demokit)
-	*@param {array.<Object>} oLibraryInfo array with all library information, e.g componentInfo, releasenotes and etc
-	*@return {string} component
-	*/
-
+	 * Return the default library's component for Version Info (Demokit)
+	 * @param {Array.<Object>} oLibraryInfo array with all library information, e.g componentInfo, releasenotes and etc
+	 * @return {string} component
+	 */
 	LibraryInfo.prototype._getDefaultComponent = function(oLibraryInfo) {
 		return oLibraryInfo && oLibraryInfo.componentInfo && oLibraryInfo.componentInfo.defaultComponent;
 	};

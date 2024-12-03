@@ -8,7 +8,7 @@
 		width="100%">
 		<l:content>
 			<Link
-				text="Click me"
+				text="Open message box"
 				press="handleLinkPress" />
 			<Link
 				text="Disabled link"
@@ -16,6 +16,26 @@
 			<Link
 				text="Open SAP Homepage"
 				target="_blank"
+				href="http://www.sap.com" />
+		</l:content>
+	</l:VerticalLayout>
+
+	<l:VerticalLayout
+		class="sapUiContentPadding"
+		width="100%">
+		<l:content>
+			<Label text="Links with Icons" design="Bold" wrapping="true" class="sapUiSmallMarginTop"/>
+			<Link
+				text="Show more information"
+				endIcon="sap-icon://inspect"
+				press="handleLinkPress" />
+			<Link
+				text="Disabled link with icon"
+				icon="sap-icon://cart"
+				enabled="false" />
+			<Link
+				text="Open SAP Homepage"
+				icon="sap-icon://globe"
 				href="http://www.sap.com" />
 		</l:content>
 	</l:VerticalLayout>

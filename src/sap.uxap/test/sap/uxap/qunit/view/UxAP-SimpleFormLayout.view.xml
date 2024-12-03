@@ -1,5 +1,5 @@
-<core:View
-		xmlns:core="sap.ui.core"
+<mvc:View
+		xmlns:mvc="sap.ui.core.mvc"
 		xmlns="sap.uxap"
 		xmlns:m="sap.m"
 		xmlns:html="http://www.w3.org/1999/xhtml"
@@ -26,7 +26,20 @@
 					</ObjectPageSubSection>
 				</subSections>
 			</ObjectPageSection>
+			<ObjectPageSection title="Employment">
+				<subSections>
+					<ObjectPageSubSection title="Employment">
+						<blocks>
+							<formblocks:EmploymentSimpleFormBlock id="employmentSimpleFormBlock" columnLayout="2"/>
+							<testblocks:BasicDivBlock/>
+							<testblocks:BasicDivBlock/>
+							<testblocks:BasicDivBlock/>
+							<testblocks:BasicDivBlock/>
+						</blocks>
+					</ObjectPageSubSection>
+				</subSections>
+			</ObjectPageSection>
 		</sections>
 	</ObjectPageLayout>
 
-</core:View>
+</mvc:View>

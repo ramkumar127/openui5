@@ -2,98 +2,146 @@
  * ${copyright}
  */
 sap.ui.define([
-		'sap/m/Dialog',
-		'sap/m/MessageBox',
-		'sap/ui/core/mvc/Controller',
-		'sap/ui/model/json/JSONModel'
-	], function(Dialog, MessageBox, Controller, JSONModel) {
+	"sap/base/Log",
+	"sap/m/MessageBox",
+	"sap/ui/core/mvc/Controller",
+	"sap/ui/model/Sorter",
+	"sap/ui/model/json/JSONModel",
+	"sap/ui/test/TestUtils"
+], function (Log, MessageBox, Controller, Sorter, JSONModel, TestUtils) {
 	"use strict";
 
-	function onRejected(oError) {
-		MessageBox.alert(oError.message, {
-			icon : sap.m.MessageBox.Icon.ERROR,
-			title : oError.isConcurrentModification
-				? "Concurrent Modification"
-				: "Unknown Error"
-		});
-	}
-
-	var MainController = Controller.extend("sap.ui.core.sample.odata.v4.ListBinding.Main", {
-		onBeforeRendering : function () {
-			var oView = this.getView();
-
-			oView.setBusy(true);
-
-			function setTeamContext() {
-				var oEmployees = oView.byId("Employees"),
-					oTeamContext = oView.byId("TeamSelect").getBinding("items").getContexts()[0];
-
-				oView.byId("TeamDetails").setBindingContext(oTeamContext);
-				oEmployees.setBindingContext(oTeamContext);
-				oEmployees.getBinding("items").attachEventOnce("change", setEmployeeContext);
-			}
-
-			function setEmployeeContext() {
-				var oEmployeesControl = oView.byId("Employees"),
-					oEmployeeContext = oEmployeesControl.getBinding("items").getContexts()[0];
-
-				oView.byId("EmployeeEquipments").setBindingContext(oEmployeeContext);
-				oEmployeesControl.setSelectedItem(oEmployeesControl.getItems()[0]);
-				oView.setBusy(false);
-			}
-
-			//TODO: as long as there is no dataReceived event in V4 we attach to "change"
-			oView.byId("TeamSelect").getBinding("items").attachEventOnce("change", setTeamContext);
+	return Controller.extend("sap.ui.core.sample.odata.v4.ListBinding.Main", {
+		cancelChangeTeamBudget : function () {
+			this.byId("ChangeTeamBudgetDialog").close();
 		},
 
-		onCancelEmployee : function (oEvent) {
-			var oCreateEmployeeDialog = this.getView().byId("createEmployeeDialog");
-
-			oCreateEmployeeDialog.close();
+		cancelChangeManagerOfTeam : function () {
+			this.byId("ChangeManagerOfTeamDialog").close();
 		},
 
-		onCreateEmployee : function (oEvent) {
-			var oCreateEmployeeDialog = this.getView().byId("createEmployeeDialog");
+		changeTeamBudget : function () {
+			var oView = this.getView(),
+				oDialog = oView.byId("ChangeTeamBudgetDialog");
 
-			oCreateEmployeeDialog.setModel(new JSONModel({
-				"ENTRYDATE" : "2015-10-01"
-			}), "new");
-			oCreateEmployeeDialog.open();
+			oDialog.getObjectBinding().invoke().then(function () {
+					var oBinding = oView.byId("Budget").getBinding("text");
+
+					oBinding.setContext(null);
+					oBinding.setContext(oDialog.getBindingContext());
+					MessageBox.success("Budget changed");
+				});
+			oView.byId("ChangeTeamBudgetDialog").close();
+		},
+
+		changeManagerOfTeam : function () {
+			var oView = this.getView(),
+				that = this;
+
+			this.oChangeManager.invoke().then(function () {
+					var oControl = oView.byId("ManagerID");
+
+					// set text to the operation result
+					oControl.bindProperty("text", "MANAGER_ID");
+					oControl.getBinding("text").setContext(null);
+					oControl.getBinding("text").setContext(that.oChangeManager.getBoundContext());
+					MessageBox.success("Manager changed");
+				});
+			oView.byId("ChangeManagerOfTeamDialog").close();
+		},
+
+		getEmployeeByID : function () {
+			var oOperation = this.byId("GetEmployeeByID").getObjectBinding();
+
+			oOperation.setParameter("EmployeeID",
+					this.getView().getModel("ui").getProperty("/EmployeeID"))
+				.invoke()
+				.catch(function (oError) {
+					MessageBox.success(oError.message);
+				});
+		},
+
+		getEmployeeMaxAge : function () {
+			this.byId("GetEmployeeMaxAge").getObjectBinding().invoke();
+		},
+
+		onCancel : function () {
+			this.getView().getModel().resetChanges();
 		},
 
 		onDeleteEmployee : function (oEvent) {
 			var oEmployeeContext = oEvent.getSource().getBindingContext();
 
-			oEmployeeContext.getModel().remove(oEmployeeContext).then(function () {
-				MessageBox.alert(oEmployeeContext.getPath(), {
-					icon : sap.m.MessageBox.Icon.SUCCESS,
-					title : "Success"});
-			}, onRejected);
+			oEmployeeContext.delete(oEmployeeContext.getModel().getGroupId()).then(function () {
+				MessageBox.success(oEmployeeContext.getPath());
+			});
 		},
 
 		onEmployeeSelect : function (oEvent) {
 			var oContext = oEvent.getParameters().listItem.getBindingContext();
-			this.getView().byId("EmployeeEquipments").setBindingContext(oContext);
+
+			this.byId("EmployeeEquipments").setBindingContext(oContext);
 		},
 
-		onGetEmployeeMaxAge : function (oEvent) {
-			this.getView().byId("GetEmployeeMaxAge").getObjectBinding().execute();
+		onEquipmentsChanged : function (oEvent) {
+			var sReason = oEvent.getParameter("reason");
+
+			Log.info("Change event on Equipment list binding received with reason: '"
+				+ sReason + "'", "sap.ui.core.sample.odata.v4.ListBinding.Main");
 		},
 
-		onSaveEmployee : function (oEvent) {
-			var oCreateEmployeeDialog = this.getView().byId("createEmployeeDialog"),
-				oEmployeeData = oCreateEmployeeDialog.getModel("new").getObject("/"),
-				that = this;
+		onEquipmentsRefresh : function () {
+			this.byId("Equipments").getBinding("items").refresh();
+		},
 
-			//TODO validate oEmployeeData according to types
-			//TODO deep create incl. LOCATION etc.
+		onExit : function () {
+			this.getView().getModel("ui").destroy();
+			return Controller.prototype.onExit.apply(this, arguments);
+		},
 
-			this.getView().getModel().create("/EMPLOYEES", oEmployeeData).then(function (oData) {
-				MessageBox.alert(JSON.stringify(oData), {
-					icon : sap.m.MessageBox.Icon.SUCCESS,
-					title : "Success"});
-				that.onCancelEmployee();
-			}, onRejected);
+		onInit : function () {
+			var oView = this.getView();
+
+			oView.setModel(new JSONModel({
+				EmployeeID : null,
+				Employees : {
+					AGE : {icon : "sap-icon://sort-ascending", desc : false},
+					Name : {icon : "", desc : undefined}
+				},
+				Equipments : {
+					Category : {icon : "sap-icon://sort-ascending", desc : false},
+					ID : {icon : "", desc : undefined},
+					Name : {icon : "", desc : undefined},
+					EmployeeId : {icon : "", desc : undefined}
+				},
+				bRealOData : TestUtils.isRealOData()
+			}), "ui");
+			this.mSorters = {
+				Employees : [new Sorter("AGE", /*bDescending*/false)],
+				Equipments : [new Sorter("Category", /*bDescending*/false, /*bGroup*/true)]
+			};
+		},
+
+		onRefresh : function () {
+			var oModel = this.getView().getModel();
+
+			if (oModel.hasPendingChanges()) {
+				MessageBox.error("Cannot refresh due to pending changes");
+			} else {
+				oModel.refresh();
+			}
+		},
+
+		onSave : function () {
+			var oModel = this.getView().getModel();
+
+			// TODO this should be the default for submitBatch
+			oModel.submitBatch(oModel.getUpdateGroupId()).then(function () {
+				// TODO the success handler could get all errors of failed parts
+				MessageBox.success("Changes have been saved");
+			}, function (oError) {
+				MessageBox.error(oError.message);
+			});
 		},
 
 		onTeamSelect : function (oEvent) {
@@ -104,7 +152,8 @@ sap.ui.define([
 
 			function setEquipmentContext() {
 				var oEquipmentControl = oView.byId("EmployeeEquipments");
-				oEquipmentControl.setBindingContext(oEmployeesBinding.getContexts()[0]);
+
+				oEquipmentControl.setBindingContext(oEmployeesBinding.getCurrentContexts()[0]);
 				oEmployeesControl.setSelectedItem(oEmployeesControl.getItems()[0]);
 			}
 
@@ -113,21 +162,129 @@ sap.ui.define([
 			oView.byId("TeamDetails").setBindingContext(oTeamContext);
 		},
 
-		onUpdateEmployee : function (oEvent) {
-			var oEmployeeContext = oEvent.getSource().getBindingContext(),
-				aItems = this.getView().byId("Employees").getItems();
+		onTeamsRequested : function () {
+			this.getView().setBusy(true);
+		},
 
-			oEmployeeContext.getModel().read(oEmployeeContext.getPath(), true)
-				.then(function (oEntityInstance) {
-					oEntityInstance["@odata.etag"] = "W/\"19700000000000.0000000\"";
+		onTeamsReceived : function () {
+			var oView = this.getView();
 
-					// have "ETag" column check for updates
-					aItems.forEach(function (oItem) {
-						oItem.getCells()[5].getBinding("text").checkUpdate();
-					});
+			oView.loaded().then(function () {
+				var oEmployeesTable = oView.byId("Employees"),
+					oFirstTeam
+						= oView.byId("TeamSelect").getBinding("items").getCurrentContexts()[0];
+
+				oView.setBusy(false);
+				oView.byId("TeamDetails").setBindingContext(oFirstTeam);
+				oEmployeesTable.getBinding("items").attachEventOnce("change", function () {
+					var oFirstEmployee = oEmployeesTable.getItems()[0];
+
+					if (oFirstEmployee) {
+						oView.byId("EmployeeEquipments").setBindingContext(
+							oFirstEmployee.getBindingContext());
+						oEmployeesTable.setSelectedItem(oFirstEmployee);
+					}
 				});
+				oEmployeesTable.setBindingContext(oFirstTeam);
+			});
+		},
+
+		openChangeTeamBudgetDialog : function () {
+			var oTeamContext = this.byId("TeamDetails").getBindingContext();
+
+			// set default values for operation parameters
+			this.byId("ChangeTeamBudgetDialog").getObjectBinding()
+				.setParameter("TeamID", oTeamContext.getProperty("Team_Id"))
+				.setParameter("Budget", oTeamContext.getProperty("Budget"));
+
+			this.byId("ChangeTeamBudgetDialog").open();
+		},
+
+		openChangeManagerOfTeamDialog : function () {
+			var oView = this.getView(),
+				oTeamContext = oView.byId("TeamDetails").getBindingContext();
+
+			this.oChangeManager ??= oView.getModel("parameterContext").bindContext(
+					"com.sap.gateway.default.iwbep.tea_busi.v0001.AcChangeManagerOfTeam(...)");
+
+			// operation is bound switch the context
+			this.oChangeManager.setContext(oTeamContext);
+			// set default values for operation parameters
+			this.oChangeManager.setParameter(
+				"ManagerID", oTeamContext.getProperty("TEAM_2_MANAGER/ID"));
+
+			oView.byId("ChangeManagerOfTeamDialog")
+				.setBindingContext(this.oChangeManager.getParameterContext(), "parameterContext")
+				.open();
+		},
+
+		// *********************************************************************************
+		// sort on absolute binding
+		// *********************************************************************************
+		onSort : function (oEvent) {
+			var oBinding,
+				mCustomData = {},
+				sId,
+				sNewIcon,
+				sProperty,
+				aSelectedContexts,
+				sSelectedId,
+				bSortDesc,
+				oTable,
+				oUiModel = this.getView().getModel("ui");
+
+			oEvent.getSource().getCustomData().forEach(function (oCustomData) {
+				mCustomData[oCustomData.getKey()] = oCustomData.getValue();
+			});
+			sId = mCustomData.sorterControlId;
+			sProperty = mCustomData.sorterPath;
+
+			// update sort model state
+			bSortDesc = oUiModel.getProperty("/" + sId + "/" + sProperty + "/desc");
+			// choose next sort order: no sort -> ascending -> descending -> no sort
+			if (bSortDesc === undefined) {
+				sNewIcon = "sap-icon://sort-ascending";
+				bSortDesc = false;
+			} else if (bSortDesc === false) {
+				sNewIcon = "sap-icon://sort-descending";
+				bSortDesc = true;
+			} else {
+				sNewIcon = "";
+				bSortDesc = undefined;
+			}
+			oUiModel.setProperty("/" + sId + "/" + sProperty + "/desc", bSortDesc);
+			oUiModel.setProperty("/" + sId + "/" + sProperty + "/icon", sNewIcon);
+
+			// remove sorter for same path
+			this.mSorters[sId] = this.mSorters[sId].filter(function (oSorter) {
+				return oSorter.sPath !== sProperty;
+			});
+			// add sorter if necessary before all others
+			if (bSortDesc !== undefined) {
+				// do grouping only for equipments
+				this.mSorters[sId].unshift(new Sorter(sProperty, bSortDesc, sId === "Equipments"));
+			}
+
+			oTable = this.byId(sId);
+			aSelectedContexts = oTable.getSelectedContexts();
+			oBinding = oTable.getBinding("items");
+			// restore selection after sort
+			if (aSelectedContexts.length > 0) {
+				// same property for equipment and employee
+				sSelectedId = aSelectedContexts[0].getProperty("ID");
+			}
+			oBinding.attachEventOnce("change", function () {
+				oTable.removeSelections(true);
+				oBinding.getCurrentContexts().some(function (oContext, i) {
+					if (oContext.getProperty("ID") === sSelectedId) {
+						oTable.setSelectedItem(oTable.getItems()[i]);
+						return true;
+					}
+					return false;
+				});
+			});
+
+			oBinding.sort(this.mSorters[sId]);
 		}
 	});
-
-	return MainController;
 });

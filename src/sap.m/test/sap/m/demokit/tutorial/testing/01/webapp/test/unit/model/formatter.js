@@ -1,38 +1,37 @@
-sap.ui.require(
-	[
-		"sap/ui/demo/bulletinboard/model/formatter"
-	],
-	function (formatter) {
-		"use strict";
+/*global QUnit*/
 
-		QUnit.module("Number unit");
+sap.ui.define([
+	"sap/ui/demo/bulletinboard/model/formatter"
+], function (formatter) {
+	"use strict";
 
-		function numberUnitValueTestCase(assert, sValue, fExpectedNumber) {
-			// Act
-			var fNumber = formatter.numberUnit(sValue);
+	QUnit.module("Number unit");
 
-			// Assert
-			assert.strictEqual(fNumber, fExpectedNumber, "The rounding was correct");
-		}
+	function numberUnitValueTestCase(assert, sValue, fExpectedNumber) {
+		// Act
+		var fNumber = formatter.numberUnit(sValue);
 
-		QUnit.test("Should round down a 3 digit number", function (assert) {
-			numberUnitValueTestCase.call(this, assert, "3.123", "3.12");
-		});
-
-		QUnit.test("Should round up a 3 digit number", function (assert) {
-			numberUnitValueTestCase.call(this, assert, "3.128", "3.13");
-		});
-
-		QUnit.test("Should round a negative number", function (assert) {
-			numberUnitValueTestCase.call(this, assert, "-3", "-3.00");
-		});
-
-		QUnit.test("Should round an empty string", function (assert) {
-			numberUnitValueTestCase.call(this, assert, "", "");
-		});
-
-		QUnit.test("Should round a zero", function (assert) {
-			numberUnitValueTestCase.call(this, assert, "0", "0.00");
-		});
+		// Assert
+		assert.strictEqual(fNumber, fExpectedNumber, "The rounding was correct");
 	}
-);
+
+	QUnit.test("Should round down a 3 digit number", function (assert) {
+		numberUnitValueTestCase.call(this, assert, "3.123", "3.12");
+	});
+
+	QUnit.test("Should round up a 3 digit number", function (assert) {
+		numberUnitValueTestCase.call(this, assert, "3.128", "3.13");
+	});
+
+	QUnit.test("Should round a negative number", function (assert) {
+		numberUnitValueTestCase.call(this, assert, "-3", "-3.00");
+	});
+
+	QUnit.test("Should round an empty string", function (assert) {
+		numberUnitValueTestCase.call(this, assert, "", "");
+	});
+
+	QUnit.test("Should round a zero", function (assert) {
+		numberUnitValueTestCase.call(this, assert, "0", "0.00");
+	});
+});

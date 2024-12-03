@@ -15,10 +15,13 @@
 					icon="{AuthorPicUrl}"
 					senderPress="onPress"
 					iconPress="onPress"
-					iconDensityAware="false"
 					info="{Type}"
 					timestamp="{Date}"
-					text="{Text}" />
+					text="{Text}"
+					convertLinksToAnchorTags="All"
+					actions="{path: 'Actions', templateShareable: false}">
+					<FeedListItemAction text="{Text}" icon="{Icon}" key="{Key}" press="onActionPressed" />
+				</FeedListItem>
 			</List>
 		</l:content>
 	</l:VerticalLayout>

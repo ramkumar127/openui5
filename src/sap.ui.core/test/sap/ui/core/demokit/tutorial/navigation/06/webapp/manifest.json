@@ -1,16 +1,20 @@
 {
-	"_version": "1.1.0",
+	"_version": "1.38.0",
 	"sap.app": {
-		"_version": "1.1.0",
 		"id": "sap.ui.demo.nav",
 		"type": "application",
-		"i18n": "i18n/i18n.properties",
+		"i18n": {
+			"bundleUrl": "i18n/i18n.properties",
+			"supportedLocales": [
+				""
+			],
+			"fallbackLocale": ""
+		},
 		"title": "{{appTitle}}",
 		"description": "{{appDescription}}",
 		"applicationVersion": {
 			"version": "1.0.0"
 		},
-		"ach": "CA-UI5-DOC",
 		"dataSources": {
 			"employeeRemote": {
 				"uri": "/here/goes/your/serviceUrl/",
@@ -23,29 +27,36 @@
 		}
 	},
 	"sap.ui": {
-		"_version": "1.1.0",
 		"technology": "UI5",
 		"deviceTypes": {
 			"desktop": true,
 			"tablet": true,
 			"phone": true
-		},
-		"supportedThemes": ["sap_bluecrystal"]
+		}
   	},
 	"sap.ui5": {
-		"_version": "1.1.0",
-		"rootView": "sap.ui.demo.nav.view.App",
+		"rootView": {
+			"viewName": "sap.ui.demo.nav.view.App",
+			"type": "XML",
+			"async": true,
+			"id": "app"
+		},
 		"dependencies": {
-			"minUI5Version": "1.30",
+			"minUI5Version": "1.98.0",
 			"libs": {
-				"sap.m": { }
+				"sap.m": {},
+				"sap.ui.core": {}
 			}
 		},
 		"models": {
 			"i18n": {
 				"type": "sap.ui.model.resource.ResourceModel",
 				"settings": {
-					"bundleName": "sap.ui.demo.nav.i18n.i18n"
+					"bundleName": "sap.ui.demo.nav.i18n.i18n",
+					"supportedLocales": [
+						""
+					],
+					"fallbackLocale": ""
 				}
 			},
 			"": {
@@ -55,14 +66,16 @@
 		"routing": {
 			"config": {
 				"routerClass": "sap.m.routing.Router",
+				"type": "View",
 				"viewType": "XML",
-				"viewPath": "sap.ui.demo.nav.view",
+				"path": "sap.ui.demo.nav.view",
 				"controlId": "app",
 				"controlAggregation": "pages",
 				"transition": "slide",
 				"bypassed": {
 					"target": "notFound"
-				}
+				},
+				"async": true
 			},
 			"routes": [{
 				"pattern": "",
@@ -75,17 +88,20 @@
 			}],
 			"targets": {
 				"home": {
-					"viewName": "Home",
-					"viewLevel" : 1
+					"id": "home",
+					"name": "Home",
+					"level" : 1
 				},
 				"notFound": {
-					"viewName": "NotFound",
+					"id": "notFound",
+					"name": "NotFound",
 					"transition": "show"
 				},
 				"employees": {
-					"viewPath": "sap.ui.demo.nav.view.employee",
-					"viewName": "EmployeeList",
-					"viewLevel" : 2
+					"id": "employeeList",
+					"path": "sap.ui.demo.nav.view.employee",
+					"name": "EmployeeList",
+					"level" : 2
 				}
 			}
 		}

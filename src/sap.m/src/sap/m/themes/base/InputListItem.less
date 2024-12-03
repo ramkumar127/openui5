@@ -1,50 +1,57 @@
-/* ============================================= */
-/* CSS for control sap.m/InputListItem.control   */
-/* ============================================= */
+/* ==================================== */
+/* CSS for control sap.m/InputListItem  */
+/* Base theme                           */
+/* ==================================== */
+
 .sapMILI {
-	display: -webkit-box;
-	display: -moz-box;
-	display: -ms-flexbox;
-	display: flex;
-	height: 2.75em;
+	min-height: 3rem;
 }
 
 .sapMILILabel {
-	-webkit-box-flex: 1;
-	-moz-box-flex: 1;
-	-ms-flex: auto;
-	flex: auto;
-	-ms-flex-negative: 1; /* IE10 does not shrink by auto */
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	display: block;
+	font-size: 1.125rem;
+	color: var(--sapList_TextColor);
 }
 
 .sapMLIBActionable .sapMILILabel {
 	cursor: pointer;
 }
 
-.sapMILI > .sapMLIBContent {
-	display: -webkit-box;
-	display: -moz-box;
-	display: -ms-flexbox;
+.sapMILIContentWrapper {
 	display: flex;
-	-webkit-box-align: center;
-	-moz-box-align: center;
-	-ms-flex-align: center;
+	gap: 0 1rem;
 	align-items: center;
 }
 
+.sapMILIContentWrapperL {
+	flex-wrap: wrap;
+
+	& > .sapMILILabel {
+		flex: 1 1 auto;
+	}
+}
+
+.sapMILILabel {
+	padding: 0.25rem 0;
+}
+
 .sapMILIDiv {
-	-webkit-box-flex: 9;
-	-moz-box-flex: 9;
-	-ms-flex: auto;
-	flex: auto;
-	-ms-flex-negative: 1; /* IE10 does not shrink by auto */
+	flex: 1 1 auto;
 	text-align: right;
 }
 
-html[dir=rtl] .sapMILIDiv {
+html[dir='rtl'] .sapMILIDiv {
 	text-align: left;
+}
+
+.sapMLIBActive .sapMILILabel {
+	color: var(--sapList_Active_TextColor);
+}
+
+/* Compact size */
+.sapUiSizeCompact .sapMILI {
+	min-height: 2rem;
+}
+
+.sapUiSizeCompact .sapMILILabel {
+	font-size: @sapMFontMediumSize;
 }

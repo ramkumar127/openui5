@@ -3,9 +3,20 @@
  */
 
 // Provides control sap.ui.commons.FormattedTextView.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
-	function (jQuery, library, Control) {
+sap.ui.define([
+    'sap/base/Log',
+    './library',
+    'sap/ui/core/Control',
+    './FormattedTextViewRenderer',
+    'sap/ui/core/library',
+    'sap/base/security/sanitizeHTML'
+],
+	function(Log, library, Control, FormattedTextViewRenderer, coreLibrary, sanitizeHTML) {
 		"use strict";
+
+
+		// shortcut for sap.ui.core.AccessibleRole
+		var AccessibleRole = coreLibrary.AccessibleRole;
 
 
 		/**
@@ -22,13 +33,14 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 		 * @constructor
 		 * @public
 		 * @since 1.9.0
+		 * @deprecated Since version 1.38. Instead, use the <code>sap.ui.core.HTML</code> control.
 		 * @alias sap.ui.commons.FormattedTextView
-		 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 		 */
 		var FormattedTextView = Control.extend("sap.ui.commons.FormattedTextView", /** @lends sap.ui.commons.FormattedTextView.prototype */ {
 			metadata: {
 
 				library: "sap.ui.commons",
+				deprecated: true,
 				properties: {
 					/**
 					 * The ARIA role for the control.
@@ -36,7 +48,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 					accessibleRole: {
 						type: "sap.ui.core.AccessibleRole",
 						group: "Accessibility",
-						defaultValue: sap.ui.core.AccessibleRole.Document
+						defaultValue: AccessibleRole.Document
 					},
 
 					/**
@@ -162,7 +174,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 					}
 				} else {
 					var sWarning = '<' + tagName + '> with attribute [' + attribs[i] + '="' + attribs[i + 1] + '"] is not allowed and cut';
-					jQuery.sap.log.warning(sWarning, this);
+					Log.warning(sWarning, this);
 
 					// to remove this attribute by the sanitizer the value has to be
 					// set to null
@@ -185,11 +197,10 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 		 */
 		var fnPolicy = function (tagName, attribs) {
 			if (this._renderingRules.ELEMENTS[tagName]) {
-				var proxiedSanatizedAttribs = jQuery.proxy(fnSanitizeAttribs, this);
-				return proxiedSanatizedAttribs(tagName, attribs);
+				return fnSanitizeAttribs.call(this, tagName, attribs);
 			} else {
 				var sWarning = '<' + tagName + '> is not allowed';
-				jQuery.sap.log.warning(sWarning, this);
+				Log.warning(sWarning, this);
 			}
 		};
 
@@ -199,17 +210,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 		 * @public
 		 */
 		FormattedTextView.prototype.setHtmlText = function (sText) {
-			var sSanitizedText = "";
-
-			// use a proxy for policy to access the control's private variables
-			var fnProxiedPolicy = jQuery.proxy(fnPolicy, this);
-
 			// using the sanitizer that is already set to the encoder
-			sSanitizedText = jQuery.sap._sanitizeHTML(sText, {
-				tagPolicy: fnProxiedPolicy
+			var sSanitizedText = sanitizeHTML(sText, {
+				tagPolicy: fnPolicy.bind(this) // allow access to the control's private variables
 			});
 
 			this.setProperty("htmlText", sSanitizedText);
+			return this;
 		};
 
 		/**
@@ -222,7 +229,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 				this.removeAllAggregation("controls");
 			}
 
-			var bIsArray = jQuery.isArray(aControls);
+			var bIsArray = Array.isArray(aControls);
 			if (bIsArray && aControls.length > 0) {
 				// iterate through the given array but suppress invalidate
 				for (var i = 0; i < aControls.length; i++) {
@@ -238,7 +245,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 		 *
 		 * @param {string} sHtmlText Contains the corresponding HTML text
 		 * @param {sap.ui.commons.FormattedTextViewControl} aControls Array of controls that should be used within given HTML text
-		 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 		 * @public
 		 */
 		FormattedTextView.prototype.setContent = function (sHtmlText, aControls) {
@@ -252,4 +258,4 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 
 		return FormattedTextView;
 
-	}, /* bExport= */ true);
+	});

@@ -2,71 +2,99 @@
  * ${copyright}
  */
 
-// Provides object sap.ui.dt.OverlayRegistry.
 sap.ui.define([
-	"sap/ui/core/Element",
-	"sap/ui/dt/ElementUtil"
+	"sap/ui/base/ManagedObject",
+	"sap/ui/dt/ElementUtil",
+	"sap/ui/dt/Util",
+	"sap/base/util/isEmptyObject"
 ],
-function(Element, ElementUtil) {
+function(
+	ManagedObject,
+	ElementUtil,
+	Util,
+	isEmptyObject
+) {
 	"use strict";
 
 	/**
-	 * Class for OverlayRegistry.
+	 * Static registry for Overlays.
 	 *
-	 * @class
-	 * Static registry for Overlays
-	 *
+	 * @namespace
 	 * @author SAP SE
 	 * @version ${version}
 	 *
 	 * @private
-	 * @static
 	 * @since 1.30
 	 * @alias sap.ui.dt.OverlayRegistry
-	 * @experimental Since 1.30. This class is experimental and provides only limited functionality. Also the API might be changed in future.
 	 */
 
 	var OverlayRegistry = {};
 
+	var S_ELEMENTOVERLAY_NAME = "sap.ui.dt.ElementOverlay";
+	var S_AGGREGATIONOVERLAY_NAME = "sap.ui.dt.AggregationOverlay";
+
 	var mOverlays = {};
+	var mAliases = {};
 
 	/**
 	 * Returns a registered Overlay by element instance or id
-	 * @param {string|sap.ui.core.Element} vElementOrId element instance or id
-	 * @return {sap.ui.dt.Overlay} found overlay or undefined
+	 * @param {string|sap.ui.core.Element|sap.ui.core.Component} vElementOrId - Element instance or id
+	 * @return {sap.ui.dt.Overlay|undefined} found overlay or undefined
 	 * @public
 	 */
 	OverlayRegistry.getOverlay = function(vElementOrId) {
-		var oElement = ElementUtil.getElementInstance(vElementOrId);
-		if (oElement) {
-			oElement = ElementUtil.fixComponentContainerElement(oElement);
-			oElement = ElementUtil.fixComponentParent(oElement);
-			if (oElement) {
-				var sId = oElement.getId();
-				return mOverlays[sId];
-			}
-		}
+		var sId = (
+			typeof vElementOrId === "string"
+				? vElementOrId
+				: ElementUtil.getElementInstance(vElementOrId) && ElementUtil.getElementInstance(vElementOrId).getId()
+		);
+
+		return mOverlays[sId] || mAliases[sId];
+	};
+
+	OverlayRegistry.getOverlays = function() {
+		return Object.values(mOverlays);
 	};
 
 	/**
 	 * Registers an overlay for the element or element's id
-	 * @param {string|sap.ui.core.Element} vElementOrId element instance or id
-	 * @param {sap.ui.dt.Overlay} oOverlay overlay to register
+	 * @param {sap.ui.dt.Overlay} oOverlay - Overlay to register
 	 * @public
 	 */
-	OverlayRegistry.register = function(vElementOrId, oOverlay) {
-		var sId = getElementId(vElementOrId);
-		mOverlays[sId] = oOverlay;
+	OverlayRegistry.register = function(oOverlay) {
+		if (!isOverlay(oOverlay)) {
+			var sLocation = "sap.ui.dt.OverlayRegistry#register";
+			var oError = new Error(`${sLocation} / Attempt to register illegal overlay`);
+			oError.name = sLocation;
+			throw oError;
+		}
+
+		mOverlays[oOverlay.getId()] = oOverlay;
+
+		// create alias for ElementOverlay
+		if (oOverlay.getMetadata().getName() === S_ELEMENTOVERLAY_NAME) {
+			mAliases[oOverlay.getAssociation("element")] = oOverlay;
+		}
 	};
 
 	/**
-	 * Deregisters an overlay for the given element or element's id
-	 * @param {string|sap.ui.core.Element} vElementOrId element instance or id
+	 * Deregisters an overlay from registry
+	 * @param {sap.ui.dt.Overlay} oOverlay overlay instance
 	 * @public
 	 */
-	OverlayRegistry.deregister = function(vElementOrId) {
-		var sId = getElementId(vElementOrId);
-		delete mOverlays[sId];
+	OverlayRegistry.deregister = function(oOverlay) {
+		if (!isOverlay(oOverlay)) {
+			var sLocation = "sap.ui.dt.OverlayRegistry#deregister";
+			var oError = new Error(`${sLocation} / Attempt to deregister illegal overlay`);
+			oError.name = sLocation;
+			throw oError;
+		}
+
+		delete mOverlays[oOverlay.getId()];
+
+		if (oOverlay.getMetadata().getName() === S_ELEMENTOVERLAY_NAME) {
+			delete mAliases[oOverlay.getAssociation("element")];
+		}
 	};
 
 	/**
@@ -75,11 +103,14 @@ function(Element, ElementUtil) {
 	 * @public
 	 */
 	OverlayRegistry.hasOverlays = function() {
-		return !jQuery.isEmptyObject(mOverlays);
+		return !isEmptyObject(mOverlays);
 	};
 
-	function getElementId (vElementOrId) {
-		return (vElementOrId instanceof Element) ? vElementOrId.getId() : vElementOrId;
+	function isOverlay(oOverlay) {
+		return (
+			oOverlay instanceof ManagedObject
+			&& [S_ELEMENTOVERLAY_NAME, S_AGGREGATIONOVERLAY_NAME].indexOf(oOverlay.getMetadata().getName()) > -1
+		);
 	}
 
 	return OverlayRegistry;

@@ -5,20 +5,7 @@ sap.ui.define(['sap/ui/core/UIComponent'],
 	var Component = UIComponent.extend("sap.m.sample.SegmentedButton.Component", {
 
 		metadata : {
-			rootView : "sap.m.sample.SegmentedButton.Page",
-			dependencies : {
-				libs : [
-					"sap.m"
-				]
-			},
-			config : {
-				sample : {
-					stretch : true,
-					files : [
-						"Page.view.xml"
-					]
-				}
-			}
+			manifest: "json"
 		}
 	});
 

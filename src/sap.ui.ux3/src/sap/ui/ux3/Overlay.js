@@ -3,9 +3,23 @@
  */
 
 // Provides control sap.ui.ux3.Overlay.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', './library'],
-	function(jQuery, Control, Popup, library) {
+sap.ui.define([
+    'sap/ui/thirdparty/jquery',
+    'sap/ui/core/Control',
+    'sap/ui/core/Popup',
+    './library',
+    './OverlayRenderer',
+    'sap/ui/core/library',
+    // jQuery Plugin 'control'
+	'sap/ui/dom/jquery/control',
+    // jQuery Plugin 'firstFocusableDomRef'
+	'sap/ui/dom/jquery/Focusable'
+],
+	function(jQuery, Control, Popup, library, OverlayRenderer, coreLibrary) {
 	"use strict";
+
+	// shortcut for sap.ui.core.OpenState
+	var OpenState = coreLibrary.OpenState;
 
 	/**
 	 * Constructor for a new Overlay.
@@ -23,11 +37,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated As of version 1.38, the concept has been discarded.
 	 * @alias sap.ui.ux3.Overlay
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Overlay = Control.extend("sap.ui.ux3.Overlay", /** @lends sap.ui.ux3.Overlay.prototype */ { metadata : {
 
+		deprecated: true,
 		interfaces : [
 			"sap.ui.core.PopupInterface"
 		],
@@ -104,19 +119,21 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		var that = this;
 		this._oPopup = new Popup(this, false, true);
 		this._oPopup.attachOpened(function(oEvent){
-			var domRef = jQuery.sap.byId(that._initialFocusId)[0];
+			var domRef = jQuery(document.getElementById(that._initialFocusId))[0];
 			if (!domRef && that._getShell() && that.getOpenButtonVisible()) {
-				domRef = jQuery.sap.domById(that._getOpenButtonId());
+				domRef = document.getElementById(that._getOpenButtonId());
 			} else if (!domRef && that._getShell() && that.getCloseButtonVisible()) {
-				domRef = jQuery.sap.domById(that._getCloseButtonId());
+				domRef = document.getElementById(that._getCloseButtonId());
 			} else if (!domRef) {
+				// jQuery Plugin "firstFocusableDomRef"
 				domRef = that.$("content").firstFocusableDomRef();
 			}
 			if (!domRef) {
+				// jQuery Plugin "firstFocusableDomRef"
 				domRef = that.$().firstFocusableDomRef();
 			}
 			if (domRef) {
-				jQuery.sap.focus(domRef);
+				domRef.focus();
 			}
 		});
 		this._oPopup.attachClosed(function(oEvent){
@@ -143,6 +160,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 * @private
 	 */
 	Overlay.prototype._getShell = function() {
+		// jQuery Plugin "control"
 		var oShell = jQuery(".sapUiUx3Shell").control();
 
 		if (oShell.length > 0 && !this._oShell) {
@@ -175,23 +193,24 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 
 	/**
 	 *
-	 * @param fFocusFirst
-	 * @param fFocusLast
-	 * @param fApplyChanges
+	 * @param {function} fnFocusFirst
+	 * @param {function} fnFocusLast
+	 * @param {function} fnApplyChanges
 	 * @private
 	 */
-	Overlay.prototype._initDom = function(fFocusFirst, fFocusLast, fApplyChanges) {
+	Overlay.prototype._initDom = function(fnFocusFirst, fnFocusLast, fnApplyChanges) {
 		//Override the popup theming and init the focus handling
+		// jQuery Plugin "control"
 		var oShell = jQuery(".sapUiUx3Shell").control();
 		this._oShell = oShell.length ? oShell[0] : null;
 		oShell = this._oShell;
 		this.$().css("position", "fixed");
 		if (oShell) {
 			this._bFocusEventsRegistered = true;
-			oShell.syncWithCanvasSize(this.getId(), true, fFocusFirst, fFocusLast, fApplyChanges);
-			this.$("firstFocusDummyPaneFw").attr("tabindex", "0").focusin(jQuery.proxy(oShell.focusFirstHdr,oShell));
-			this.$("firstFocusDummyPaneBw").attr("tabindex", "0").focusin(jQuery.proxy(oShell.focusLastTool,oShell));
-			this.$("LastFocusDummyPane").attr("tabindex", "0").focusin(jQuery.proxy(oShell.focusPaneStart,oShell));
+			oShell.syncWithCanvasSize(this.getId(), true, fnFocusFirst, fnFocusLast, fnApplyChanges);
+			this.$("firstFocusDummyPaneFw").attr("tabindex", "0").on("focusin", jQuery.proxy(oShell.focusFirstHdr,oShell));
+			this.$("firstFocusDummyPaneBw").attr("tabindex", "0").on("focusin", jQuery.proxy(oShell.focusLastTool,oShell));
+			this.$("LastFocusDummyPane").attr("tabindex", "0").on("focusin", jQuery.proxy(oShell.focusPaneStart,oShell));
 		} else {
 			this.$().css("bottom", "0").css("top", "0").css("left", "0").css("right", "0");
 		}
@@ -207,9 +226,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 		}
 		if (this._bFocusEventsRegistered) {
 			this._bFocusEventsRegistered = false;
-			this.$("firstFocusDummyPaneFw").removeAttr("tabindex").unbind("focusin");
-			this.$("firstFocusDummyPaneBw").removeAttr("tabindex").unbind("focusin");
-			this.$("LastFocusDummyPane").removeAttr("tabindex").unbind("focusin");
+			this.$("firstFocusDummyPaneFw").removeAttr("tabindex").off("focusin");
+			this.$("firstFocusDummyPaneBw").removeAttr("tabindex").off("focusin");
+			this.$("LastFocusDummyPane").removeAttr("tabindex").off("focusin");
 		}
 	};
 
@@ -219,7 +238,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 */
 	Overlay.prototype.onAfterRendering = function() {
 	    var oPopupState = this._oPopup.getOpenState();
-	    if (oPopupState === sap.ui.core.OpenState.OPEN || oPopupState === sap.ui.core.OpenState.OPENING) {
+	    if (oPopupState === OpenState.OPEN || oPopupState === OpenState.OPENING) {
 	          this._initDom(jQuery.proxy(this._setFocusFirst, this), jQuery.proxy(this._setFocusLast, this), jQuery.proxy(this._applyChanges, this));
 	    }
 	};
@@ -244,7 +263,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 *
 	 * @param {string} initialFocusId ID of the control that gets focused when the overlay is openend
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	Overlay.prototype.open = function(initialFocusId) {
 		this._initialFocusId = initialFocusId;
@@ -271,21 +289,20 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 * Closes the Overlay.
 	 *
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	Overlay.prototype.close = function() {
 		if (!this._oPopup.isOpen()) {
 			return;
 		}
 		this._oPopup.close(400);
-		jQuery.sap.delayedCall(400, this, 'restorePreviousFocus');
+		setTimeout(this.restorePreviousFocus.bind(this), 400);
 		this._cleanupDom();
 	};
 
 	/**
 	 * Handle the click event happening on the Overlay.
 	 *
-	 * @param {jQuery.EventObject} oEvent
+	 * @param {jQuery.Event} oEvent
 	 * @private
 	 */
 	Overlay.prototype.onclick = function(oEvent) {
@@ -295,7 +312,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	/**
 	 * Handle the sapselect pseudo event happening on the Overlay.
 	 *
-	 * @param {jQuery.EventObject} oEvent
+	 * @param {jQuery.Event} oEvent
 	 * @private
 	 */
 	Overlay.prototype.onsapselect = function(oEvent) {
@@ -305,7 +322,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	/**
 	 * Event handling for Overlay Buttons.
 	 *
-	 * @param {jQuery.EventObject} oEvent
+	 * @param {jQuery.Event} oEvent
 	 * @private
 	 */
 	Overlay.prototype._handleButtonEvent = function(oEvent) {
@@ -352,7 +369,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 * @private
 	 */
 	Overlay.prototype._setFocusFirst = function() {
-		jQuery.sap.focus(jQuery.sap.domById(this._getOpenButtonId()));
+		var oElem = document.getElementById(this._getOpenButtonId());
+		if (oElem) {
+			oElem.focus();
+		}
 	};
 
 	/**
@@ -364,7 +384,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 * @private
 	 */
 	Overlay.prototype._setFocusLast = function() {
-		jQuery.sap.focus(jQuery.sap.domById(this._getCloseButtonId()));
+		var oElem = document.getElementById(this._getCloseButtonId());
+	    if (oElem) {
+		    oElem.focus();
+		}
 	};
 
 	/**
@@ -386,7 +409,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	 *
 	 * @type boolean
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	Overlay.prototype.isOpen = function() {
 		return this._oPopup.isOpen();
@@ -398,4 +420,4 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/Popup', 
 	};
 
 	return Overlay;
-}, /* bExport= */ true);
+});

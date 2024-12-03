@@ -2,31 +2,53 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', './Matcher', './Visible'], function ($, Matcher, Visible) {
+sap.ui.define([
+	'sap/ui/test/matchers/Matcher',
+	'sap/ui/test/matchers/Visible',
+	'sap/ui/test/matchers/_Busy',
+	'sap/ui/test/matchers/_Visitor'
+], function (Matcher, Visible, _Busy, _Visitor) {
 	"use strict";
+
 	var oVisibleMatcher = new Visible();
+	var oBusyMatcher = new _Busy();
+	var oVisitor = new _Visitor();
 
 	/**
 	 * @class
-	 * Interactable - check if a control is currently able to take user interactions.
+	 * Checks if a control is currently able to take user interactions.
 	 * OPA5 will automatically apply this matcher if you specify actions in {@link sap.ui.test.Opa5#waitFor}.
-	 * This matcher will match if none of the following conditions apply to the control:
+	 * A control will be filtered out by this matcher when:
 	 * <ul>
 	 *     <li>
-	 *         If the control is invisible (using the visible matcher)
+	 *         The control is invisible
 	 *     </li>
 	 *     <li>
-	 *         If the control is hidden behind a dialog
+	 *         The control or its parents are busy
 	 *     </li>
 	 *     <li>
-	 *         If the control is in a navigating nav container
+	 *         The control is hidden behind a dialog
 	 *     </li>
-	 *     <li>
-	 *         If the control or its parents are busy
+	 *		<li>
+	 *         The UIArea of the control needs new rendering
 	 *     </li>
-	 *     <li>
-	 *         If the UIArea of the control needs new rendering
-	 *     </li>
+	 * </ul>
+	 * <ul>
+	 *      <li>
+	 *         As of version 1.53, the Interactable matcher no longer uses internal autoWait functionality.
+	 *      </li>
+	 *      <li>
+	 *         Interactable matcher might be made private in the near future.
+	 *      </li>
+	 *      <li>
+	 *         It is recommended to enable autoWait OPA option instead of using the Interactable matcher directly.
+	 *      </li>
+	 *      <li>
+	 *         The Interactable matcher doesn't check if a control is enabled or editable.
+	 *         One way to check for these properties is with matchers such as the {@link sap.ui.test.matchers.PropertyStrictEquals} and {@link sap.ui.test.matchers.Properties} matchers.
+	 *         Another way is to use the `enabled` and `editable` properties of {@link sap.ui.test.Opa5#waitFor}.
+	 *         Note that `enabled` is available as of version 1.66, and `editable` is available as of version 1.80.
+	 *      </li>
 	 * </ul>
 	 * @public
 	 * @extends sap.ui.test.matchers.Matcher
@@ -35,64 +57,38 @@ sap.ui.define(['jquery.sap.global', './Matcher', './Visible'], function ($, Matc
 	 * @since 1.34
 	 */
 	return Matcher.extend("sap.ui.test.matchers.Interactable", {
-		isMatching:  function(oControl) {
-			var bVisible = oVisibleMatcher.isMatching(oControl);
-
-			if (!bVisible) {
-				// Control is not visible so there is no need to continue
+		isMatching: function (oControl) {
+			// control must be visible
+			if (!oVisibleMatcher.isMatching(oControl)) {
 				return false;
 			}
 
-			// Check busy of the control
-			if (oControl.getBusy && oControl.getBusy()) {
-				$.sap.log.debug("The control " + oControl + " is busy so it is filtered out", this._sLogPrefix);
+			// control and ancestors should not be busy
+			if (oBusyMatcher.isMatching(oControl)) {
 				return false;
 			}
 
-			var oParent = oControl.getParent();
-			while (oParent) {
-				// Check busy of parents
-				if (oParent.getBusy && oParent.getBusy()) {
-					$.sap.log.debug("The control " + oControl + " has a parent that is busy " + oParent, this._sLogPrefix);
-					return false;
-				}
+			var bInAreaForRerendering = oVisitor.isMatching(oControl, function (oControl) {
+				return oControl.isA("sap.ui.core.UIArea") && oControl.bNeedsRerendering;
+			});
 
-				// Check for navigating nav containers
-				var sName = oParent.getMetadata().getName();
-				// Split container and splitapp use navcontainers in the control tree
-				if ((sName === "sap.m.App" || sName === "sap.m.NavContainer") && oParent._bNavigating) {
-					$.sap.log.debug("The control " + oControl + " has a parent NavContainer " + oParent + " that is currently navigating", this._sLogPrefix);
-					return false;
-				}
-
-				if (sName === "sap.ui.core.UIArea" && oParent.bNeedsRerendering) {
-					$.sap.log.debug("The control " + oControl + " is currently in an ui area that needs a new rendering", this._sLogPrefix);
-					return false;
-				}
-
-				oParent = oParent.getParent();
+			if (bInAreaForRerendering) {
+				this._oLogger.debug("Control '" + oControl + "' is currently in a UIArea that needs a new rendering");
+				return false;
 			}
 
-			// Control is not in the static UI area
-			if (oControl.$().closest("#sap-ui-static").length === 0) {
-				// Check for blocking layer and if the control is not in the static ui area
-				if ($("#sap-ui-blocklayer-popup").is(":visible")) {
-					$.sap.log.debug("The control " + oControl + " is hidden behind a blocking layer of a Popup", this._sLogPrefix);
-					return false;
-				}
+			var oAppWindowJQuery = this._getApplicationWindowJQuery();
+			var bControlIsInStaticArea = this._isInStaticArea(oControl.getDomRef());
+			var bOpenStaticBlockingLayer = oAppWindowJQuery("#sap-ui-blocklayer-popup").is(":visible");
 
-				// Whan a Dialog was opened and is in the closing phase the blocklayer is gone already therefore ask the instance manager
-				var oInstanceManager = $.sap.getObject("sap.m.InstanceManager");
-				if (oInstanceManager && oInstanceManager.getOpenDialogs().length) {
-					$.sap.log.debug("The control " + oControl + " is hidden behind an Open dialog", this._sLogPrefix);
-					return false;
-				}
-
+			if (!bControlIsInStaticArea && bOpenStaticBlockingLayer) {
+				this._oLogger.debug("The control '" + oControl + "' is hidden behind a blocking popup layer");
+				return false;
 			}
 
-
+			// control is interactable
 			return true;
 		}
 	});
 
-}, /* bExport= */ true);
+});

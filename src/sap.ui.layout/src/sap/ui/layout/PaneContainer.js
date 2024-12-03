@@ -2,10 +2,12 @@
  * ${copyright}
  */
 
-// Provides control sap.ui.layout.PaneContainer.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Element', './Splitter', './AssociativeSplitter'],
-	function(jQuery, library, Element, Splitter, AssociativeSplitter) {
+sap.ui.define(['./library', 'sap/ui/core/Element', './AssociativeSplitter', 'sap/ui/core/library'],
+	function(library, Element, AssociativeSplitter, coreLibrary) {
 	"use strict";
+
+	// shortcut for sap.ui.core.Orientation
+	var Orientation = coreLibrary.Orientation;
 
 	/**
 	 * Constructor for a new PaneContainer.
@@ -14,8 +16,9 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Element', './Split
 	 * @param {object} [mSettings] Initial settings for the new control
 	 *
 	 * @class
-	 * PaneContainer is an abstraction of Splitter
-	 * Could be used as an aggregation of ResponsiveSplitter or other PaneContainers.
+	 * PaneContainer is an abstraction of Splitter.
+	 *
+	 * Could be used as an aggregation of ResponsiveSplitter or nested in other PaneContainers.
 	 * @extends sap.ui.core.Element
 	 *
 	 * @author SAP SE
@@ -32,24 +35,56 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Element', './Split
 			/**
 			 The orientation of the Splitter
 			 */
-			orientation : { type : "sap.ui.core.Orientation", group : "Behavior", defaultValue : sap.ui.core.Orientation.Horizontal}
+			orientation : { type : "sap.ui.core.Orientation", group : "Behavior", defaultValue : Orientation.Horizontal }
 		},
 		defaultAggregation : "panes",
 		aggregations : {
 			/**
-			 The Pane that will be shown when there is no suitable pane for ResponsiveSplitter's current width.
+			 * The panes to be split. The control will show n-1 splitter bars between n controls in this aggregation.
 			 */
 			panes: { type: "sap.ui.core.Element", multiple: true, singularName: "pane" }
+		},
+		events: {
+			/**
+			 * Fired when contents are resized.
+			 */
+			resize : {
+				parameters : {
+
+					/**
+					 * An array of values representing the old (pixel)sizes of the split panes,
+					 * which are inside the pane container.
+					 */
+					oldSizes : {type : "float[]"},
+
+					/**
+					 * An array of values representing the new (pixel)sizes of the split panes,
+					 * which are inside the pane container.
+					 */
+					newSizes : {type : "float[]"}
+				}
+			}
 		}
 	}});
 
 	PaneContainer.prototype.init = function () {
 		this._oSplitter = new AssociativeSplitter({
 			orientation: this.getOrientation(),
-			height: "100%"
+			height: "100%",
+			resize: this._onSplitterResize.bind(this)
 		});
+	};
 
-		this._oSplitter._bUseIconForSeparator = false;
+	PaneContainer.prototype.exit = function () {
+		this._oSplitter.destroy();
+		this._oSplitter = null;
+	};
+
+	PaneContainer.prototype._onSplitterResize = function (oEvent) {
+		this.fireResize({
+			oldSizes: oEvent.getParameter("oldSizes"),
+			newSizes: oEvent.getParameter("newSizes")
+		});
 	};
 
 	/**
@@ -57,41 +92,78 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Element', './Split
 	 * Default value is sap.ui.core.Orientation.Horizontal
 	 * @public
 	 * @param {sap.ui.core.Orientation} sOrientation The Orientation type.
-	 * @returns {sap.ui.layout.PaneContainer} this to allow method chaining.
+	 * @returns {this} this to allow method chaining.
 	 */
 	PaneContainer.prototype.setOrientation = function(sOrientation) {
 		this._oSplitter.setOrientation(sOrientation);
-
-		return this.setProperty("orientation", sOrientation, true);
+		return this.setProperty("orientation", sOrientation);
 	};
 
-	/**
-	 * Adds a SplitPane or a PaneContainer to the PaneContainer.
-	 * @public
-	 * @param {sap.ui.core.Element} oElement The Element to be added.
-	 * @returns {sap.ui.layout.PaneContainer} this to allow method chaining.
-	 */
-	PaneContainer.prototype.addPane = function(oElement) {
-		this.addAggregation("panes", oElement);
-
-		if (oElement instanceof sap.ui.layout.SplitPane) {
-			this._oSplitter.addAssociatedContentArea(oElement.getContent());
-		} else {
-			this._oSplitter.addAssociatedContentArea(oElement._oSplitter);
-		}
-		return this;
+	PaneContainer.prototype._getPanesInInterval = function (iFrom) {
+		return this.getPanes().filter(function(oPane) {
+			return oPane && oPane.isA("sap.ui.layout.SplitPane") && oPane._isInInterval(iFrom);
+		});
 	};
 
 	/**
 	 * Setter for property layoutData.
 	 * @public
 	 * @param {sap.ui.core.LayoutData} oLayoutData The LayoutData object.
-	 * @returns {sap.ui.layout.PaneContainer} this to allow method chaining.
+	 * @returns {this} this to allow method chaining.
 	 */
 	PaneContainer.prototype.setLayoutData = function(oLayoutData) {
-		return this._oSplitter.setLayoutData(oLayoutData);
+		this._oSplitter.setLayoutData(oLayoutData);
+		return this;
+	};
+
+	/**
+	 * Getter for property layoutData.
+	 * @public
+	 * @returns {sap.ui.core.LayoutData} The LayoutData object.
+	 */
+	PaneContainer.prototype.getLayoutData = function() {
+		return this._oSplitter.getLayoutData();
+	};
+
+	PaneContainer.prototype.insertPane = function (oObject, iIndex) {
+		var vResult =  this.insertAggregation("panes", oObject, iIndex),
+			oEventDelegate = {
+				onAfterRendering: function () {
+					this.triggerResize();
+					this.removeEventDelegate(oEventDelegate);
+				}
+			};
+
+		// When nesting Panes there should be resize event everytime a new pane is inserted.
+		// However for the newly inserted pane is too early and it has not been subscribed yet to the resize handler.
+		// Therefore the resize event should be triggered manually.
+		if (oObject instanceof PaneContainer && oObject._oSplitter) {
+			oObject._oSplitter.addEventDelegate(oEventDelegate, oObject._oSplitter);
+		}
+
+		return vResult;
+	};
+
+	PaneContainer.prototype.removePane = function (oObject) {
+		var vResult =  this.removeAggregation("panes", oObject),
+			oEventDelegate = {
+				onAfterRendering: function () {
+					this.triggerResize();
+					this.removeEventDelegate(oEventDelegate);
+				}
+			};
+
+		// When nesting Panes there should be resize event everytime a new pane is removed.
+		// However it is too early and it has not been subscribed yet to the resize handler.
+		// Therefore the resize event should be triggered manually.
+		this.getPanes().forEach(function (pane) {
+			if (pane instanceof PaneContainer && pane._oSplitter) {
+				pane._oSplitter.addEventDelegate(oEventDelegate, pane._oSplitter);
+			}
+		});
+
+		return vResult;
 	};
 
 	return PaneContainer;
-
-}, /* bExport= */ true);
+});

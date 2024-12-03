@@ -2,8 +2,8 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', './ListRenderer', 'sap/ui/core/Renderer'],
-	function(jQuery, ListRenderer, Renderer) {
+sap.ui.define(['./ListRenderer', 'sap/ui/core/Renderer'],
+	function(ListRenderer, Renderer) {
 	"use strict";
 
 	/**
@@ -14,6 +14,7 @@ sap.ui.define(['jquery.sap.global', './ListRenderer', 'sap/ui/core/Renderer'],
 	 * @alias sap.m.FacetFilterListRenderer
 	 */
 	var FacetFilterListRenderer = Renderer.extend(ListRenderer);
+	FacetFilterListRenderer.apiVersion = 2;
 
 	return FacetFilterListRenderer;
 

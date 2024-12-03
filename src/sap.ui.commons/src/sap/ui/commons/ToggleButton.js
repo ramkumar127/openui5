@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.ui.commons.ToggleButton.
-sap.ui.define(['jquery.sap.global', './Button'],
-	function(jQuery, Button) {
+sap.ui.define(['./Button', './ToggleButtonRenderer'],
+	function(Button, ToggleButtonRenderer) {
 	"use strict";
 
 
@@ -24,12 +24,13 @@ sap.ui.define(['jquery.sap.global', './Button'],
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated as of version 1.38, replaced by {@link sap.m.ToggleButton}
 	 * @alias sap.ui.commons.ToggleButton
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var ToggleButton = Button.extend("sap.ui.commons.ToggleButton", /** @lends sap.ui.commons.ToggleButton.prototype */ { metadata : {
 
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -42,7 +43,7 @@ sap.ui.define(['jquery.sap.global', './Button'],
 	/**
 	 * Function is called when ToggleButton is clicked.
 	 *
-	 * @param {jQuery.Event} oEvent
+	 * @param {jQuery.Event} oEvent The fired event
 	 * @private
 	 */
 	ToggleButton.prototype.onclick = function(oEvent) {
@@ -83,6 +84,21 @@ sap.ui.define(['jquery.sap.global', './Button'],
 	};
 
 
+	/**
+	 * @see sap.ui.core.Control#getAccessibilityInfo
+	 * @returns {sap.ui.core.AccessibilityInfo} Current accessibility state of the control
+	 * @protected
+	 */
+	ToggleButton.prototype.getAccessibilityInfo = function() {
+		var oInfo = Button.prototype.getAccessibilityInfo.apply(this, arguments);
+		if (this.getPressed()) {
+			oInfo.description = ((oInfo.description || "") + " " +
+				sap.ui.getCore().getLibraryResourceBundle("sap.ui.commons").getText("ACC_CTR_STATE_PRESSED")).trim();
+		}
+		return oInfo;
+	};
+
+
 	return ToggleButton;
 
-}, /* bExport= */ true);
+});

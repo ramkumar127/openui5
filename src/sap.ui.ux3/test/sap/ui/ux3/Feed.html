@@ -1,23 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 	<title>Feed - sap.ui.ux3</title>
  	<link rel="shortcut icon" type="image/x-icon" href="images/controls/sap.ui.ux3.Feed.gif">
 
+  <script src="shared-config.js"></script>
   <script
-				src="../../../../resources/sap-ui-core.js"
-        type="text/javascript"
+		src="../../../../resources/sap-ui-core.js"
         id="sap-ui-bootstrap"
         data-sap-ui-libs="sap.ui.core,sap.ui.ux3,sap.ui.commons"
-				data-sap-ui-theme="sap_goldreflection"
-				data-sap-ui-areas="target1" >
+		data-sap-ui-areas="target1" >
   </script>
 
  	<script src="../../../../resources/sap-ui-debug.js"></script>
 
-	<script type="text/javascript">
+	<script>
 
 		function handleDeleted(oEvent){
 			alert("Chunk "+ oEvent.oSource.getId() + " deleted");

@@ -8,14 +8,14 @@ sap.ui.define(["sap/ui/core/Element", "./library"],
 		"use strict";
 
 	/**
-	 * Constructor for a new ModelMapping.
+	 * Constructor for a new <code>ModelMapping</code>.
 	 *
 	 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
 	 * @param {object} [mSettings] Initial settings for the new control
 	 *
 	 * @class
+	 * Defines the entity that will be passed to the {@link sap.uxap.ObjectPageLayout}.
 	 *
-	 * Define the entity that will be passed to the ObjectPageLayout.
 	 * @extends sap.ui.core.Element
 	 *
 	 * @author SAP SE
@@ -24,7 +24,6 @@ sap.ui.define(["sap/ui/core/Element", "./library"],
 	 * @public
 	 * @alias sap.uxap.ModelMapping
 	 * @since 1.26
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var ModelMapping = Element.extend("sap.uxap.ModelMapping", /** @lends sap.uxap.ModelMapping.prototype */ {
 		metadata: {
@@ -33,17 +32,17 @@ sap.ui.define(["sap/ui/core/Element", "./library"],
 			properties: {
 
 				/**
-				 * Determines the the external model name.
+				 * Determines the external model name.
 				 */
 				externalModelName: {type: "string", group: "Misc", defaultValue: null},
 
 				/**
-				 * Determines the the internal model name.
+				 * Determines the internal model name.
 				 */
 				internalModelName: {type: "string", group: "Misc", defaultValue: "Model"},
 
 				/**
-				 * Determines the the external path.
+				 * Determines the external path.
 				 */
 				externalPath: {type: "string", group: "Misc", defaultValue: null}
 			}

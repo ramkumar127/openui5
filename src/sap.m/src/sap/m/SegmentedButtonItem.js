@@ -3,21 +3,21 @@
  */
 
 // Provides control sap.m.SegmentedButtonItem.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
-	function(jQuery, library, Item) {
+sap.ui.define(['./library', 'sap/ui/core/Item', 'sap/m/Button', 'sap/ui/core/CustomStyleClassSupport'],
+	function(library, Item, Button, CustomStyleClassSupport) {
 		"use strict";
 
 
 
 		/**
-		 * Constructor for a new SegmentedButtonItem.
+		 * Constructor for a new <code>SegmentedButtonItem</code>.
 		 *
 		 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
 		 * @param {object} [mSettings] Initial settings for the new control
 		 *
 		 * @class
-		 * The SegmentedButtonItem control is used for creating buttons for the sap.m.SegmentedButton.
-		 * It is derived from a core sap.ui.core.Item.
+		 * Used for creating buttons for the {@link sap.m.SegmentedButton}.
+		 * It is derived from the {@link sap.ui.core.Item}.
 		 * @extends sap.ui.core.Item
 		 *
 		 * @author SAP SE
@@ -27,7 +27,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
 		 * @public
 		 * @since 1.28
 		 * @alias sap.m.SegmentedButtonItem
-		 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 		 */
 		var SegmentedButtonItem = Item.extend("sap.m.SegmentedButtonItem", /** @lends sap.m.SegmentedButtonItem.prototype */ { metadata : {
 
@@ -36,7 +35,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
 
 				/**
 				 * The icon, which belongs to the button.
-				 * This can be an URI to an image or an icon font URI.
+				 * This can be a URI to an image or an icon font URI.
 				 */
 				icon : {type : "string", group : "Appearance", defaultValue : null},
 
@@ -60,6 +59,57 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
 			}
 
 		}});
+
+		// Add custom style class support
+		CustomStyleClassSupport.apply(SegmentedButtonItem.prototype);
+
+		/**
+		 * Called once during the element's initialization
+		 * @override
+		 * @protected
+		 */
+		SegmentedButtonItem.prototype.init = function () {
+			// Create internal button with a stable ID
+			var oButton = new Button(this.getId() + "-button");
+
+			// Create objects first so they can be referenced in the button
+			this.aCustomStyleClasses;
+			this.mCustomStyleClassMap;
+
+			// Reference's between button and item objects related to customStyleClasses so they will be in sync
+			oButton.aCustomStyleClasses = this.aCustomStyleClasses;
+			oButton.mCustomStyleClassMap = this.mCustomStyleClassMap;
+
+			// Attach CustomData and LayoutData function copy's with bound context to the button
+			oButton.getCustomData = this.getCustomData.bind(this);
+			oButton.getLayoutData = this.getLayoutData.bind(this);
+
+			// Hook on firePress method of the button so we can fire local press event also
+			oButton.firePress = function () {
+				this.firePress();
+				Button.prototype.firePress.call(oButton);
+			}.bind(this);
+
+			// We return DOM reference from the button so for example CustomData.setKey method checks
+			// for parent DOM reference and does a live update only of the attribute.
+			this.getDomRef = oButton.getDomRef.bind(oButton);
+
+			// Keep in mind that we are using property instead of private aggregation because
+			// we need to add this button to the SegmentedButton buttons aggregation
+			this.oButton = oButton;
+		};
+
+		/**
+		 * Cleanup
+		 * @override
+		 * @protected
+		 */
+		SegmentedButtonItem.prototype.exit = function () {
+			if (this.oButton) {
+				this.oButton.destroy();
+				this.oButton = null;
+			}
+		};
 
 		SegmentedButtonItem.prototype.setText = function (sValue) {
 			this.setProperty("text", sValue, true);
@@ -113,4 +163,4 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
 
 		return SegmentedButtonItem;
 
-	}, /* bExport= */ true);
+	});

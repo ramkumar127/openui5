@@ -10,13 +10,14 @@
 				inset="false"
 				id="idProductsTable">
 				<headerToolbar>
-					<Toolbar
-						id="idCrumbToolbar" />
+					<OverflowToolbar id="idCrumbToolbar" >
+						<Breadcrumbs id="breadcrumb" />
+					</OverflowToolbar>
 				</headerToolbar>
 				<infoToolbar>
-					<Toolbar visible="{Order>/hasCounts}">
+					<OverflowToolbar visible="{Order>/hasCounts}">
 						<Label text="{Order>/count} Products Selected" />
-					</Toolbar>
+					</OverflowToolbar>
 				</infoToolbar>
 				<columns>
 					<Column
@@ -27,7 +28,7 @@
 						id="dimensionsColumn"
 						minScreenWidth="Tablet"
 						demandPopin="true"
-						hAlign="Right"
+						hAlign="End"
 						visible="false">
 						<Text text="Dimensions" />
 					</Column>
@@ -40,23 +41,23 @@
 						<Text text="Weight" />
 					</Column>
 					<Column
-						hAlign="Right">
+						hAlign="End">
 						<Text text="Price" />
 					</Column>
 				</columns>
 			</Table>
 		</content>
 		<footer>
-			<Toolbar>
+			<OverflowToolbar>
 				<ToolbarSpacer/>
 				<Button
 					text="Order"
 					enabled="{
 						path: 'Order>/',
-						formatter: 'sap.m.sample.TableBreadcrumb.Formatter.isAnyProductSelected'
+						formatter: '.isAnyProductSelected'
 					}"
 					press="handleOrderPress" />
-			</Toolbar>
+			</OverflowToolbar>
 		</footer>
 	</Page>
 </mvc:View>

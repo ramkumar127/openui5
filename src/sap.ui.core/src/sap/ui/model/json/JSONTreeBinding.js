@@ -1,38 +1,48 @@
 /*!
  * ${copyright}
  */
-
+/*eslint-disable max-len */
 // Provides the JSON model implementation of a list binding
-sap.ui.define(['jquery.sap.global', 'sap/ui/model/ClientTreeBinding'],
-	function(jQuery, ClientTreeBinding) {
+sap.ui.define(['sap/ui/model/ClientTreeBinding'],
+	function(ClientTreeBinding) {
 	"use strict";
 
 
 	/**
+	 * Creates a new JSONListBinding.
+	 *
+	 * This constructor should only be called by subclasses or model implementations, not by application or control code.
+	 * Such code should use {@link sap.ui.model.json.JSONModel#bindTree JSONModel#bindTree} on the corresponding model instance instead.
+	 *
+	 * @param {sap.ui.model.json.JSONModel}
+	 *         oModel Model instance that this binding is created for and that it belongs to
+	 * @param {string}
+	 *         sPath Path pointing to the tree or array that should be bound
+	 * @param {object}
+	 *         [oContext=null] Context object for this binding, mandatory when a relative binding path is given
+	 * @param {sap.ui.model.Filter[]|sap.ui.model.Filter} [aFilters=[]]
+	 *   The filters to be used initially with type {@link sap.ui.model.FilterType.Application}; call {@link #filter} to
+	 *   replace them
+	 * @param {object}
+	 *         [mParameters=null] Additional model-specific parameters
+	 * @param {string[]} [mParameters.arrayNames]
+	 * 			Keys of arrays to be used for building the tree structure. If not specified, all arrays and objects in the bound data will be used.
+	 *			Note that for arrays nested inside differently named arrays, you need to add both to <code>arrayNames</code>. You always have to add the complete parent chain.
+	 *			If any array is ignored, its child arrays will be ignored as well even if they have been added to <code>arrayNames</code>.
+	 * @param {sap.ui.model.Sorter[]|sap.ui.model.Sorter} [aSorters=[]]
+	 *   The sorters used initially; call {@link #sort} to replace them
+	 * @throws {Error} If one of the filters uses an operator that is not supported by the underlying model
+	 *   implementation or if the {@link sap.ui.model.Filter.NONE} filter instance is contained in <code>aFilters</code>
+	 *   together with other filters
 	 *
 	 * @class
 	 * Tree binding implementation for JSON format.
 	 *
-	 * The tree data structure may contain JSON objects and also arrays. If using arrays and don't want to bind every array data in the data structure you can
-	 * specify a parameter <code>arrayNames</code> in the mParameters which contains the names of the arrays in a string array which should be bound for the tree.
-	 * An array not included there won't be bound. If an array is included but it is nested in another parent array which isn't included in the names list it won't be bound.
-	 * So make sure that the parent array name is also included. If the tree data structure doesn't include any arrays you don't have to specify this parameter at all.
+	 * The bound data can contain JSON objects and arrays. Both will be used to build the tree structure.
+	 * You can optionally define a set of arrays to be used for the tree structure in the parameter <code>arrayNames</code>.
+	 * If this parameter is set, all other objects and arrays will be ignored.
 	 *
-	 * @param {sap.ui.model.json.JSONModel} [oModel]
-	 * @param {string}
-	 *         sPath the path pointing to the tree / array that should be bound
-	 * @param {object}
-	 *         [oContext=null] the context object for this databinding (optional)
-	 * @param {array}
-	 *         [aFilters=null] predefined filter/s contained in an array (optional)
-	 * @param {object}
-	 *         [mParameters=null] additional model specific parameters (optional)
-	 * @param {string[]} [mParameters.arrayNames]
-	 *         If this parameter is specified with an array of string names, these names will be used to construct the tree data structure.
-	 *         Only the nested objects contained in arrays, with names specified by mParameters.arrayNames, will be included in the tree.
-	 *         Of course this will only happen if all parent-nodes up to the top-level are also included.
-	 *         If you do NOT specify this parameter: by default all nested objects/arrays will be used to build the trees hierarchy.
-	 *
+	 * @protected
 	 * @alias sap.ui.model.json.JSONTreeBinding
 	 * @extends sap.ui.model.ClientTreeBinding
 	 */
@@ -43,8 +53,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ClientTreeBinding'],
 		if (oNode && typeof oNode == "object") {
 			var oNodeContext = this.oModel.getContext(sContextPath + sName);
 			// check if there is a filter on this level applied
-			if (this.aAllFilters && !this.bIsFiltering) {
-				if (jQuery.inArray(oNodeContext, this.filterInfo.aFilteredContexts) != -1) {
+			if (this.oCombinedFilter && !this.bIsFiltering) {
+				if (this.filterInfo.aFilteredContexts && this.filterInfo.aFilteredContexts.indexOf(oNodeContext) != -1) {
 					aContexts.push(oNodeContext);
 				}
 			} else {

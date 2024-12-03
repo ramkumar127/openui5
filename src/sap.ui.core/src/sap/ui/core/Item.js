@@ -7,6 +7,8 @@ sap.ui.define(['./Element', './library'],
 	function(Element, library) {
 	"use strict";
 
+	// shortcut for enum(s)
+	var TextDirection = library.TextDirection;
 
 
 	/**
@@ -22,10 +24,8 @@ sap.ui.define(['./Element', './library'],
 	 * @author SAP SE
 	 * @version ${version}
 	 *
-	 * @constructor
 	 * @public
 	 * @alias sap.ui.core.Item
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Item = Element.extend("sap.ui.core.Item", /** @lends sap.ui.core.Item.prototype */ { metadata : {
 
@@ -35,7 +35,7 @@ sap.ui.define(['./Element', './library'],
 			/**
 			 * The text to be displayed for the item.
 			 */
-			text : {type : "string", group : "Misc", defaultValue : ""},
+			text : {type : "string", group : "Data", defaultValue : ""},
 
 			/**
 			 * Enabled items can be selected.
@@ -45,7 +45,7 @@ sap.ui.define(['./Element', './library'],
 			/**
 			 * Options are RTL and LTR. Alternatively, an item can inherit its text direction from its parent control.
 			 */
-			textDirection : {type : "sap.ui.core.TextDirection", group : "Misc", defaultValue : sap.ui.core.TextDirection.Inherit},
+			textDirection : {type : "sap.ui.core.TextDirection", group : "Misc", defaultValue : TextDirection.Inherit},
 
 			/**
 			 * Can be used as input for subsequent actions.

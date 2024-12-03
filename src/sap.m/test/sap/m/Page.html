@@ -1,21 +1,20 @@
 <!DOCTYPE HTML>
 <html>
+
 <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>sap.m.Page - Accessibility</title>
 
+    <script src="shared-config.js"></script>
     <script src="../../../resources/sap-ui-core.js"
-            type="text/javascript"
             id="sap-ui-bootstrap"
-            data-sap-ui-libs="sap.m"
-            data-sap-ui-theme="sap_bluecrystal">
+            data-sap-ui-libs="sap.m">
     </script>
     <script>
         var oApp = new sap.m.App("myApp", {
             initialPage: "page"
         });
 
-        var aBackGrounds = ["List", "Solid", "Transparent", "Standard"];
+        var aBackgrounds = ["List", "Solid", "Transparent", "Standard"];
         var iCurrentBackground = 0;
 
         var oSetBusyButton = new sap.m.Button({
@@ -26,16 +25,16 @@
         });
 
         var fnCycleBackgrounds = function () {
-            oPage.setBackgroundDesign(aBackGrounds[iCurrentBackground]);
+            oPage.setBackgroundDesign(aBackgrounds[iCurrentBackground]);
 
-            if (iCurrentBackground < aBackGrounds.length) {
+            if (iCurrentBackground < aBackgrounds.length) {
                 iCurrentBackground++;
             } else {
                 iCurrentBackground = 0;
             }
         };
 
-        var oChangeBackgroung = new sap.m.Button({
+        var oChangeBackground = new sap.m.Button({
             id: "background-change-button", text: "Cycle background",
             tooltip: "Cycles the backgrounds", press: fnCycleBackgrounds
         });
@@ -46,19 +45,37 @@
             showNavButton: true,
             contentOnlyBusy: true,
             content: [
-                new sap.m.Text({
-                    text: "This is a sample page which demonstrates the sap.m.Page control. The sap.m.Page control is just a container for other controls used in the application."
+                new sap.m.Button('hide-show-header', {
+                     text: "Hide/show header",
+                     press: function () {
+                         oPage.setShowHeader(!oPage.getShowHeader());
+                     }
+                }),
+                new sap.m.Button('hide-show-footer', {
+                     text: "Hide/show footer",
+                     press: function () {
+                         oPage.setShowFooter(!oPage.getShowFooter());
+                     }
+                }),
+                new sap.m.Button('toggle-floating-footer', {
+                    text: "Toggle FloatingFooter",
+                    press: function () {
+                        oPage.setFloatingFooter(!oPage.getFloatingFooter());
+                    }
                 })
             ],
             footer: new sap.m.Bar({
                 contentLeft: oSetBusyButton,
-                contentRight: oChangeBackgroung
+                contentRight: oChangeBackground
             })
         });
+
         oApp.addPage(oPage).placeAt("content");
     </script>
 </head>
-<body class="sapUiBody" role="application">
-<div id="content"></div>
+
+<body class="sapUiBody">
+    <div id="content"></div>
 </body>
+
 </html>

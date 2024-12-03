@@ -3,8 +3,8 @@
  */
 
 // Provides class sap.ui.core.util.ExportType
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject'],
-	function(jQuery, ManagedObject) {
+sap.ui.define(['sap/ui/base/ManagedObject'],
+	function(ManagedObject) {
 	'use strict';
 
 	/**
@@ -21,8 +21,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject'],
 	 * @version ${version}
 	 * @since 1.22.0
 	 *
-	 * @constructor
 	 * @public
+	 * @deprecated As of version 1.73, replaced by the export functionality of the <code>sap.ui.export</code> library.
 	 * @alias sap.ui.core.util.ExportType
 	 */
 	var ExportType = ManagedObject.extend('sap.ui.core.util.ExportType', {
@@ -43,7 +43,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject'],
 				/**
 				 * Charset.
 				 */
-				charset: 'string'
+				charset: 'string',
+
+				/**
+				 * Whether to prepend an unicode byte order mark when saving as a file (only applies for utf-8 charset).
+				 */
+				byteOrderMark: { type: 'boolean', defaultValue: undefined }
 			}
 		}
 
@@ -195,8 +200,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObject'],
 
 					// convert customData object array to key-value map
 					var mCustomData = {};
-					jQuery.each(aCells[iIndex].getCustomData(), function() {
-						mCustomData[this.getKey()] = this.getValue();
+					aCells[iIndex].getCustomData().forEach(function(oCustomData) {
+						mCustomData[oCustomData.getKey()] = oCustomData.getValue();
 					});
 
 					return {

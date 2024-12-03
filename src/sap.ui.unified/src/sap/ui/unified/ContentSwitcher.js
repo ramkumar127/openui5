@@ -3,9 +3,18 @@
  */
 
 // Provides control sap.ui.unified.ContentSwitcher.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
-	function(jQuery, Control, library) {
+sap.ui.define([
+	'sap/ui/core/Control',
+	'./library',
+	"./ContentSwitcherRenderer",
+	"sap/base/Log"
+], function(Control, library, ContentSwitcherRenderer, Log) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.unified.ContentSwitcherAnimation
+	var ContentSwitcherAnimation = library.ContentSwitcherAnimation;
 
 
 
@@ -27,8 +36,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 	 * @since 1.16.0
 	 * @experimental Since version 1.16.0.
 	 * API is not yet finished and might change completely
+	 * @deprecated As of version 1.44.0, the concept has been discarded.
 	 * @alias sap.ui.unified.ContentSwitcher
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var ContentSwitcher = Control.extend("sap.ui.unified.ContentSwitcher", /** @lends sap.ui.unified.ContentSwitcher.prototype */ { metadata : {
 
@@ -59,15 +68,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 			 */
 			content2 : {type : "sap.ui.core.Control", multiple : true, singularName : "content2"}
 		}
-	}});
+	}, renderer: ContentSwitcherRenderer});
 
 	(function(window) {
 
 	////////////////////////////////////////// Public Methods //////////////////////////////////////////
 
-	/**
-	 * This file defines behavior for the control,
-	 */
 	ContentSwitcher.prototype.init = function(){
 	};
 
@@ -99,8 +105,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 	 * sapUiUnifiedCSwitcherVisible
 	 */
 	ContentSwitcher.prototype._showActiveContent = function(iNumber) {
-		this._$Contents[0].toggleClass("sapUiUfdCSwitcherVisible", iNumber === 1);
-		this._$Contents[1].toggleClass("sapUiUfdCSwitcherVisible", iNumber === 2);
+		if (this._$Contents) {
+			this._$Contents[0].toggleClass("sapUiUfdCSwitcherVisible", iNumber === 1);
+			this._$Contents[1].toggleClass("sapUiUfdCSwitcherVisible", iNumber === 2);
+		}
 	};
 
 	///////////////////////////////////////// Hidden Functions /////////////////////////////////////////
@@ -108,21 +116,21 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 
 	//////////////////////////////////////// Overridden Methods ////////////////////////////////////////
 
-	    ///////////////////////////////// Property "activeContent" /////////////////////////////////
+		///////////////////////////////// Property "activeContent" /////////////////////////////////
 
 	ContentSwitcher.prototype.setActiveContent = function(iNumber) {
-		iNumber = parseInt(iNumber, 10);
+		iNumber = parseInt(iNumber);
 
 		if (isNaN(iNumber) || iNumber < 1) {
 			iNumber = 1;
 
-			jQuery.sap.log.warning(
+			Log.warning(
 				"setActiveContent argument must be either 1 or 2. Active content set to 1."
 			);
 		} else if (iNumber > 2) {
 			iNumber = 2;
 
-			jQuery.sap.log.warning(
+			Log.warning(
 				"setActiveContent argument must be either 1 or 2. Active content set to 2."
 			);
 		}
@@ -135,14 +143,14 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 	};
 
 
-	    /////////////////////////////////// Property "animation" ///////////////////////////////////
+		/////////////////////////////////// Property "animation" ///////////////////////////////////
 
 	ContentSwitcher.prototype.setAnimation = function(sAnimation, bSuppressInvalidate){
 		if (typeof (sAnimation) !== "string") {
-			sAnimation = sap.ui.unified.ContentSwitcherAnimation.None;
-			jQuery.sap.log.warning(
+			sAnimation = ContentSwitcherAnimation.None;
+			Log.warning(
 				"setAnimation argument must be a string. Animation was set to \"" +
-				sap.ui.unified.ContentSwitcherAnimation.None + "\"."
+				ContentSwitcherAnimation.None + "\"."
 			);
 		}
 
@@ -153,7 +161,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 
 		if (sAnimation === sCurrentAnimation) {
 			// No change.
-			return;
+			return this;
 		}
 
 		var $Dom = this.$();
@@ -165,18 +173,16 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 			// The renderer will take care of it.
 		}/**/
 
-		this.setProperty("animation", sAnimation, bSuppressInvalidate);
-
-		return this;
+		return this.setProperty("animation", sAnimation, bSuppressInvalidate);
 	};
 
 
-	    //////////////////////////////////////// Event "xxx" ///////////////////////////////////////
-	    ///////////////////////////////////// Aggregation "xxx" ////////////////////////////////////
-	    ///////////////////////////////////// Association "xxx" ////////////////////////////////////
+		//////////////////////////////////////// Event "xxx" ///////////////////////////////////////
+		///////////////////////////////////// Aggregation "xxx" ////////////////////////////////////
+		///////////////////////////////////// Association "xxx" ////////////////////////////////////
 
 	})(window);
 
 	return ContentSwitcher;
 
-}, /* bExport= */ true);
+});

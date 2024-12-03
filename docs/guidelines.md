@@ -19,10 +19,12 @@ When a file is consistently not following these rules and adhering to the rules 
     *  [Themes/CSS](#themescss)
         *  [General](#general-1)
         *  [Naming](#naming)
+        *  [Images](#images)
         *  [LESS Theme Parameters](#less-theme-parameters)
 1.  [Product Standards / Acceptance Criteria](#product-standards--acceptance-criteria)
 1.  [File Names and Encoding](#file-names-and-encoding)
 1.  [Git Guidelines](#git-guidelines)
+    * [Commit Message](#commit-message)
 1.  [Tools](#tools)
     *  [ESLint](#eslint)
 
@@ -44,13 +46,14 @@ General
 JavaScript Coding Guidelines
 ----------------------------
 
--   No global JavaScript variables; organize all global objects in an `sap.\*` namespace structure or extend the `jQuery.sap` object. The methods `sap.ui.define(...)` and `jQuery.sap.declare(sModuleName)` assist in doing so, find [more details here](guidelines/jsnamespaces.md).
+-   No global JavaScript variables; Use AMD modules for encapsulation. For more information, see [Best Practices for Loading Modules](https://sdk.openui5.org/topic/00737d6c1b864dc3ab72ef56611491c4) and [API Reference: `sap.ui.define`](https://sdk.openui5.org/api/sap.ui/methods/sap.ui.define).
     -   This also means: no undeclared variables
     -   When using global variables introduced by other libraries, declare the usage in a special "global"-comment: `/*global JSZip, OpenAjax */`
 -   Do not access internal (private) members of other objects
 -   Do not use console.log()
--   Use jQuery.sap.byId("&lt;someId&gt;") instead of jQuery("\#&lt;someId&gt;") when &lt;someId&gt; is not a known string - certain characters in IDs need to be escaped for jQuery to work correctly
--   Keep modifications of jQuery and other embedded Open Source to a minimum and document them clearly with the term "SAP modification"
+-   Use `jQuery(window.document.getElementById("<someId>")` instead of `jQuery("#<someId>")` when &lt;someId&gt; is not a known string - certain characters in IDs need to be escaped for jQuery to work correctly
+-   Keep modifications of jQuery and other embedded Open Source to a minimum and document them clearly with the terms "BEGIN: MODIFIED BY SAP" and "END: MODIFIED BY SAP" before and after the modified section. Also add the following sentence to the copyright comment:
+```Modifications SAP SE or an SAP affiliate company and OpenUI5 contributors. All rights reserved.```
     -   Such modifications may not alter the standard behavior of the used library in a way that breaks other libraries
 
 ### Code Formatting
@@ -97,12 +100,13 @@ But do NOT use hungarian notation for API method parameters: the documentation w
 | <b>i</b>Count      | int                |
 | <b>m</b>Parameters | map / assoc. array |
 | <b>a</b>Entries    | array              |
-| <b>d</b>Today      | date               |
+| <b>d</b>Today      | Date               |
 | <b>f</b>Decimal    | float              |
 | <b>b</b>Enabled    | boolean            |
 | <b>r</b>Pattern    | RegExp             |
 | <b>fn</b>Function  | function           |
 | <b>v</b>Variant    | variant types      |
+| <b>p</b>Dialog     | Promise            |
 
 -   Class names should use CamelCase, starting with an uppercase letter
 -   HTML element IDs starting with `sap-ui-` are reserved for UI5.
@@ -122,37 +126,39 @@ But do NOT use hungarian notation for API method parameters: the documentation w
 
 ### Creating Classes
 
--   Instance fields should be initialized and described in the constructor function: `this._bReady = false; // ready to handle requests`
--   Instance methods are defined as members of the prototype of the constructor function: `MyClass.prototype.doSomething = function(){...`
--   Static members (fields and functions) are defined as members of the constructor function object itself: `MyClass.doSomething = function(){...`
--   Private members should have a name starting with an underscore: `this._bFinalized`
+| Implementation | Description |
+|-------------|----------------|
+| `this._bFinalized` | Private members should have a name starting with an underscore |
+| `this._aItems = [];`| Instance fields (members) should be initialized and described in the constructor function. If necessary set them to undefined in <code>MyClass.prototype.exit = function() { this._aItems = undefined; }</code> to prevent memory leaks |
+| `MyClass.prototype.doSomething = function(){...}` | Instance methods are defined as members of the prototype of the constructor function |
+| `MyClass.doSomething = function(){...}` | Static members (fields and functions) are defined as members of the constructor function object itself |
+| <code>MyClass.prototype.isOpen = function() { return true; }</code> | Members that return a Boolean value should be prefixed with `is`. An exception are Control properties for Boolean values. The Getters are prefixed with `get`.  |
+| <code>MyClass.prototype.hasModel = function() { return !!this._oModel; }</code> | Members that check the content of an array, map, or object and return a Boolean value should be prefixed with `has` |
+| <code>MyClass.prototype._onMetadataLoaded = function() {...}</code> | Members that are attached to an event and thus are used as event listeners should be prefixed with `on`. Since event listeners usually are used in a private manner they should be prefixed with a <code>_</code> as well. |
+| <code>MyClass.prototype.metadataLoaded = function() { return new Promise({...}); }</code> | Members that return a <code>Promise</code> should be named with a verbal phrase in past tense that states what they do |
+| <code>MyClass.prototype.setSomething = function() {... return this;}</code> | API methods with no return value should return `this` to enable method chaining |
+| <code>SuperClass.extend(…)</code> | Subclasses should use this way to extend a class<br>If there is no base class, the prototype is automatically initialized by JavaScript as an empty object literal and must not be assigned manually. Consider inheriting from `sap/ui/base/Object` |
+| `SuperClass.apply(this, arguments);` | Subclasses have to call (or apply) their parent's constructor |
+
 -   Constructor + methods + statics are combined in a single JS source file named and located after the qualified name of the class (precondition for the class loading)
--   API methods with no return value should return "this" to enable method chaining
 -   Static classes do not have a constructor but an object literal. There is no pattern for inheritance of such classes. If inheritance is needed, use a normal class and create a singleton in the class.
--   Subclasses should use SuperClass.extend(…)
-    -   If there is no base class, the prototype is automatically initialized by JavaScript as an empty object literal and must not be assigned manually. Consider inheriting from `sap.ui.base.Object`
--   Subclasses call (or apply) the constructor of their base class: `SuperClass.apply(this, arguments);`
 
 See the [example for creating a class (with documentation)](guidelines/classexample.md).
 
 ### Documentation (JSDoc)
 
-For documenting JavaScript, UI5 uses the JSDoc3 toolkit which mimics JavaDoc. See the [JSDoc3 Toolkit Homepage](http://usejsdoc.org/) for an explanation of the available tags.
+For documenting JavaScript, UI5 uses the JSDoc toolkit which mimics JavaDoc. See the [JSDoc Toolkit Homepage](https://jsdoc.app/) for an explanation of the available tags.
 
--   Document the constructor with `@class, @author, @since`, …
--   For subclasses, document the inheritance by using an `@extends` tag in their constructor doclet
--   Document at least public and protected methods with JSDoc, mark them as `@public`/`@protected`
-    -   When you also document private methods with JSDoc, mark them with `@private` (this is currently the default in UI5, but not in JSDoc, so it is safer to explicitly specify it)
-    -   "Protected" is not clearly defined in a JavaScript environment, in UI5 it means: not for use by applications, but might be used even outside the same class or subclasses, but only in closely related classes.
--   Document method parameters with type (in curly braces) and parameter name (in square brackets if optional)
--   For static helper classes that only provide static methods use `@namespace`
+For further details, see [JSDoc Guidelines](guidelines/jsdoc.md).
 
-See the [example for creating a class with documentation](guidelines/classexample.md).
-
-Also see the [list of common JSDoc pitfalls](guidelines/jsdocpitfalls.md).
 
 UI5 Control Development Guidelines
 ----------------------------------
+
+### General
+
+-   Keep things simple! Keep the number of entities created for a new control minimal
+-   Re-use is good, but not when it comes with a significant performance penalty. E.g. when a control needs a clickable area, implementing `onclick` and checking where the click came from is easy, comes with zero runtime weight and is hence usually better than instantiating and aggregating a Button control and using not much else than its "press" event. It is always a question how much functionality of the other control is actually needed.
 
 ### API
 
@@ -171,6 +177,7 @@ UI5 Control Development Guidelines
     -   When there is one most important aggregation, it should be marked as default aggregation (easier usage in XMLViews)
 -   Properties, associations and aggregations should be preferred to API methods due to data binding support and easier usage in XMLViews
 -   Make sure not to break usage in XMLViews; e.g. types like sap.ui.core/object and sap.ui.core/any may not be used for mandatory properties
+-   Be careful about initial dependencies. E.g. the Input control should not always load the table library just because some Inputs may show a value help table after certain user interaction
 
 ### Behavior
 
@@ -206,7 +213,7 @@ UI5 Control Development Guidelines
 #### General
 
 -   Write semicolons even where optional
--   In general, use "rem" for dimensions; use "px" only for dimensions that do not depend on the font size (exception: controls still supporting IE8 cannot use rem)
+-   In general, use "rem" for dimensions; use "px" only for dimensions that do not depend on the font size
 -   The root element of a control should come without outer margins; add any required padding *inside*. Root margins are owned by the parent control
 -   Do not hard-code any colors, use LESS parameters and color calculations instead; also recommended for other significant theme aspects like fonts and background images
 -   Use other LESS features moderately (the more LESS processing happens, the less clear it is where the runtime CSS originates from)
@@ -231,6 +238,15 @@ UI5 Control Development Guidelines
     -   This class must be written to the HTML root element of the control
     -   All CSS classes within the HTML of this control must append a suffix to this class name, e.g. `sapUiBtnInner`, or `sapMITBHeader`
 
+#### Images
+
+-   Themes (including "base") should only refer to existing images inside that theme
+-   Images will be loaded relative to the theme where they are referenced (see LESS option "relativeUrls")
+  - If an image url defined in base stays active in another theme 'mytheme', derived from base, LESS will calculate a relative URL that points from the mytheme/library.css to the base/library.css.
+  - Similar path calculation is necessary when the URL is defined in another library (e.g. from sap/m/themes/mytheme/library.css to sap/ui/core/themes/base/image.png).
+  - Last but not least, these URL transformations assume a single repository for all sources. When resources for different themes / libs are located in different libraries, such relative URLs might not work.
+-   To override an image within the base theme an additional rule has to be added to the individual theme referencing the image. Otherwise the base image will be loaded.
+
 #### LESS Theme Parameters
 
 -   Use the correct theme parameter - do not find by color value, but by semantics. In general, let the visual designers give the correct parameter to use.
@@ -238,7 +254,24 @@ UI5 Control Development Guidelines
     -   Use parameters like `@sapUiTextInverted` for bright-on-dark scenarios
     -   If no suitable parameter exists, derive the color by calculation from a suitable parameter
 -   Do not add parameters to the public API (using annotations) without sufficient clarification with designers and Product Owners
--   You can (but do not need to) create your own internal control-specific parameters. If you do, also prefix their name with your control name (e.g. `@sapUiBtnDisabledText`).
+-   If you create your own local parameters, you must ensure that the names you define are unique by using name(space) prefixes.
+    -   For **control-specific** parameters in ```*.less``` files, use a combination of the library name and the ```*.less``` file name for the prefix. Start with an underscore. Separate each part of the library namespace and the file name from each other using underscores as well.
+    -   **Tip**
+    -   For example, you can define the following prefix:
+    -   **Library:** ```sap.ui.core```
+    -   **File:** ```sap/ui/core/themes/base/MyControl.less```
+    -   **Prefix:** ```@_sap_ui_core_MyControl_```
+    -   For **library-specific** parameters in ```library.source.less``` files, use the library name for the prefix. Start with an underscore. Separate each part of the library namespace from each other using underscores.
+    -   **Tip**
+    -   For example, you can define the following prefix:
+    -   **Library:** ```sap.ui.core```
+    -   **File:** ```sap/ui/core/themes/base/library.source.less```
+    -   **Prefix:** ```@_sap_ui_core_```
+    -   **Caution**
+    -   Local parameters themselves must **not** contain underscores. For example, do not write ```@_sap_ui_core_MyControl_Some_Color```, but write ```@_sap_ui_core_MyControl_SomeColor``` instead.
+-   When defining URLs as parameters use the proper `url()` format: ```@sapUiMyUrl: url(./path/to/img.png)```
+    -   Do **NOT** use escaped strings (`~`): ~~@sapUiMyUrl: ~"path/to/img.png"~~
+    -   Do **NOT** use absolute urls: ~~@sapUiMyUrl: url(/absolute/path/to/img.png)~~
 
 Product Standards / Acceptance Criteria
 ---------------------------------------
@@ -254,7 +287,7 @@ General:
 -   Proper API documentation
 -   Translation: all texts visible in the UI must be translatable
     -   Do not provide translations, only provide the "developer english" version in messagebundle.properties, but annotate properly for translators, see [this page](guidelines/translationfiles.md) for details.
--   Follow the compatibility rules, as specified [here](https://openui5.hana.ondemand.com/docs/guide/91f087396f4d1014b6dd926db0e91070.html)
+-   Follow the compatibility rules, as specified [here](https://sdk.openui5.org/topic/91f087396f4d1014b6dd926db0e91070)
 -   Make sure other Open Source libraries (or parts of them) are officially approved before adding them to UI5. Do not add code you "found" somewhere.
 
 For controls in addition:
@@ -278,23 +311,34 @@ Some of the target platforms of UI5 impose technical restrictions on the naming 
 
 
 
-Git Guidelines
+# Git Guidelines
 --------------
 
+## Settings
 Set the Git `core.autocrlf` configuration property to "false" (and make sure to use Unix-style linebreaks (LF-only))
 
-The commit message consists of two or three parts, separated by empty lines:
+## Commit Message
+The commit message consists of two or three parts, separated by empty lines.
 
-1.  The commit summary (the first line)
-2.  An optional commit description text (may contain additional empty lines, for external contributors you would express your CLA agreement here)
-3.  A data section
+### Commit Summary
+The commit summary is the first line of the commit message.
+- It should be 50-70 characters long.
+- Must be prefixed by `[FIX]` or `[FEATURE]` and should start with the control/component which was the main subject of the change
+-   Instead of `[FIX]`/`[FEATURE]` an `[INTERNAL]` can be used for commits/explanations which should not be part of the change log. If this tag is used the message won’t appear in the release/patch notes.
+- Do not use any `[` or `]` within the summary but for the prefixes.
 
--   The summary line must be prefixed by `[FIX]` or `[FEATURE]` and should start with the control/component which was the main subject of the change
--   Instead of `[FIX]`/`[FEATURE]` and at any other location in the commit message `[INTERNAL]` can be used for commits/explanations which are not supposed to be part of the release notes because they are not relevant for users of UI5
--   The data section consists of name-value pairs
-	-   `Fixes https://github.com/SAP/openui5/issues/(issueNumber)` when the change fixes a GitHub-reported bug; it is important that there is NO colon between "Fixes" and the URL!
-	-   `Closes https://github.com/SAP/openui5/pull/(pullRequestNumber)` when the change comes from a pull request; it is important that there is NO colon between "Fixes" and the URL! As the pull request number is not known before it is created, this is usually added by the OpenUI5 committer handling the pull request
-    -   Further internal information - like `CSS` (for old SAP-internally reported bugs), `BCP` (for customer messages reported at SAP and new internal bug reports), a mandatory `Change-Id`, and the `CR-Id` ("Change Request ID", mandatory for maintenance codelines) - is added by SAP developers when required
+### Description
+Describe the problem you fix with this change. Whether your patch is a one-line bug fix or 5000 lines of a new feature, there must be an underlying problem that motivated you to do this work. Make the necessity of the fix clear to the reviewers, so they will continue reading.
+
+Describe the effect that this change has from a user's point of view. App crashes and lockups are pretty convincing for example, but not all bugs are that obvious and should be mentioned in the text. Even if the problem was spotted during code review, describe the impact you think it can have on users.
+
+After that, describe the technical details of what you changed. It is important to describe the change in a most understandable way so the reviewer is able to verify that the code is behaving as you intend it to.
+
+### Data Section
+The data section consists of name-value pairs
+-   `Fixes: https://github.com/SAP/openui5/issues/(issueNumber)` if the change fixes a GitHub-reported bug
+-   `Closes: https://github.com/SAP/openui5/pull/(pullRequestNumber)` if the change comes from a pull request. This is usually added by the OpenUI5 committer handling the pull request
+-   Further internal information - like `BCP` (for customer and internal messages reported at SAP and new internal bug reports), a mandatory `Change-Id` for Gerrit, and the `CR-Id` ("Change Request ID", mandatory for maintenance codelines) - is added by SAP developers if required
 -   A commit message can thus look like this:
 
     ``` wiki
@@ -307,7 +351,7 @@ The commit message consists of two or three parts, separated by empty lines:
     focus/blur event listener in onBefore/AfterRerendering
 
     Change-Id: I3c7d6e4d52fa71e9412b729b7a234a112915c2a4
-    Fixes https://github.com/SAP/openui5/issues/1
+    Fixes: https://github.com/SAP/openui5/issues/1
     ```
 
 

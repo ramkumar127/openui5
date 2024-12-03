@@ -1,11 +1,11 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<title>ViewSettingsDialog - sap.m</title>
 
-		<script src="../../../resources/sap-ui-core.js" type="text/javascript"
-			id="sap-ui-bootstrap" data-sap-ui-libs="sap.m, sap.ui.commons" data-sap-ui-theme="sap_bluecrystal"
+		<script src="shared-config.js"></script>
+		<script src="../../../resources/sap-ui-core.js"
+			id="sap-ui-bootstrap" data-sap-ui-libs="sap.m"
 			data-sap-ui-xx-bindingSyntax="complex">
 		</script>
 
@@ -42,6 +42,9 @@
 		 * Table setup and formatting *
 		 ******************************/
 
+		// make the util namespace known globally
+		var util = globalThis.util = {};
+
 		/* custom formatters (taken from cart app to test custom formatters) */
 
 		jQuery.sap.declare("util.Formatter");
@@ -62,7 +65,7 @@
 				"D": "Denied"
 			},
 			statusText: function (status) {
-				return (util.Formatter._statusTextMap[status]) ? util.Formatter._statusTextMap[status]: status;
+				return (util.Formatter._statusTextMap[status]) ? util.Formatter._statusTextMap[status] : status;
 			},
 			_statusStateMap: {
 				"A": "Success",
@@ -70,28 +73,25 @@
 				"D": "Error"
 			},
 			statusState: function (status) {
-				return (util.Formatter._statusStateMap[status]) ? util.Formatter._statusStateMap[status]: "None";
+				return (util.Formatter._statusStateMap[status]) ? util.Formatter._statusStateMap[status] : "None";
 			}
 		};
 
 		/* column data and model */
-		var model = new sap.ui.model.json.JSONModel();
-		model.setData({
+		var i18nModel = new sap.ui.model.json.JSONModel();
+		i18nModel.setData({
 			Name: "Name",
 			Status: "Status",
 			Value: "Value",
 			Price: "Price"
 		});
-		sap.ui.getCore().setModel(model, "i18n");
 
 		/* table definition */
 
 		var table = new sap.m.Table("items", {
-			threshold: 2,
 			inset: false,
 			mode: "MultiSelect",
 			showUnread: true,
-			scrollToLoad: true,
 			infoToolbar:
 				new sap.m.Toolbar({
 				visible: false,
@@ -209,6 +209,7 @@
 		var oModel = new sap.ui.model.json.JSONModel();
 		oModel.setData(data);
 		table.setModel(oModel);
+		table.setModel(i18nModel, "i18n");
 		table.bindAggregation("items", "/navigation", template);
 
 		/* sort item text model (CSN issue)*/
@@ -236,7 +237,7 @@
 				return oContext.getProperty("limit").toString();
 			},
 			price: function (oContext) { // use price to sort in categories (cheap / medium / expensive)
-				var price = parseInt(oContext.getProperty("price"), 10),
+				var price = parseInt(oContext.getProperty("price")),
 					key,
 					text;
 
@@ -264,7 +265,8 @@
 			items: [
 				new sap.m.Label("minLabel", {
 					design: sap.m.LabelDesign.Bold,
-					text: "Minimum price:"
+					text: "Minimum price:",
+					labelFor: "minSlider"
 				}),
 				new sap.m.Slider("minSlider", {
 					value: 0,
@@ -288,15 +290,15 @@
 						// update filter
 						// this functionality only needed because custom control is cloned for this test page
 						// if you don't have cloned controls you can directly access them by id and set/reset the values
-						for(; i < filters.length; i++) {
-							if(filters[i] instanceof sap.m.ViewSettingsCustomItem && filters[i].getKey() === "myPriceFilter") {
+						for (; i < filters.length; i++) {
+							if (filters[i] instanceof sap.m.ViewSettingsCustomItem && filters[i].getKey() === "myPriceFilter") {
 								customFilter = filters[i];
 								break;
 							}
 						}
 
-						if(customFilter) {
-							if(oEvent.getParameter("value") !== 0 || source.getParent().getItems()[3].getValue() !== 100) {
+						if (customFilter) {
+							if (oEvent.getParameter("value") !== 0 || source.getParent().getItems()[3].getValue() !== 100) {
 								customFilter.setSelected(true);
 								customFilter.setFilterCount(1);
 							} else {
@@ -308,7 +310,8 @@
 				}),
 				new sap.m.Label("maxLabel", {
 					design: sap.m.LabelDesign.Bold,
-					text: "Maximum price:"
+					text: "Maximum price:",
+					labelFor: "maxSlider"
 				}),
 				new sap.m.Slider("maxSlider", {
 					value: 100,
@@ -332,15 +335,15 @@
 						// update filter
 						// this functionality only needed because custom control is cloned for this test page
 						// if you don't have cloned controls you can directly access them by id and set/reset the values
-						for(; i < filters.length; i++) {
-							if(filters[i] instanceof sap.m.ViewSettingsCustomItem && filters[i].getKey() === "myPriceFilter") {
+						for (; i < filters.length; i++) {
+							if (filters[i] instanceof sap.m.ViewSettingsCustomItem && filters[i].getKey() === "myPriceFilter") {
 								customFilter = filters[i];
 								break;
 							}
 						}
 
-						if(customFilter) {
-							if(oEvent.getParameter("value") !== 100 || source.getParent().getItems()[1].getValue() !== 0) {
+						if (customFilter) {
+							if (oEvent.getParameter("value") !== 100 || source.getParent().getItems()[1].getValue() !== 0) {
 								customFilter.setSelected(true);
 								customFilter.setFilterCount(1);
  							} else {
@@ -368,18 +371,18 @@
 
 			// this functionality only needed because custom control is cloned for this test page
 			// if you don't have cloned controls you can directly access them by id and set/reset the values
-			for(; i < filters.length; i++) {
-				if(filters[i] instanceof sap.m.ViewSettingsCustomItem && filters[i].getKey() === "myPriceFilter") {
+			for (; i < filters.length; i++) {
+				if (filters[i] instanceof sap.m.ViewSettingsCustomItem && filters[i].getKey() === "myPriceFilter") {
 					customFilter = filters[i];
 					customControl = customFilter.getCustomControl();
 					break;
 				}
 			}
-			if(customFilter) {
+			if (customFilter) {
 				customFilter.setSelected(false);
 				customFilter.setFilterCount(0);
 			}
-			if(customControl) {
+			if (customControl) {
 				customControl.getItems()[0].setText("Minimum price:");
 				customControl.getItems()[1].setValue(0);
 				customControl.getItems()[2].setText("Maximum price:");
@@ -498,7 +501,7 @@
 					"composed filters: " + JSON.stringify(aTableFilters)
 				);
 			}
-		});
+		}).addStyleClass("sapUiNoContentPadding");;
 		vsd1.setSortDescending(false);
 		vsd1.setGroupDescending(true);
 		vsd1.setModel(oModel18n, "i18n");
@@ -573,166 +576,6 @@
 			})
 		}));
 
-		vsd1.addFilterItem(new sap.m.ViewSettingsFilterItem({
-			key: "myNameFilter",
-			text: "Name",
-			items: [
-				new sap.m.ViewSettingsItem({
-					key: "name1",
-					text: "Headphone",
-					selected: true,
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("name", sap.ui.model.FilterOperator.EQ, "Headphone")
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "name2",
-					text: "Mousepad",
-					selected: true,
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("name", sap.ui.model.FilterOperator.EQ, "Mouse Pad")
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "name3",
-					text: "Monitor",
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("name", sap.ui.model.FilterOperator.EQ, "Monitor")
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "name4",
-					text: "Backpack",
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("name", sap.ui.model.FilterOperator.EQ, "Backpack")
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "name5",
-					text: "Printer",
-					selected: true,
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("name", sap.ui.model.FilterOperator.EQ, "Printer")
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "name6",
-					text: "Optic Mouse",
-					selected: true,
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("name", sap.ui.model.FilterOperator.EQ, "Optic Mouse")
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "name7",
-					text: "Dock Station",
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("name", sap.ui.model.FilterOperator.EQ, "Dock Station")
-					})
-				})
-			]
-		}));
-
-		vsd1.addFilterItem(new sap.m.ViewSettingsFilterItem({
-			key: "myStatusFilter",
-			text: "Status",
-			items: [
-				new sap.m.ViewSettingsItem({
-					key: "status1",
-					text: "Approved",
-					selected: true,
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("status", sap.ui.model.FilterOperator.EQ, "A")
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "status2",
-					text: "Open",
-					selected: true,
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("status", sap.ui.model.FilterOperator.EQ, "O")
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "status3",
-					text: "Denied",
-					selected: true,
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("status", sap.ui.model.FilterOperator.EQ, "D")
-					})
-				})
-			]
-		}));
-
-		vsd1.addFilterItem(new sap.m.ViewSettingsFilterItem({
-			key: "myValueFilter",
-			text: "Value",
-			multiSelect: false,
-			items: [
-				new sap.m.ViewSettingsItem({
-					key: "value1",
-					text: "< 10 EUR",
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("limit", sap.ui.model.FilterOperator.LT, 10)
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "value2",
-					text: "10 - 30 EUR",
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("limit", sap.ui.model.FilterOperator.BT, 10, 30)
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "value3",
-					text: "30 - 50 EUR",
-					selected: true,
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("limit", sap.ui.model.FilterOperator.BT, 30, 50)
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "value4",
-					text: "50 - 70 EUR",
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("limit", sap.ui.model.FilterOperator.BT, 50, 70)
-					})
-				}),
-				new sap.m.ViewSettingsItem({
-					key: "value5",
-					text: "> 70 EUR",
-					customData: new sap.ui.core.CustomData({
-						key: "filter",
-						value: new sap.ui.model.Filter("limit", sap.ui.model.FilterOperator.GT, 70)
-					})
-				})
-			]
-		}));
-
-		// custom price control filter
-		vsd1.addFilterItem(new sap.m.ViewSettingsCustomItem({
-			key: "myPriceFilter",
-			text: "Price",
-			customControl: customPriceFilter.clone(),
-			customData: new sap.ui.core.CustomData({
-				key: "callback",
-				value: customPriceCallback // callback to add filters based on the control
-			})
-		}));
 		vsd1.attachResetFilters(customPriceReset); // reset function to reset control when the reset button was pressed
 		vsd1.attachCancel(customPriceCancel); // reset function to reset control when the cancel button was pressed
 
@@ -869,6 +712,7 @@
 								case "value4": aFilters = new sap.ui.model.Filter("limit", sap.ui.model.FilterOperator.BT, 50, 70); break;
 								case "value5": aFilters = new sap.ui.model.Filter("limit", sap.ui.model.FilterOperator.GT, 70); break;
 							}
+
 							// add filters
 							if (aFilters) {
 								// the filter could be an array of filters or a single filter so we transform it to an array
@@ -902,13 +746,15 @@
 					"composed sorters: " + JSON.stringify(aTableSorters) + "\n" +
 					"composed filters: " + JSON.stringify(aTableFilters)
 				);
-			}
+			},
+			filterSearchOperator: sap.m.StringFilterOperator.Contains
 		});
 
 		// init sorting (with simple sorters as custom data for all fields)
 		vsd2.addSortItem(new sap.m.ViewSettingsItem({
 			key: "myNameSorter",
-			text: "Name"
+			text: "Please fill in your name, middle name and Last name",
+			wrapping: true
 		}));
 		vsd2.addSortItem(new sap.m.ViewSettingsItem({
 			key: "myStatusSorter",
@@ -1030,20 +876,6 @@
 		}));
 		vsd2.attachResetFilters(customPriceReset); // reset function to reset control when the reset button was pressed
 		vsd2.attachCancel(customPriceCancel); // reset function to reset control when the cancel button was pressed
-
-		// preset filters
-		vsd2.addPresetFilterItem(new sap.m.ViewSettingsItem({
-			key: "myPresetFilter1",
-			text: "A very complex filter"
-		}));
-		vsd2.addPresetFilterItem(new sap.m.ViewSettingsItem({
-			key: "myPresetFilter2",
-			text: "Ridiculously complex filter"
-		}));
-		vsd2.addPresetFilterItem(new sap.m.ViewSettingsItem({
-			key: "myPresetFilter3",
-			text: "Expensive stuff"
-		}));
 
 		/* set dialog state (solely by API instead of selected flag) */
 
@@ -1227,20 +1059,6 @@
 		}));
 		vsd3.attachResetFilters(customPriceReset); // reset function to reset control when the reset button was pressed
 		vsd3.attachCancel(customPriceCancel); // reset function to reset control when the cancel button was pressed
-
-		// preset filters
-		vsd3.addPresetFilterItem(new sap.m.ViewSettingsItem({
-			key: "myPresetFilter1",
-			text: "A very complex filter"
-		}));
-		vsd3.addPresetFilterItem(new sap.m.ViewSettingsItem({
-			key: "myPresetFilter2",
-			text: "Ridiculously complex filter"
-		}));
-		vsd3.addPresetFilterItem(new sap.m.ViewSettingsItem({
-			key: "myPresetFilter3",
-			text: "Expensive stuff"
-		}));
 
 		/* Example 4) only sort tab & data, other tabs are automatically hidden
 		- Sort data is attached as customData items */
@@ -1487,6 +1305,7 @@
 
 		// init filters
 		vsd7.addFilterItem(new sap.m.ViewSettingsFilterItem({
+			id: "test_filter",
 			key: "myNameFilter",
 			text: "Name",
 			items: [
@@ -1660,7 +1479,7 @@
 				new sap.m.ToolbarSpacer(),
 				new sap.m.Button({
 					icon: "sap-icon://drop-down-list",
-					text: "1",
+					tooltip: "Drop down list",
 					press : function () {
 						sap.m.MessageToast.show("Example 1: sort/group/filter with custom data meta");
 						vsd1.open();
@@ -1668,7 +1487,6 @@
 				}),
 				new sap.m.Button({
 					icon: "sap-icon://action-settings",
-					text: "2",
 					press : function () {
 						sap.m.MessageToast.show("Example 2: sort/group/filter by evaluating the item keys manually");
 						vsd2.open();
@@ -1676,7 +1494,7 @@
 				}),
 				new sap.m.Button({
 					icon: "sap-icon://electrocardiogram",
-					text: "3",
+					tooltip: "Sort group filter without applying settings to the table",
 					press : function () {
 						sap.m.MessageToast.show("Example 3: sort/group/filter without applying settings to the table");
 						vsd3.open();
@@ -1684,7 +1502,6 @@
 				}),
 				new sap.m.Button({
 					icon: "sap-icon://sort",
-					text: "4",
 					press : function () {
 						sap.m.MessageToast.show("Example 4: sort with custom data meta");
 						vsd4.open();
@@ -1692,7 +1509,6 @@
 				}),
 				new sap.m.Button({
 					icon: "sap-icon://group-2",
-					text: "5",
 					press : function () {
 						sap.m.MessageToast.show("Example 5: group with custom data meta");
 						vsd5.open();
@@ -1700,15 +1516,14 @@
 				}),
 				new sap.m.Button({
 					icon: "sap-icon://filter",
-					text: "6",
 					press : function () {
 						sap.m.MessageToast.show("Example 6: preset filters with custom data meta");
 						vsd6.open();
 					}
 				}),
 				new sap.m.Button({
+					id: "open_d",
 					icon: "sap-icon://add-filter",
-					text: "7",
 					press : function () {
 						sap.m.MessageToast.show("Example 7: standard & custom filters with custom data meta");
 						vsd7.open();
@@ -1723,11 +1538,11 @@
 
 		var panel = new sap.m.Panel({
 			headerText: "Debug Area",
-			headerLevel: "H4",
 			content: debug
 		}).addStyleClass("debugPanel");
 
 		var page = new sap.m.Page({
+			id: "testPage",
 			title: "Table",
 			enableScrolling: true,
 			content: [table, panel]

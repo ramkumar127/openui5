@@ -3,9 +3,35 @@
  */
 
 // Provides control sap.ui.ux3.ExactBrowser.
-sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Menu', 'sap/ui/core/Control', './ExactAttribute', './ExactList', './library'],
-	function(jQuery, Button, Menu, Control, ExactAttribute, ExactList, library) {
+sap.ui.define([
+    'sap/ui/commons/Button',
+    'sap/ui/commons/Menu',
+    'sap/ui/core/Control',
+    './ExactAttribute',
+    './ExactList',
+    './library',
+    './ExactBrowserRenderer',
+    'sap/ui/core/Popup'
+],
+	function(
+	    Button,
+		Menu,
+		Control,
+		ExactAttribute,
+		ExactList,
+		library,
+		ExactBrowserRenderer,
+		Popup
+	) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.core.Popup.Dock
+	var Dock = Popup.Dock;
+
+	// shortcut for sap.ui.ux3.ExactOrder
+	var ExactOrder = library.ExactOrder;
 
 
 
@@ -26,11 +52,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38.
 	 * @alias sap.ui.ux3.ExactBrowser
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var ExactBrowser = Control.extend("sap.ui.ux3.ExactBrowser", /** @lends sap.ui.ux3.ExactBrowser.prototype */ { metadata : {
 
+		deprecated: true,
 		library : "sap.ui.ux3",
 		properties : {
 
@@ -48,7 +75,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 			 * The order how the sublists of the top level list should be displayed.
 			 * @since 1.7.1
 			 */
-			topListOrder : {type : "sap.ui.ux3.ExactOrder", defaultValue : sap.ui.ux3.ExactOrder.Select},
+			topListOrder : {type : "sap.ui.ux3.ExactOrder", defaultValue : ExactOrder.Select},
 
 			/**
 			 * Enables the close icons of the displayed lists.
@@ -95,7 +122,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 			/**
 			 * The attributes which shall be available.
 			 */
-			attributes : {type : "sap.ui.ux3.ExactAttribute", multiple : true, singularName : "attribute"},
+			attributes : {type : "sap.ui.ux3.ExactAttribute", multiple : true, singularName : "attribute", forwarding: {idSuffix: "-rootAttribute", aggregation: "attributes"}},
 
 			/**
 			 * Menu with options. The menu can not used when the property showTopList is set to false.
@@ -147,11 +174,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 	}});
 
 
-
-
-
-	(function() {
-
 		/**
 		 * Does the setup when the ExactBrowser is created.
 		 * @private
@@ -164,7 +186,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 			this._rb = sap.ui.getCore().getLibraryResourceBundle("sap.ui.ux3");
 
 			//Create a root node for the attributes tree
-			this._attributeRoot = new ExactAttribute();
+			this._attributeRoot = new ExactAttribute(this.getId() + "-rootAttribute");
 			this.setAggregation("rootAttribute",this._attributeRoot);
 			//Init the used subcontrols
 			this._rootList = new ExactList(this.getId() + "-rootlist");
@@ -192,7 +214,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 				var oMenu = that.getOptionsMenu();
 				if (oMenu) {
 					var oDomRef = oEvent.getParameter("domRef");
-					oMenu.open(oEvent.getParameter("keyboard"), oDomRef, sap.ui.core.Popup.Dock.BeginTop, sap.ui.core.Popup.Dock.BeginBottom, oDomRef);
+					oMenu.open(oEvent.getParameter("keyboard"), oDomRef, Dock.BeginTop, Dock.BeginBottom, oDomRef);
 				}
 			});
 		};
@@ -286,51 +308,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 		};
 
 
-		ExactBrowser.prototype.getAttributes = function() {
-			return this._attributeRoot.getAttributesInternal();
-		};
-
-
-		ExactBrowser.prototype.insertAttribute = function(oAttribute, iIndex) {
-			this._attributeRoot.insertAttribute(oAttribute, iIndex);
-			return this;
-		};
-
-
-		ExactBrowser.prototype.addAttribute = function(oAttribute) {
-			this._attributeRoot.addAttribute(oAttribute);
-			return this;
-		};
-
-
-		ExactBrowser.prototype.removeAttribute = function(vElement) {
-			return this._attributeRoot.removeAttribute(vElement);
-		};
-
-
-		ExactBrowser.prototype.removeAllAttributes = function() {
-			return this._attributeRoot.removeAllAttributes();
-		};
-
-
-		ExactBrowser.prototype.indexOfAttribute = function(oAttribute) {
-			return this._attributeRoot.indexOfAttribute(oAttribute);
-		};
-
-
-		ExactBrowser.prototype.destroyAttributes = function() {
-			this._attributeRoot.destroyAttributes();
-			return this;
-		};
-
-
 
 		/**
 		 * Deselects all currently selected attributes and closes all attribute lists.
 		 *
 		 * @type void
 		 * @public
-		 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 		ExactBrowser.prototype.reset = function() {
 			this._rootList._closeAll();
@@ -385,8 +368,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/Button', 'sap/ui/commons/Men
 		}
 	*/
 
-	}());
 
 	return ExactBrowser;
 
-}, /* bExport= */ true);
+});

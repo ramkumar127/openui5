@@ -1,21 +1,69 @@
 /**
- * JUnit reporter for QUnit v1.0.2pre (commit 38d011eec6e44453ab22a851f9f604e9ab7c00e5)
+ * JUnit reporter for QUnit v1.1.1
  *
- * https://github.com/jquery/qunit-reporter-junit
+ * https://github.com/JamesMGreene/qunit-reporter-junit
  *
- * Copyright 2013 jQuery Foundation and other contributors
+ * ##### BEGIN: MODIFIED BY SAP
+ * Support for nested modules was inspired by
+ * https://github.com/JamesMGreene/qunit-reporter-junit/pull/30
+ * (https://github.com/abstraktor/qunit-reporter-junit/commit/526cd95adf147f9867f5ec025e61d2cd9ee1aa3f).
+ * ##### END: MODIFIED BY SAP
+ *
+ * Copyright jQuery Foundation and other contributors
  * Released under the MIT license.
  * https://jquery.org/license/
  */
 (function() {
-
 	'use strict';
 
-	var currentRun, currentModule, currentTest, assertCount;
+	// ##### BEGIN: MODIFIED BY SAP
+	// Prevent script from being executed twice (from sap/ui/thirdparty/qunit-reporter-junit.js + copy within sap/ui/qunit/qunit-junit.js)
+	if (QUnit.jUnitDone) {
+		return;
+	}
+	// ##### END: MODIFIED BY SAP
 
+	var currentRun, currentModule, currentTest, assertCount,
+			jUnitReportData, _executeRegisteredCallbacks,
+			// ##### BEGIN: MODIFIED BY SAP
+			currentModules = [],
+			// ##### END: MODIFIED BY SAP
+			jUnitDoneCallbacks = [];
+
+	// Old API
 	// Gets called when a report is generated.
 	QUnit.jUnitReport = function(/* data */) {
 		// Override me!
+	};
+
+	// New API
+	QUnit.jUnitDone = function(cb) {
+		if (typeof cb === 'function') {
+			// If QUnit is already done running, just execute the newly registered callback immediately
+			if (jUnitReportData) {
+				cb(jUnitReportData);
+			}
+			else {
+				jUnitDoneCallbacks.push(cb);
+			}
+		}
+	};
+
+	_executeRegisteredCallbacks = function() {
+		// New API support
+		var cb;
+		do {
+			cb = jUnitDoneCallbacks.shift();
+			if (typeof cb === 'function') {
+				cb(jUnitReportData);
+			}
+		}
+		while (jUnitDoneCallbacks.length > 0);
+
+		// Old API support
+		if (typeof QUnit.jUnitReport === 'function') {
+			QUnit.jUnitReport(jUnitReportData);
+		}
 	};
 
 	QUnit.begin(function() {
@@ -27,9 +75,24 @@
 			start: new Date(),
 			time: 0
 		};
+		// ##### BEGIN: MODIFIED BY SAP
+		// Register testDone callback late so that `currentTest` is more likely to be defined
+		// even when another `testDone` callback uses e.g. `QUnit.log` / `QUnit.push(Failure)`
+		QUnit.testDone(function(data) {
+			currentTest.time = (new Date()).getTime() - currentTest.start.getTime();  // ms
+			currentTest.total = data.total;
+			currentTest.passed = data.passed;
+			currentTest.failed = data.failed;
+
+			currentTest = null;
+		});
+		// ##### END: MODIFIED BY SAP
 	});
 
 	QUnit.moduleStart(function(data) {
+		// ##### BEGIN: MODIFIED BY SAP
+		currentModules.push(currentModule);
+		// ##### END: MODIFIED BY SAP
 		currentModule = {
 			name: data.name,
 			tests: [],
@@ -87,18 +150,24 @@
 			currentTest.failedAssertions.push(data);
 
 			// Add log message of failure to make it easier to find in Jenkins CI
-			currentModule.stdout.push('[' + currentModule.name + ', ' + currentTest.name + ', ' + assertCount + '] ' + data.message);
+			currentModule.stdout.push(
+				'[' + currentModule.name + ', ' + currentTest.name + ', ' + assertCount + '] ' +
+				data.message + ( data.source ? '\nSource: ' + data.source : '' )
+			);
 		}
 	});
 
-	QUnit.testDone(function(data) {
-		currentTest.time = (new Date()).getTime() - currentTest.start.getTime();  // ms
-		currentTest.total = data.total;
-		currentTest.passed = data.passed;
-		currentTest.failed = data.failed;
-
-		currentTest = null;
-	});
+	// ##### BEGIN: MODIFIED BY SAP
+	// Moved into `QUnit.begin` callback
+	//QUnit.testDone(function(data) {
+	//	currentTest.time = (new Date()).getTime() - currentTest.start.getTime();  // ms
+	//	currentTest.total = data.total;
+	//	currentTest.passed = data.passed;
+	//	currentTest.failed = data.failed;
+	//
+	//	currentTest = null;
+	//});
+	// ##### END: MODIFIED BY SAP
 
 	QUnit.moduleDone(function(data) {
 		currentModule.time = (new Date()).getTime() - currentModule.start.getTime();  // ms
@@ -106,7 +175,10 @@
 		currentModule.passed = data.passed;
 		currentModule.failed = data.failed;
 
-		currentModule = null;
+		// ##### BEGIN: MODIFIED BY SAP
+		currentModule = currentModules.pop();
+		// ##### END: MODIFIED BY SAP
+
 	});
 
 	QUnit.done(function(data) {
@@ -138,22 +210,31 @@
 
 		var xmlEncode = function(text) {
 			var baseEntities = {
-				'"' : '&quot;',
-				'\'': '&apos;',
 				'<' : '&lt;',
 				'>' : '&gt;',
-				'&' : '&amp;'
+				'&' : '&amp;',
+				'"' : '&quot;',
+				'\'': '&apos;',
+				'\r': '',
+				'\n': '&#10;',
+				'\t': '&#9;'
 			};
 
-			return ('' + text).replace(/[<>&\"\']/g, function(chr) {
-				return baseEntities[chr] || chr;
+			return ('' + text).replace(/[<>&"'\r\n\t]/g, function(chr) {
+				return baseEntities.hasOwnProperty(chr) ? baseEntities[chr] : chr;
 			});
 		};
 
 		var XmlWriter = function(settings) {
+			if (!(this instanceof XmlWriter)) {
+				return new XmlWriter(settings);
+			}
+
 			settings = settings || {};
 
-			var data = [], stack = [], lineBreakAt;
+			var data = [],
+					stack = [],
+					lineBreakAt;
 
 			var addLineBreak = function(name) {
 				if (lineBreakAt[name] && data[data.length - 1] !== '\n') {
@@ -233,17 +314,15 @@
 		// Generate JUnit XML report!
 		var m, mLen, module, t, tLen, test, a, aLen, assertion, isEmptyElement,
 			xmlWriter = new XmlWriter({
-				linebreak_at: ['testsuites', 'testsuite', 'testcase', 'failure', 'system-out', 'system-err']
+				linebreak_at: ['testsuites', 'testsuite', 'testcase', 'failure', 'expected', 'actual', 'system-out', 'system-err']
 			});
 
 		xmlWriter.start('testsuites', {
-			name: (window && window.location && window.location.href) || (run.modules.length === 1 && run.modules[0].name) || null,
-			hostname: 'localhost',
+			name: (typeof location !== 'undefined' && location && location.href) || (run.modules.length === 1 && run.modules[0].name) || null,
 			tests: run.total,
 			failures: run.failed,
 			errors: 0,
-			time: convertMillisToSeconds(run.time),  // ms → sec
-			timestamp: toISODateString(run.start)
+			time: convertMillisToSeconds(run.time)  // ms → sec
 		});
 
 		for (m = 0, mLen = run.modules.length; m < mLen; m++) {
@@ -265,9 +344,6 @@
 
 				xmlWriter.start('testcase', {
 					name: test.name,
-					tests: test.total,
-					failures: test.failed,
-					errors: 0,
 					time: convertMillisToSeconds(test.time),  // ms → sec
 					timestamp: toISODateString(test.start)
 				});
@@ -307,11 +383,13 @@
 		xmlWriter.end();  //'testsuites'
 
 
-		// Invoke the user-defined callback
-		QUnit.jUnitReport({
+		// Save the results to be passed to any pertinent user-defined callbacks
+		jUnitReportData = {
 			results: results,
 			xml: xmlWriter.getString()
-		});
+		};
+
+		_executeRegisteredCallbacks();
 	};
 
 })();

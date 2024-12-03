@@ -1,12 +1,11 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>ToolPopup - sap.ui.ux3</title>
 
-<script id="sap-ui-bootstrap" type="text/javascript"
-	src="../../../../resources/sap-ui-core.js"
-	data-sap-ui-theme="sap_goldreflection" data-sap-ui-noConflict="true"
+<script src="shared-config.js"></script>
+<script id="sap-ui-bootstrap"
+	src="../../../../resources/sap-ui-core.js" data-sap-ui-noConflict="true"
 	data-sap-ui-libs="sap.ui.ux3,sap.ui.commons">
 
 </script>
@@ -130,7 +129,7 @@
 	}).placeAt("collision_box");
 </script>
 
-<script language="javascript">
+<script>
 	jQuery.sap.require("sap.ui.core.Popup");
 	jQuery.sap.require("sap.ui.thirdparty.jqueryui.jquery-ui-core");
 	jQuery.sap.require("sap.ui.thirdparty.jqueryui.jquery-ui-effect")
@@ -195,16 +194,12 @@
 		text : "Move Opener Button",
 		checked : false,
 		change : function() {
-			if (sap.ui.Device.browser.internet_explorer && sap.ui.Device.browser.version < 10) {
-				alert("Use a modern browser damnit :-)");
+			if (this.getChecked()) {
+				oButton.addStyleClass("animate");
+				oButtonOpenToolPopFollowOf.setEnabled(true);
 			} else {
-				if (this.getChecked()) {
-					oButton.addStyleClass("animate");
-					oButtonOpenToolPopFollowOf.setEnabled(true);
-				} else {
-					oButton.removeStyleClass("animate");
-					oButtonOpenToolPopFollowOf.setEnabled(false);
-				}
+				oButton.removeStyleClass("animate");
+				oButtonOpenToolPopFollowOf.setEnabled(false);
 			}
 		}
 	}).placeAt("checkFollowOf");

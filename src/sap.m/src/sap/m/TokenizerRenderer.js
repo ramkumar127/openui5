@@ -1,8 +1,8 @@
 /*!
  * ${copyright}
  */
-sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
-	function(jQuery, Device) {
+sap.ui.define(['sap/ui/Device', 'sap/ui/core/InvisibleText'],
+	function(Device, InvisibleText) {
 	"use strict";
 
 
@@ -11,6 +11,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 	 * @namespace
 	 */
 	var TokenizerRenderer = {
+		apiVersion: 2
 	};
 
 
@@ -18,77 +19,135 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
 	 * @param {sap.ui.core.RenderManager} oRm the RenderManager that can be used for writing to the render output buffer
-	 * @param {sap.ui.core.Control} oControl an object representation of the control that should be rendered
+	 * @param {sap.m.Tokenizer} oControl an object representation of the control that should be rendered
 	 */
 	TokenizerRenderer.render = function(oRm, oControl){
-		//write the HTML into the render manager
-		if (oControl.getParent() && (oControl.getParent() instanceof sap.m.MultiInput || oControl.getParent() instanceof sap.m.MultiComboBox)) {
-			oRm.write("<div ");
-		} else {
-			oRm.write("<div tabindex=\"0\"");
-		}
-
-		oRm.writeControlData(oControl);
-		oRm.addClass("sapMTokenizer");
-
 		var aTokens = oControl.getTokens();
-		if (!aTokens.length) {
-			oRm.addClass("sapMTokenizerEmpty");
+
+		//write the HTML into the render manager
+		oRm.openStart("div", oControl);
+
+
+		if (oControl.getEffectiveTabIndex()) {
+			oRm.attr("tabindex", "0");
 		}
 
-		oRm.writeClasses();
 
-		oRm.writeAttribute("role", "list");
+		oRm.class("sapMTokenizer");
 
-		var oAccAttributes = {}; // additional accessibility attributes
+		if (!oControl.getEditable()) {
+			oRm.class("sapMTokenizerReadonly");
+		}
+
+		if (!oControl.getEnabled()) {
+			oRm.class("sapMTokenizerDisabled");
+		}
+
+		if (!aTokens.length) {
+			oRm.class("sapMTokenizerEmpty");
+			oRm.attr("aria-hidden", "true");
+		}
+
+		oRm.style("max-width", oControl.getMaxWidth());
+
+		var sPixelWdth = oControl.getWidth();
+		if (sPixelWdth) {
+			oRm.style("width", sPixelWdth);
+		}
+
+		var oAccAttributes = {
+			role: "listbox"
+		}; // additional accessibility attributes
 
 		//ARIA attributes
 		oAccAttributes.labelledby = {
-			value: oControl._sAriaTokenizerLabelId,
+			value: InvisibleText.getStaticId("sap.m", "TOKENIZER_ARIA_LABEL"),
 			append: true
 		};
+		// aria-readonly is not valid for the current role of the tokenizer.
 
-		oRm.writeAccessibilityState(oControl, oAccAttributes);
+		oRm.accessibilityState(oControl, oAccAttributes);
 
-		oRm.write(">"); // div element
+		oRm.openEnd(); // div element
+		oRm.renderControl(oControl.getAggregation("_tokensInfo"));
 
 		oControl._bCopyToClipboardSupport = false;
 
 		if ((Device.system.desktop || Device.system.combi) && aTokens.length) {
-			oRm.write("<div id='" + oControl.getId() + "-clip' class='sapMTokenizerClip'");
+			oRm.openStart("div", oControl.getId() + "-clip").class("sapMTokenizerClip");
 			if (window.clipboardData) { //IE
-				oRm.writeAttribute("contenteditable", "true");
-				oRm.writeAttribute("tabindex", "-1");
+				oRm.attr("contenteditable", "true");
+				oRm.attr("tabindex", "-1");
 			}
-			oRm.write(">&nbsp;</div>");
+			oRm.openEnd();
+			oRm.unsafeHtml("&nbsp");
+			oRm.close("div");
+
 			oControl._bCopyToClipboardSupport = true;
 		}
 
-		var sClass = "class=\"sapMTokenizerScrollContainer\">";
-		var sSpace = " ";
+		oRm.openStart("div", oControl.getId() + "-scrollContainer");
+		oRm.class("sapMTokenizerScrollContainer");
 
-		var sIdScrollContainer = "id=" + oControl.getId() + "-scrollContainer";
-		oRm.write("<div" + sSpace + sIdScrollContainer + sSpace + sClass);
+		if (oControl.getHiddenTokensCount() === oControl.getTokens().length) {
+			oRm.class("sapMTokenizerScrollContainerNoVisibleTokens");
+		}
 
-		TokenizerRenderer._renderTokens(oRm, oControl);
+		oRm.openEnd();
 
-		oRm.write("</div>");
-		oRm.write("</div>");
+		this._renderTokens(oRm, oControl);
+
+		oRm.close("div");
+		this._renderIndicator(oRm, oControl);
+		oRm.close("div");
 	};
 
 	/**
 	 * renders the tokens
 	 *
 	 * @param {sap.ui.core.RenderManager} oRm the RenderManager that can be used for writing to the render output buffer
-	 * @param {sap.ui.core.Control} oControl an object representation of the control that should be rendered
+	 * @param {sap.m.Tokenizer} oControl an object representation of the control that should be rendered
 	 */
 	TokenizerRenderer._renderTokens = function(oRm, oControl){
-		var i, length, tokens;
-		tokens = oControl.getTokens();
-		length = tokens.length;
+		var i = 0,
+			tokens = oControl.getTokens(),
+			length = tokens.length;
+
 		for (i = 0; i < length; i++) {
 			oRm.renderControl(tokens[i]);
 		}
+	};
+
+	/**
+	 * Renders the N-more indicator
+	 *
+	 * @param {sap.ui.core.RenderManager} oRm the RenderManager that can be used for writing to the render output buffer
+	 * @param {sap.m.Tokenizer} oControl an object representation of the control that should be rendered
+	 */
+	TokenizerRenderer._renderIndicator = function(oRm, oControl){
+		oRm.openStart("span");
+		oRm.class("sapMTokenizerIndicator");
+
+		this._renderIndicatorTabIndex(oRm, oControl);
+
+		if (oControl.getHiddenTokensCount() === 0) {
+			oRm.class("sapUiHidden");
+		}
+		oRm.openEnd().close("span");
+	};
+
+	/**
+	 * Callback for specific rendering of Tokenizer N-more indicator tabindex attribute.
+	 *
+	 * @param {sap.ui.core.RenderManager}
+	 *            oRm the RenderManager currently rendering this control
+	 * @param {sap.m.Tokenizer}
+	 *            oControl the Tokenizer that should be rendered
+	 * @private
+	 *
+	 * @ui5-restricted sap.ui.mdc.field.TokenizerDisplayRenderer
+	 */
+	TokenizerRenderer._renderIndicatorTabIndex = function(oRm, oControl) {
 	};
 
 	return TokenizerRenderer;

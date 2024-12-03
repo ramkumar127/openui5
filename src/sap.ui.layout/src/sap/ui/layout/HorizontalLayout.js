@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.ui.layout.HorizontalLayout.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
-	function(jQuery, Control, library) {
+sap.ui.define(['sap/ui/core/Control', './library', "./HorizontalLayoutRenderer"],
+	function(Control, library, HorizontalLayoutRenderer) {
 	"use strict";
 
 
@@ -26,30 +26,43 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 	 * @public
 	 * @since 1.16.0
 	 * @alias sap.ui.layout.HorizontalLayout
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	var HorizontalLayout = Control.extend("sap.ui.layout.HorizontalLayout", /** @lends sap.ui.layout.HorizontalLayout.prototype */ { metadata : {
+	var HorizontalLayout = Control.extend("sap.ui.layout.HorizontalLayout", /** @lends sap.ui.layout.HorizontalLayout.prototype */ {
+		metadata : {
 
-		library : "sap.ui.layout",
-		properties : {
+			library : "sap.ui.layout",
+			properties : {
 
-			/**
-			 * Specifies whether the content inside the Layout shall be line-wrapped in the case that there is less horizontal space available than required.
-			 */
-			allowWrapping : {type : "boolean", group : "Misc", defaultValue : false}
+				/**
+				 * Specifies whether the content inside the Layout shall be line-wrapped in the case that there is less horizontal space available than required.
+				 */
+				allowWrapping : {type : "boolean", group : "Misc", defaultValue : false}
+			},
+			defaultAggregation : "content",
+			aggregations : {
+
+				/**
+				 * The controls inside this layout
+				 */
+				content : {type : "sap.ui.core.Control", multiple : true, singularName : "content"}
+			},
+			designtime: "sap/ui/layout/designtime/HorizontalLayout.designtime",
+			dnd: { draggable: false, droppable: true }
 		},
-		defaultAggregation : "content",
-		aggregations : {
 
-			/**
-			 * The controls inside this layout
-			 */
-			content : {type : "sap.ui.core.Control", multiple : true, singularName : "content"}
-		}
-	}});
+		renderer: HorizontalLayoutRenderer
+	});
 
+	/**
+	 * @see sap.ui.core.Control#getAccessibilityInfo
+	 * @returns {sap.ui.core.AccessibilityInfo} Current accessibility state of the control
+	 * @protected
+	 */
+	HorizontalLayout.prototype.getAccessibilityInfo = function() {
+		return {children: this.getContent()};
 
+	};
 
 	return HorizontalLayout;
 
-}, /* bExport= */ true);
+});

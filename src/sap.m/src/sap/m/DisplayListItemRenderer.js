@@ -2,9 +2,13 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', './ListItemBaseRenderer', 'sap/ui/core/Renderer'],
-	function(jQuery, ListItemBaseRenderer, Renderer) {
+sap.ui.define(["sap/ui/core/library", "sap/ui/core/Renderer", "./ListItemBaseRenderer"],
+	function(coreLibrary, Renderer, ListItemBaseRenderer) {
 	"use strict";
+
+
+	// shortcut for sap.ui.core.TextDirection
+	var TextDirection = coreLibrary.TextDirection;
 
 
 	/**
@@ -12,47 +16,48 @@ sap.ui.define(['jquery.sap.global', './ListItemBaseRenderer', 'sap/ui/core/Rende
 	 * @namespace
 	 */
 	var DisplayListItemRenderer = Renderer.extend(ListItemBaseRenderer);
+	DisplayListItemRenderer.apiVersion = 2;
 
 	/**
 	 * Renders the HTML for the given control, using the provided
 	 * {@link sap.ui.core.RenderManager}.
 	 *
-	 * @param {sap.ui.core.RenderManager}
-	 *          oRenderManager the RenderManager that can be used for writing to the
-	 *          Render-Output-Buffer
-	 * @param {sap.ui.core.Control}
-	 *          oControl an object representation of the control that should be
-	 *          rendered
+	 * @param {sap.ui.core.RenderManager} rm
+	 *          RenderManager that can be used to render the control's DOM
+	 * @param {sap.m.DisplayListItem} oLI
+	 *          The item to be rendered
 	 */
 	DisplayListItemRenderer.renderLIAttributes = function(rm, oLI) {
-		rm.addClass("sapMDLI");
+		rm.class("sapMDLI");
 	};
 
 	DisplayListItemRenderer.renderLIContent = function(rm, oLI) {
 
-		var isLabel = oLI.getLabel();
-
 		// List item label
-		if (isLabel) {
-			rm.write("<label for='" + oLI.getId() + "-value' class='sapMDLILabel'>");
-			rm.writeEscaped(oLI.getLabel());
-			rm.write("</label>");
+		var sLabel = oLI.getLabel();
+		if (sLabel) {
+			rm.openStart("label");
+			rm.attr("for", oLI.getId() + "-value");
+			rm.class("sapMDLILabel");
+			rm.openEnd();
+			rm.text(sLabel);
+			rm.close("label");
 		}
 
-		var isValue = oLI.getValue();
-		var sValueTextDir = oLI.getValueTextDirection();
-
 		// List item value
-		if (isValue) {
-			rm.write("<div id='" + oLI.getId() + "-value' class='sapMDLIValue'");
+		var sValue = oLI.getValue();
+		if (sValue) {
+			rm.openStart("div", oLI.getId() + "-value");
+			rm.class("sapMDLIValue");
 
-			if (sValueTextDir != sap.ui.core.TextDirection.Inherit) {
-				rm.writeAttribute("dir", sValueTextDir.toLowerCase());
+			var sValueTextDir = oLI.getValueTextDirection();
+			if (sValueTextDir != TextDirection.Inherit) {
+				rm.attr("dir", sValueTextDir.toLowerCase());
 			}
 
-			rm.write(">");
-			rm.writeEscaped(oLI.getValue());
-			rm.write("</div>");
+			rm.openEnd();
+			rm.text(sValue);
+			rm.close("div");
 		}
 	};
 

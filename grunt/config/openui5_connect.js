@@ -4,6 +4,14 @@ module.exports = function(grunt, config) {
 	// libraries are sorted alphabetically
 	var aLibraries = config.allLibraries.slice();
 	aLibraries.sort(function(a, b) {
+		// ensure that the wrapper is handled before the
+		// original library to allow an overlay
+		if (b.name == `${a.name}-wrapper`) {
+			return 1;
+		}
+		if (a.name == `${b.name}-wrapper`) {
+			return -1;
+		}
 		return a.name.localeCompare(b.name);
 	});
 
@@ -13,6 +21,9 @@ module.exports = function(grunt, config) {
 
 			contextpath: config.testsuite.name,
 			proxypath: 'proxy',
+			proxyOptions: {
+				secure: false
+			},
 			cors: {
 				origin: "*"
 			}
@@ -23,14 +34,14 @@ module.exports = function(grunt, config) {
 
 			options: {
 
-				appresources: config.testsuite.path + '/src/main/webapp',
+				appresources: [config.testsuite.path + '/src/main/webapp', 'target/openui5-sdk/'],
 
 				resources: aLibraries.map(function(lib) {
-					return lib.path + '/src';
+					return lib.src;
 				}),
 
 				testresources: aLibraries.map(function(lib) {
-					return lib.path + '/test';
+					return lib.test;
 				})
 
 			}

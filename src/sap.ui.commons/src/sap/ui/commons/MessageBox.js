@@ -3,7 +3,7 @@
  */
 
 // Provides class sap.ui.commons.MessageBox
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/library', 'sap/ui/core/ElementMetadata', 'sap/ui/core/Control',
+sap.ui.define(["sap/ui/thirdparty/jquery", 'sap/ui/core/library', 'sap/ui/core/ElementMetadata', 'sap/ui/core/Control',
 		'./library', './Button', './Dialog', './Image', './TextView', './layout/MatrixLayout', './layout/MatrixLayoutCell'],
 	function (jQuery, core, ElementMetadata, Control,
 			  commons, Button, Dialog, Image, TextView, MatrixLayout, MatrixLayoutCell) {
@@ -32,6 +32,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/library', 'sap/ui/core/ElementM
 		 * @version ${version}
 		 * @public
 		 * @since 0.8.8
+		 * @deprecated Since version 1.38. Instead, use the <code>sap.m.MessageBox</code> control.
 		 * @alias sap.ui.commons.MessageBox
 		 */
 		var MessageBox = {};
@@ -43,6 +44,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/library', 'sap/ui/core/ElementM
 		 * specifying the set of allowed actions as well as reporting back the user choice.
 		 * @enum
 		 * @public
+		 * @deprecated as of version 1.38 Instead, use the <code>sap.m.MessageBox.Action</code>.
 		 */
 		MessageBox.Action = {
 
@@ -99,6 +101,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/library', 'sap/ui/core/ElementM
 		 * Enumeration of the pre-defined icons that can be used in a MessageBox.
 		 * @enum
 		 * @public
+		 * @deprecated as of version 1.38 Instead, use the <code>sap.m.MessageBox.Icon</code>.
 		 */
 		MessageBox.Icon = {
 
@@ -200,7 +203,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/library', 'sap/ui/core/ElementM
 				oDialog, oResult, oContent, oMsg, oDefaultButton;
 
 			// normalize the vActions array
-			if (typeof vActions !== "undefined" && !jQuery.isArray(vActions)) {
+			if (typeof vActions !== "undefined" && !Array.isArray(vActions)) {
 				vActions = [vActions];
 			}
 			if (!vActions || vActions.length === 0) {
@@ -278,7 +281,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/library', 'sap/ui/core/ElementM
 			oDialog = new Dialog({
 				id: sDialogId,
 				applyContentPadding: false,
-				title: sTitle,
 				accessibleRole: AccessibleRole.AlertDialog,
 				resizable: false,
 				modal: true,
@@ -286,7 +288,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/library', 'sap/ui/core/ElementM
 				content: oContent,
 				defaultButton: oDefaultButton,
 				closed: onclose
-			});
+			}).setTitle(sTitle);
 
 			oDialog.open();
 

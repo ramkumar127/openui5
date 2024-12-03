@@ -1,13 +1,17 @@
 /*!
  * ${copyright}
  */
-
+/*eslint-disable max-len */
 // Provides the XML model implementation of a list binding
-sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/ClientListBinding'],
-	function(jQuery, ChangeReason, ClientListBinding) {
+sap.ui.define([
+	'sap/ui/model/ChangeReason',
+	'sap/ui/model/ClientListBinding',
+	"sap/ui/util/XMLHelper",
+	"sap/base/util/deepEqual",
+	"sap/base/util/each"
+],
+	function(ChangeReason, ClientListBinding, XMLHelper, deepEqual, each) {
 	"use strict";
-
-
 
 	/**
 	 *
@@ -17,74 +21,32 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 	 * @param {sap.ui.model.xml.XMLModel} oModel
 	 * @param {string} sPath
 	 * @param {sap.ui.model.Context} oContext
-	 * @param {sap.ui.model.Sorter|sap.ui.model.Sorter[]} [aSorters] initial sort order (can be either a sorter or an array of sorters)
-	 * @param {sap.ui.model.Filter|sap.ui.model.Filter[]} [aFilters] predefined filter/s (can be either a filter or an array of filters)
+	 * @param {sap.ui.model.Sorter[]|sap.ui.model.Sorter} [aSorters=[]]
+	 *   The sorters used initially; call {@link #sort} to replace them
+	 * @param {sap.ui.model.Filter[]|sap.ui.model.Filter} [aFilters=[]]
+	 *   The filters to be used initially with type {@link sap.ui.model.FilterType.Application}; call {@link #filter} to
+	 *   replace them
 	 * @param {object} [mParameters]
+	 * @throws {Error} If one of the filters uses an operator that is not supported by the underlying model
+	 *   implementation or if the {@link sap.ui.model.Filter.NONE} filter instance is contained in
+	 *   <code>aFilters</code> together with other filters
 	 * @alias sap.ui.model.xml.XMLListBinding
 	 * @extends sap.ui.model.ClientListBinding
 	 */
 	var XMLListBinding = ClientListBinding.extend("sap.ui.model.xml.XMLListBinding");
 
 	/**
-	 * Return contexts for the list or a specified subset of contexts
-	 * @param {int} [iStartIndex=0] the startIndex where to start the retrieval of contexts
-	 * @param {int} [iLength=length of the list] determines how many contexts to retrieve beginning from the start index.
-	 * Default is the whole list length.
+	 * Returns the entry data as required for change detection/diff. For the XMLModel this is the
+	 * node referenced by the context, serialized as XML.
 	 *
-	 * @return {sap.ui.model.Context[]} the contexts array
-	 * @protected
+	 * @param {sap.ui.model.Context} oContext The context to get the entry data from
+	 *
+	 * @returns {string} The entry data of the given context
+	 *
+	 * @private
 	 */
-	XMLListBinding.prototype.getContexts = function(iStartIndex, iLength) {
-		this.iLastStartIndex = iStartIndex;
-		this.iLastLength = iLength;
-
-		if (!iStartIndex) {
-			iStartIndex = 0;
-		}
-		if (!iLength) {
-			iLength = Math.min(this.iLength, this.oModel.iSizeLimit);
-		}
-
-		var aContexts = this._getContexts(iStartIndex, iLength),
-			oContextData = {};
-
-		if (this.bUseExtendedChangeDetection) {
-			for (var i = 0; i < aContexts.length; i++) {
-				oContextData[aContexts[i].getPath()] = this.oModel._getObject(aContexts[i].getPath())[0];
-			}
-
-			//Check diff
-			if (this.aLastContexts && iStartIndex < this.iLastEndIndex) {
-				var that = this;
-				var aDiff = jQuery.sap.arrayDiff(this.aLastContexts, aContexts, function(oOldContext, oNewContext) {
-					var oOldNode =  that.oLastContextData &&  that.oLastContextData[oOldContext.getPath()];
-					var oNewNode = oContextData && oContextData[oNewContext.getPath()];
-					if (oOldNode && oNewNode) {
-						return jQuery.sap.isEqualNode(oOldNode, oNewNode);
-					}
-					return false;
-				});
-				aContexts.diff = aDiff;
-			}
-
-			this.iLastEndIndex = iStartIndex + iLength;
-			this.aLastContexts = aContexts.slice(0);
-			this.oLastContextData = {};
-			var that = this;
-			jQuery.each(oContextData, function(sKey, oNode) {
-				that.oLastContextData[sKey] = oNode.cloneNode(true);
-			});
-		}
-
-		return aContexts;
-	};
-
-	XMLListBinding.prototype.getCurrentContexts = function() {
-		if (this.bUseExtendedChangeDetection) {
-			return this.aLastContexts || [];
-		} else {
-			return this.getContexts(this.iLastStartIndex, this.iLastLength);
-		}
+	XMLListBinding.prototype.getEntryData = function(oContext) {
+		return XMLHelper.serialize(oContext.getObject());
 	};
 
 	/**
@@ -97,7 +59,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 			this.oList = [];
 			var that = this;
 			if (this.bUseExtendedChangeDetection) {
-				jQuery.each(oList, function(sKey, oNode) {
+				each(oList, function(sKey, oNode) {
 					that.oList.push(oNode.cloneNode(true));
 				});
 			} else {
@@ -115,23 +77,23 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 	};
 
 	/**
-	 * Check whether this Binding would provide new values and in case it changed,
-	 * inform interested parties about this.
+	 * Checks whether this Binding would provide new values and in case it changed, fires a change
+	 * event with change reason <code>Change</code>.
 	 *
-	 * @param {boolean} bForceupdate
+	 * @param {boolean} [bForceupdate]
+	 *   Whether the change event is fired regardless of the binding's state
 	 *
 	 */
 	XMLListBinding.prototype.checkUpdate = function(bForceupdate){
+		var oList;
 
 		if (this.bSuspended && !this.bIgnoreSuspend && !bForceupdate) {
 			return;
 		}
 
 		if (!this.bUseExtendedChangeDetection) {
-			var oList = this.oModel._getObject(this.sPath, this.oContext);
-			if (!this.oList || !oList || oList.length != this.oList.length || bForceupdate) {
-				// TODO does not work currently, so so old behavior
-				//if (!jQuery.sap.equal(this.oList, oList)) {
+			oList = this.oModel._getObject(this.sPath, this.oContext) || [];
+			if (oList.length != this.oList.length || bForceupdate) {
 				this.update();
 				this._fireChange({reason: ChangeReason.Change});
 			}
@@ -140,11 +102,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 			var that = this;
 
 			//If the list has changed we need to update the indices first
-			var oList = this.oModel._getObject(this.sPath, this.oContext);
-			if (oList && this.oList.length != oList.length) {
+			oList = this.oModel._getObject(this.sPath, this.oContext) || [];
+			if (this.oList.length != oList.length) {
 				bChangeDetected = true;
 			}
-			if (!jQuery.sap.equal(this.oList, oList)) {
+			if (!deepEqual(this.oList, oList)) {
 				this.update();
 			}
 
@@ -154,13 +116,14 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 				if (this.aLastContexts.length != aContexts.length) {
 					bChangeDetected = true;
 				} else {
-					jQuery.each(this.aLastContexts, function(iIndex, oContext) {
-						var oNewNode = aContexts[iIndex].getObject();
-						var oOldNode = that.oLastContextData && that.oLastContextData[oContext.getPath()];
-						if (oNewNode && oOldNode && !oOldNode.isEqualNode(oNewNode)) {
+					each(this.aLastContextData, function(iIndex, oLastData) {
+						var oCurrentData = that.getContextData(aContexts[iIndex]);
+						if (oCurrentData !== oLastData) {
 							bChangeDetected = true;
 							return false;
 						}
+
+						return true;
 					});
 				}
 			} else {
@@ -172,7 +135,5 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/model/ChangeReason', 'sap/ui/model/C
 		}
 	};
 
-
 	return XMLListBinding;
-
 });

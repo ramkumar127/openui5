@@ -1,10 +1,9 @@
-/*global history*/
-
 sap.ui.define([
-	'sap/ui/demo/bulletinboard/controller/BaseController',
+	'./BaseController',
 	'sap/ui/model/json/JSONModel',
-	'sap/ui/demo/bulletinboard/model/formatter'
-], function (BaseController, JSONModel, formatter) {
+	'../model/formatter',
+	'sap/m/library'
+], function(BaseController, JSONModel, formatter, mobileLibrary) {
 	"use strict";
 
 	return BaseController.extend("sap.ui.demo.bulletinboard.controller.Worklist", {
@@ -82,7 +81,7 @@ sap.ui.define([
 
 		/**
 		 * Sets the item count on the worklist view header
-		 * @param {integer} iTotalItems the total number of items in the table
+		 * @param {int} iTotalItems the total number of items in the table
 		 * @private
 		 */
 		_updateListItemCount: function (iTotalItems) {
@@ -100,12 +99,11 @@ sap.ui.define([
 		 */
 		onShareEmailPress: function () {
 			var oViewModel = this.getModel("worklistView");
-			sap.m.URLHelper.triggerEmail(
+			mobileLibrary.URLHelper.triggerEmail(
 				null,
 				oViewModel.getProperty("/shareSendEmailSubject"),
 				oViewModel.getProperty("/shareSendEmailMessage")
 			);
 		}
 	});
-
 });

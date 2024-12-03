@@ -1,3 +1,8 @@
+/* ========================================= */
+/* CSS for control sap.m/P13nConditionPanel  */
+/* Base theme                                */
+/* ========================================= */
+
 .sapMConditionPanel .sapUiRespGridMedia-Std-Phone .floatRight {
 	float: right;
 }
@@ -26,27 +31,23 @@
 	margin-top: 1rem;
 }
 
-.sapMConditionPanel > div {
-
-}
-
-.sapMConditionPanelContent {
-
-}
-
 .sapMConditionPanel .sapMCb {
 	display: block;
 }
 
 .sapMConditionPanel .sapMTB {
-    border-bottom: 0px; 
+	border-bottom: 0;
 }
 
 .sapMFilterPanel .sapMPanelWrappingDivTb {
-    border-bottom: 0px;
+	border-bottom: 0;
 }
 
-.sapMFilterPanel .sapMTB  {
-    border-bottom: 0px;
+.sapMFilterPanel .sapMTB {
+	border-bottom: 0;
 }
 
+/* WORKAROUND BCP:1770523047 : set min-height back to 0px */
+.sapMConditionPanel div[class*='sapUiRespGrid'] > div[class*='sapUiRespGridSpan'] {
+	min-height: 0;
+}

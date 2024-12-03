@@ -1,26 +1,26 @@
-/*
- * ! ${copyright}
+/*!
+ * ${copyright}
  */
 
 // Provides control sap.m.P13nItem.
 sap.ui.define([
-	'jquery.sap.global', './library', 'sap/ui/core/Element'
-], function(jQuery, library, Element) {
+	'./library', 'sap/ui/core/Element'
+], function(library, Element) {
 	"use strict";
 
 	/**
 	 * Constructor for a new P13nItem.
 	 *
-	 * @param {string} [sId] id for the new control, generated automatically if no id is given
+	 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
 	 * @param {object} [mSettings] initial settings for the new control
-	 * @class Base type for <code>items</code> aggregation in P13nPanel control.
-	 * @extends sap.ui.core.Item
+	 * @class Base type for <code>items</code> aggregation in <code>P13nPanel</code> control.
+	 * @extends sap.ui.core.Element
 	 * @version ${version}
 	 * @constructor
 	 * @public
 	 * @since 1.26.0
 	 * @alias sap.m.P13nItem
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
+	 * @deprecated As of version 1.124, replaced by the artifacts in {@link sap.m.p13n}.
 	 */
 	var P13nItem = Element.extend("sap.m.P13nItem", /** @lends sap.m.P13nItem.prototype */
 	{
@@ -30,8 +30,6 @@ sap.ui.define([
 			properties: {
 				/**
 				 * Can be used as input for subsequent actions.
-				 *
-				 * @since 1.26.0
 				 */
 				columnKey: {
 					type: "string",
@@ -40,8 +38,6 @@ sap.ui.define([
 				},
 				/**
 				 * The text to be displayed for the item.
-				 *
-				 * @since 1.26.0
 				 */
 				text: {
 					type: "string",
@@ -51,8 +47,6 @@ sap.ui.define([
 
 				/**
 				 * Defines visibility of column
-				 *
-				 * @since 1.26.0
 				 */
 				visible: {
 					type: "boolean",
@@ -62,8 +56,6 @@ sap.ui.define([
 
 				/**
 				 * data type of the column (text, numeric or date is supported)
-				 *
-				 * @since 1.26.0
 				 */
 				type: {
 					type: "string",
@@ -72,9 +64,18 @@ sap.ui.define([
 				},
 
 				/**
-				 * if type==numeric the precision will be used to format the entered value (maxIntegerDigits of the used Formatter)
+				 * data type instance of the column. Can be used instead of the type, precision, scale and formatSettings properties
 				 *
-				 * @since 1.26.0
+				 * @since 1.56
+				 */
+				typeInstance: {
+					type: "object",
+					group: "Misc",
+					defaultValue: null
+				},
+
+				/**
+				 * if type==numeric the precision will be used to format the entered value (maxIntegerDigits of the used Formatter)
 				 */
 				precision: {
 					type: "string",
@@ -83,9 +84,28 @@ sap.ui.define([
 				},
 
 				/**
-				 * if type==numeric the scale will be used to format the entered value (maxFractionDigits of the used Formatter)
+				 * A JSON object containing the formatSettings which will be used to pass additional type/format settings for the entered value.
+				 * if type==time or date or datetime the object will be used for the DateFormatter, TimeFormatter or DateTimeFormatter
 				 *
-				 * @since 1.26.0
+				 *<i>Below you can find a brief example</i>
+				 *
+				 * <pre><code>
+				 * {
+				 *		UTC: false,
+				 * 		style: "medium" //"short" or "long"
+				 * }
+				 * </code></pre>
+				 *
+				 * @since 1.52
+				 */
+				formatSettings: {
+					type: "object",
+					group: "Misc",
+					defaultValue: null
+				},
+
+				/**
+				 * if type==numeric the scale will be used to format the entered value (maxFractionDigits of the used Formatter)
 				 */
 				scale: {
 					type: "string",
@@ -95,8 +115,6 @@ sap.ui.define([
 
 				/**
 				 * specifies the number of characters which can be entered in the value fields of the condition panel
-				 *
-				 * @since 1.26.0
 				 */
 				maxLength: {
 					type: "string",
@@ -106,8 +124,6 @@ sap.ui.define([
 
 				/**
 				 * Defines column width
-				 *
-				 * @since 1.26.0
 				 */
 				width: {
 					type: "string",
@@ -117,8 +133,6 @@ sap.ui.define([
 
 				/**
 				 * the column with isDefault==true will be used as the selected column item on the conditionPanel
-				 *
-				 * @since 1.26.0
 				 */
 				isDefault: {
 					type: "boolean",
@@ -156,6 +170,52 @@ sap.ui.define([
 				aggregationRole: {
 					type: "string",
 					defaultValue: null
+				},
+
+				/**
+				 * Defines href of a link.
+				 *
+				 * @since 1.46.0
+				 */
+				href: {
+					type: "string",
+					defaultValue: null
+				},
+
+				/**
+				 * Defines target of a link.
+				 */
+				target: {
+					type: "string",
+					defaultValue: null
+				},
+
+				/**
+				 * Defines press handler of a link.
+				 *
+				 * @since 1.46.0
+				 */
+				press: {
+					type: "object",
+					defaultValue: null
+				},
+				/**
+				 * Defines additional information of the link.
+				 *
+				 * @since 1.56.0
+				 */
+				description: {
+					type: "string",
+					defaultValue: null
+				},
+
+				/**
+				 * Defines if the item is nullable
+				 */
+				nullable: {
+					type: "boolean",
+					group: "Misc",
+					defaultValue: false
 				}
 			}
 		}
@@ -163,4 +223,4 @@ sap.ui.define([
 
 	return P13nItem;
 
-}, /* bExport= */true);
+});

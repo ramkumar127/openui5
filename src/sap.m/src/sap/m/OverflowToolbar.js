@@ -4,35 +4,130 @@
 
 // Provides control sap.m.OverflowToolbar.
 sap.ui.define([
-	"jquery.sap.global",
+	"sap/ui/core/Theming",
+	"sap/ui/core/library",
 	"./library",
+	"sap/ui/core/Control",
+	"sap/ui/core/Element",
 	"sap/m/ToggleButton",
 	"sap/ui/core/InvisibleText",
 	"sap/m/Toolbar",
-	"sap/m/ToolbarSpacer",
 	"sap/m/OverflowToolbarLayoutData",
 	"sap/m/OverflowToolbarAssociativePopover",
 	"sap/m/OverflowToolbarAssociativePopoverControls",
-	"sap/m/OverflowToolbarPriority",
+	'sap/ui/core/ResizeHandler',
 	"sap/ui/core/IconPool",
-	"sap/m/SearchField"
-], function (jQuery, library, ToggleButton, InvisibleText, Toolbar, ToolbarSpacer, OverflowToolbarLayoutData,
-			 OverflowToolbarAssociativePopover, OverflowToolbarAssociativePopoverControls, OverflowToolbarPriority,
-			 IconPool, SearchField) {
+	"sap/ui/Device",
+	"./OverflowToolbarRenderer",
+	"sap/base/Log",
+	"sap/ui/core/Lib",
+	"sap/ui/thirdparty/jquery",
+	"sap/ui/dom/jquery/Focusable" // jQuery Plugin "lastFocusableDomRef"
+], function(
+	Theming,
+	coreLibrary,
+	library,
+	Control,
+	Element,
+	ToggleButton,
+	InvisibleText,
+	Toolbar,
+	OverflowToolbarLayoutData,
+	OverflowToolbarAssociativePopover,
+	OverflowToolbarAssociativePopoverControls,
+	ResizeHandler,
+	IconPool,
+	Device,
+	OverflowToolbarRenderer,
+	Log,
+	Library,
+	jQuery
+) {
 	"use strict";
+
+	// shortcut for sap.m.PlacementType
+	var PlacementType = library.PlacementType;
+
+	// shortcut for sap.m.ButtonType
+	var ButtonType = library.ButtonType;
+
+	// shortcut for sap.ui.core.aria.HasPopup
+	var AriaHasPopup = coreLibrary.aria.HasPopup;
+
+	// shortcut for sap.m.OverflowToolbarPriority
+	var OverflowToolbarPriority = library.OverflowToolbarPriority;
 
 
 	/**
-	 * Constructor for a new Overflow Toolbar
+	 * Constructor for a new <code>OverflowToolbar</code>.
 	 *
-	 * @param {string} [sId] ID for the new control, generated automatically if no id is given
+	 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
 	 * @param {object} [mSettings] Initial settings for the new control
 	 *
 	 * @class
-	 * The OverflowToolbar control is a container based on sap.m.Toolbar, that provides overflow when its content does not fit in the visible area.
+	 * A container control based on {@link sap.m.Toolbar}, that provides overflow when
+	 * its content does not fit in the visible area.
 	 *
-	 * Note: It is recommended that you use OverflowToolbar over {@link sap.m.Toolbar}, unless you want to avoid overflow in favor of shrinking.
-	 * @extends sap.ui.core.Toolbar
+	 * <h3>Overview</h3>
+	 *
+	 * The content of the <code>OverflowToolbar</code> moves into the overflow area from
+	 * right to left when the available space is not enough in the visible area of
+	 * the container. It can be accessed by the user through the overflow button that
+	 * opens it in a popover.
+	 *
+	 * <b>Note:</b> It is recommended that you use <code>OverflowToolbar</code> over
+	 * {@link sap.m.Toolbar}, unless you want to avoid overflow in favor of shrinking.
+	 *
+	 * <h3>Usage</h3>
+	 *
+	 * Different behavior and priorities can be set for each control inside the
+	 * <code>OverflowToolbar</code>, such as certain controls to appear only in the
+	 * overflow area or to never move there. For more information, see
+	 * {@link sap.m.OverflowToolbarLayoutData} and {@link sap.m.OverflowToolbarPriority}.
+	 *
+	 * <h3>Overflow Behavior</h3>
+	 * By default, only the following controls can move to the overflow area:
+	 *
+	 * <ul><li>{@link sap.m.Breadcrumbs}</li>
+	 * <li>{@link sap.m.Button}</li>
+	 * <li>{@link sap.m.CheckBox}</li>
+	 * <li>{@link sap.m.ComboBox}</li>
+	 * <li>{@link sap.m.DatePicker}</li>
+	 * <li>{@link sap.m.DateRangeSelection}</li>
+	 * <li>{@link sap.m.DateTimePicker}</li>
+	 * <li>{@link sap.m.GenericTag}</li>
+	 * <li>{@link sap.m.Input}</li>
+	 * <li>{@link sap.m.Label}</li>
+	 * <li>{@link sap.m.MenuButton}</li>
+	 * <li>{@link sap.m.OverflowToolbarButton}</li>
+	 * <li>{@link sap.m.OverflowToolbarToggleButton}</li>
+	 * <li>{@link sap.m.SearchField}</li>
+	 * <li>{@link sap.m.SegmentedButton}</li>
+	 * <li>{@link sap.m.Select}</li>
+	 * <li>{@link sap.m.TimePicker}</li>
+	 * <li>{@link sap.m.ToggleButton}</li>
+	 * <li>{@link sap.m.ToolbarSeparator}</li>
+	 * <li>{@link sap.ui.comp.smartfield.SmartField}</li>
+	 * <li>{@link sap.ui.comp.smartfield.SmartLabel}</li></ul>
+	 *
+	 * Additionally, any control that implements the {@link sap.m.IOverflowToolbarContent} interface may define
+	 * its behavior (most importantly overflow behavior) when placed inside <code>OverflowToolbar</code>.
+	 *
+	 * <b>Note:</b> The <code>OverflowToolbar</code> is an adaptive container that checks the available
+	 * width and hides the part of its content that doesn't fit. It is intended that simple controls,
+	 * such as {@link sap.m.Button} and {@link sap.m.Label} are used as content. Embedding other
+	 * adaptive container controls (with the exception of {@link sap.m.Breadcrumbs}), results in competition for the available
+	 * space - both controls calculate the available space based on the other one's size and both change their
+	 * width at the same time, leading to incorrectly distributed space.
+	 *
+	 * <h3>Responsive behavior</h3>
+	 *
+	 * The height of the toolbar changes on desktop, tablet, and smartphones.
+	 *
+	 * @see {@link fiori:https://experience.sap.com/fiori-design-web/toolbar-overview/#overflow-generic Overflow Toolbar}
+	 *
+	 * @extends sap.m.Toolbar
+	 * @implements sap.ui.core.Toolbar,sap.m.IBar
 	 *
 	 * @author SAP SE
 	 * @version ${version}
@@ -41,22 +136,45 @@ sap.ui.define([
 	 * @public
 	 * @since 1.28
 	 * @alias sap.m.OverflowToolbar
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 *
 	 */
 	var OverflowToolbar = Toolbar.extend("sap.m.OverflowToolbar", {
 		metadata: {
+			properties : {
+
+				/**
+				 * Defines whether the <code>OverflowToolbar</code> works in async mode.
+				 *
+				 * <b>Note:</b> When this property is set to <code>true</code>, the <code>OverflowToolbar</code>
+				 * makes its layout recalculations asynchronously. This way it is not blocking the thread
+				 * immediately after re-rendering or resizing. However, it may lead to flickering, when there is
+				 * a change in the width of the content of the <code>OverflowToolbar</code>.
+				 *
+				 * @since 1.67
+				 */
+				asyncMode : {type : "boolean", group : "Behavior", defaultValue : false}
+			},
 			aggregations: {
 				_overflowButton: {type: "sap.m.ToggleButton", multiple: false, visibility: "hidden"},
 				_popover: {type: "sap.m.Popover", multiple: false, visibility: "hidden"}
-			}
-		}
+			},
+			designtime: "sap/m/designtime/OverflowToolbar.designtime"
+		},
+
+		renderer: OverflowToolbarRenderer
 	});
 
 	/**
+	 * STATIC MEMBERS
+	 */
+	OverflowToolbar.TOGGLE_BUTTON_TOOLTIP = "OVERFLOW_TOOLBAR_TOGGLE_BUTTON_TOOLTIP";
+
+	OverflowToolbar.CONTENT_SIZE_TOLERANCE = 1;
+
+	/**
 	 * A shorthand for calling Toolbar.prototype methods
-	 * @param sFuncName - the name of the method
-	 * @param aArguments - the arguments to pass in the form of array
+	 * @param {string} sFuncName - the name of the method
+	 * @param {any[]} aArguments - the arguments to pass in the form of array
 	 * @returns {*}
 	 * @private
 	 */
@@ -78,54 +196,189 @@ sap.ui.define([
 		// When set to true, the overflow button will be rendered
 		this._bOverflowButtonNeeded = false;
 
-		// When set to true, changes to the controls in the toolbar will trigger a recalculation
+		// When set to true, changes to the properties of the controls in the toolbar will trigger a recalculation
 		this._bListenForControlPropertyChanges = false;
+
+		// When set to true, invalidation events will trigger a recalculation
+		this._bListenForInvalidationEvents = false;
 
 		// When set to true, controls widths, etc... will not be recalculated, because they are already cached
 		this._bControlsInfoCached = false;
 
-		// When set to true, the recalculation algorithm will bypass an optimization to determine if anything moved from/to the action sheet
+		// When set to true, the recalculation algorithm will bypass an optimization to determine if anything moved from/to the Popover
 		this._bSkipOptimization = false;
 
-		// Init static hidden text for ARIA
-		if (!OverflowToolbar._sAriaOverflowButtonLabelId) {
+		this._aControlSizes = {}; // A map of control id -> control *optimal* size in pixels; the optimal size is outerWidth for most controls and min-width for spacers
 
-			// Load the resources, needed for the text of the overflow button
-			var oCoreResourceBundle = sap.ui.getCore().getLibraryResourceBundle("sap.ui.core");
+		this._iFrameRequest = null;
 
-			// Use Icon-Font text
-			OverflowToolbar._sAriaOverflowButtonLabelId = new InvisibleText({
-				text: oCoreResourceBundle.getText("Icon.overflow")
-			}).toStatic().getId();
+		// Overflow Button size
+		this._iOverflowToolbarButtonSize = 0;
 
+		// Overflow Button clone, it helps to calculate correct size of the button
+		this._oOverflowToolbarButtonClone = null;
+
+		// Width of the content with "NeverOverflow" priority
+		this._iToolbarOnlyContentSize = 0;
+
+		this._aMovableControls = []; // Controls that can be in the toolbar or Popover
+		this._aToolbarOnlyControls = []; // Controls that can't go to the Popover (inputs, labels, buttons with special layout, etc...)
+		this._aPopoverOnlyControls = []; // Controls that are forced to stay in the Popover (buttons with layout)
+		this._aAllCollections = [this._aMovableControls, this._aToolbarOnlyControls, this._aPopoverOnlyControls];
+
+		this.addStyleClass("sapMOTB");
+
+		this._fnMediaChangeRef = this._fnMediaChange.bind(this);
+		Device.media.attachHandler(this._fnMediaChangeRef);
+		this._handleKeyNavigationBound =  this._handleKeyNavigation.bind(this);
+	};
+
+	OverflowToolbar.prototype.exit = function () {
+		var oPopover = this.getAggregation("_popover");
+		if (oPopover) {
+			oPopover.destroy();
 		}
 
-		this._aControlSizes = {}; // A map of control id -> control *optimal* size in pixels; the optimal size is outerWidth for most controls and min-width for spacers
+		if (this._oOverflowToolbarButtonClone) {
+			this._oOverflowToolbarButtonClone.destroy();
+		}
+
+		if (this._iFrameRequest) {
+			window.cancelAnimationFrame(this._iFrameRequest);
+			this._iFrameRequest = null;
+		}
+
+		Device.media.detachHandler(this._fnMediaChangeRef);
+	};
+
+	/**
+	 * This method is a hook for the RenderManager that gets called
+	 * during the rendering of child Controls. It allows to add,
+	 * remove and update existing accessibility attributes (ARIA) of
+	 * those controls.
+	 *
+	 * @param {sap.ui.core.Control} oElement - The Control that gets rendered by the RenderManager
+	 * @param {object} mAriaProps - The mapping of "aria-" prefixed attributes
+	 * @protected
+	 */
+	OverflowToolbar.prototype.enhanceAccessibilityState = function (oElement, mAriaProps) {
+		Toolbar.prototype.enhanceAccessibilityState.apply(this, arguments);
+		if (oElement === this.getAggregation("_overflowButton")) {
+			this._enhanceOverflowButtonAccessibility(mAriaProps);
+		}
+	};
+
+	OverflowToolbar.prototype._enhanceOverflowButtonAccessibility = function (mAriaProps) {
+		var oPopover = this.getAggregation("_popover"),
+			oOverflowButton = this.getAggregation("_overflowButton");
+
+		if (!oOverflowButton) {
+			return;
+		}
+
+		// the overflow toolbar button is better represented as a menu button
+		// because it opens a menu with the overflowed content
+		// because of that the aria-pressed is to be removed and the aria-expanded is to be added
+		mAriaProps.expanded = oOverflowButton.getPressed();
+		delete mAriaProps.pressed;
+
+		if (oPopover && oPopover.getDomRef()) {
+			mAriaProps.controls = oPopover.getId();
+		}
+	};
+
+	/**
+	 * Sets the <code>asyncMode</code> property.
+	 *
+	 * @since 1.67
+	 *
+	 * @public
+	 * @param {boolean} bValue
+	 * @return {this} <code>this</code> pointer for chaining
+	 */
+	OverflowToolbar.prototype.setAsyncMode = function(bValue) {
+		// No invalidation is needed
+		return this.setProperty("asyncMode", bValue, true);
+	};
+
+	/**
+	 * Called before the control is rendered
+	 */
+	OverflowToolbar.prototype.onBeforeRendering = function () {
+		if (!this.getDomRef()) {
+			this._bControlsInfoCached = false;
+		}
 	};
 
 	/**
 	 * Called after the control is rendered
 	 */
 	OverflowToolbar.prototype.onAfterRendering = function () {
-		// If a control of the toolbar was focused, and we're here, then the focused control overflowed, so set the focus to the overflow button
-		if (this._bControlWasFocused) {
-			this._getOverflowButton().focus();
-			this._bControlWasFocused = false;
+		this._bInvalidatedAndNotRendered = false;
+		if (this._bContentVisibilityChanged) {
+			this._bControlsInfoCached = false;
+			this._bContentVisibilityChanged = false;
 		}
-
-		// If before invalidation the overflow button was focused, and it's not visible any more, focus the last focusable control
-		if (this._bOverflowButtonWasFocused && !this._getOverflowButtonNeeded()) {
-			this.$().lastFocusableDomRef().focus();
-			this._bOverflowButtonWasFocused = false;
-		}
-
-		// TODO: refactor with addEventDelegate for onAfterRendering for both overflow button and its label
-		this._getOverflowButton().$().attr("aria-haspopup", "true");
 
 		// Unlike toolbar, we don't set flexbox classes here, we rather set them on a later stage only if needed
-		this._doLayout();
+
+		if (this.getAsyncMode()) {
+			this._doLayoutAsync().then(this._applyFocus.bind(this));
+		} else {
+			this._doLayout();
+			this._applyFocus();
+		}
+
+		//Attach event listened needed for the arrow key navigation
+		if (this.getDomRef()) {
+			this.getDomRef().removeEventListener("keydown", this._handleKeyNavigationBound);
+			this.getDomRef().addEventListener("keydown", this._handleKeyNavigationBound);
+		}
+
 	};
 
+	OverflowToolbar.prototype.onsapfocusleave = function() {
+		this._resetChildControlFocusInfo();
+	};
+
+	OverflowToolbar.prototype.onfocusfail = function(oEvent) {
+		const oFocusLostCtrl = oEvent.srcControl;
+		const oOverflowButton = this._getOverflowButton();
+		const oDomRef = this.getDomRef();
+
+		if (!oDomRef.contains(oFocusLostCtrl.getDomRef())) {
+			oOverflowButton?.focus();
+			this._bControlWasFocused = false;
+			this._bOverflowButtonWasFocused = !!oOverflowButton;
+			this.sFocusedChildControlId = "";
+		} else {
+			const oChildren = this.getContent();
+			const iPos = oChildren.indexOf(oFocusLostCtrl);
+
+			if (iPos !== -1) {
+				let oFocusTarget;
+				for (let i = iPos + 1; i < oChildren.length; i++) {
+					const oFocusDomRef = oChildren[i].getFocusDomRef?.();
+					if (oDomRef.contains(oFocusDomRef) && jQuery.expr.pseudos.sapTabbable(oFocusDomRef)) {
+						oFocusTarget = oChildren[i];
+						break;
+					}
+				}
+				oFocusTarget ??= oOverflowButton;
+				oFocusTarget?.focus();
+				this._bControlWasFocused = !oOverflowButton;
+				this._bOverflowButtonWasFocused = !!oOverflowButton;
+				this.sFocusedChildControlId = oFocusTarget === oOverflowButton ? "" : oFocusTarget.getId();
+			}
+		}
+	};
+
+	OverflowToolbar.prototype.setWidth = function(sWidth) {
+		this.setProperty("width", sWidth);
+		this._bResized = true;
+
+		return this;
+	};
 
 	/*********************************************LAYOUT*******************************************************/
 
@@ -135,24 +388,30 @@ sap.ui.define([
 	 * @override
 	 * @private
 	 */
-
-
 	OverflowToolbar.prototype._doLayout = function () {
-		var iWidth = this.$().width();
+		var iWidth;
 
-		// Stop listening for control changes while calculating the layout to avoid an infinite loop scenario
+		this._recalculateOverflowButtonSize();
+
+		iWidth = this.$().is(":visible") ? this.$().width() : 0;
+
+		// Stop listening for control property changes while calculating the layout to avoid an infinite loop scenario
 		this._bListenForControlPropertyChanges = false;
+
+		// Stop listening for invalidation events while calculating the layout to avoid an infinite loop scenario
+		this._bListenForInvalidationEvents = false;
 
 		// Deregister the resize handler to avoid multiple instances of the same code running at the same time
 		this._deregisterToolbarResize();
 
-		// Polyfill the flexbox support, if necessary
-		this._polyfillFlexboxSupport();
+		if (this._iPreviousToolbarWidth !== iWidth) {
+			this._bResized = true;
+		}
 
 		if (iWidth > 0) {
 
 			// Cache controls widths and other info, if not done already
-			if (!this._isControlsInfoCached()) {
+			if (!this._isControlsInfoCached() || (this._bNeedUpdateOnControlsCachedSizes && this._bResized)) {
 				this._cacheControlsInfo();
 			}
 
@@ -160,8 +419,10 @@ sap.ui.define([
 			if (this._iPreviousToolbarWidth !== iWidth) {
 				this._iPreviousToolbarWidth = iWidth;
 				this._setControlsOverflowAndShrinking(iWidth);
+				this.fireEvent("_controlWidthChanged");
 			}
-
+		} else {
+			this._iPreviousToolbarWidth = iWidth;
 		}
 
 		// Register the resize handler again after all calculations are done and it's safe to do so
@@ -170,77 +431,223 @@ sap.ui.define([
 
 		// Start listening for property changes on the controls once again
 		this._bListenForControlPropertyChanges = true;
+
+		// Start listening for invalidation events once again
+		this._bListenForInvalidationEvents = true;
+
+		this._bResized = false;
 	};
 
 	/**
-	 * If the client does not support the latest flexbox spec, run some polyfill code
+	 * Asynchronous layouting
 	 * @private
 	 */
-	OverflowToolbar.prototype._polyfillFlexboxSupport = function () {
-		// Modern clients have flexbox natively, do nothing
-		if (Toolbar.hasNewFlexBoxSupport) {
-			return;
+	OverflowToolbar.prototype._doLayoutAsync = function () {
+		return new Promise(function(resolve, reject) {
+			this._iFrameRequest = window.requestAnimationFrame(function () {
+				this._doLayout();
+				resolve();
+			}.bind(this));
+		}.bind(this));
+	};
+
+	OverflowToolbar.prototype._applyFocus = function () {
+		var oFocusedChildControl,
+			$LastFocusableChildControl = this.$().lastFocusableDomRef();
+
+		if (this.sFocusedChildControlId) {
+			oFocusedChildControl = Element.getElementById(this.sFocusedChildControlId);
 		}
 
-		// Old flexbox polyfill
-		if (Toolbar.hasFlexBoxSupport) {
-			var $This = this.$();
-			var oDomRef = $This[0] || {};
-			$This.removeClass("sapMTBOverflow");
-			var bOverflow = oDomRef.scrollWidth > oDomRef.clientWidth;
-			bOverflow && $This.addClass("sapMTBOverflow");
-			// IE - run the polyfill
-		} else {
-			Toolbar.flexie(this.$());
+		if (oFocusedChildControl && oFocusedChildControl.getDomRef()){
+			oFocusedChildControl.focus();
+
+		} else if (this._bControlWasFocused) {
+			// If a control of the toolbar was focused, and we're here, then the focused control overflowed, so set the focus to the overflow button
+			this._getOverflowButton().focus();
+			this._bControlWasFocused = false;
+			this._bOverflowButtonWasFocused = true;
+
+		} else if (this._bOverflowButtonWasFocused) {
+			if (this._getOverflowButtonNeeded()) {
+				this._getOverflowButton().focus();
+			} else {
+				// If before invalidation the overflow button was focused, and it's not visible any more, focus the last focusable control
+				$LastFocusableChildControl && $LastFocusableChildControl.focus();
+				this._bOverflowButtonWasFocused = false;
+			}
 		}
 	};
 
+	/**
+	 * Preserves info to retain focus on child controls upon invalidation.
+	 * @private
+	 */
+	OverflowToolbar.prototype._preserveChildControlFocusInfo = function () {
+		// Preserve focus info
+		var oElement = Element.closestTo(document.activeElement);
+		var sActiveElementId = oElement ? oElement.getId() : null;
+
+		if (this._getControlsIds().indexOf(sActiveElementId) !== -1) {
+			this._bControlWasFocused = true;
+			this.sFocusedChildControlId = sActiveElementId;
+		} else if (sActiveElementId === this._getOverflowButton().getId()) {
+			this._bOverflowButtonWasFocused = true;
+			this.sFocusedChildControlId = "";
+		}
+	};
+
+	/**
+	 * Resets focus info.
+	 * @private
+	 */
+	OverflowToolbar.prototype._resetChildControlFocusInfo = function () {
+		this._bControlWasFocused = false;
+		this._bOverflowButtonWasFocused = false;
+		this.sFocusedChildControlId = "";
+	};
+
+	// register OverflowToolbar resize handler
+	OverflowToolbar.prototype._registerToolbarResize = function() {
+		// register resize handler only if toolbar has relative width
+		if (Toolbar.isRelativeWidth(this.getWidth())) {
+			var fnResizeProxy = this._handleResize.bind(this);
+			this._sResizeListenerId = ResizeHandler.register(this, fnResizeProxy);
+		}
+	};
+
+	// deregister OverflowToolbar resize handlers
+	OverflowToolbar.prototype._deregisterToolbarResize = function() {
+		if (this._sResizeListenerId) {
+			ResizeHandler.deregister(this._sResizeListenerId);
+			this._sResizeListenerId = "";
+		}
+	};
+
+	// Resize Handler
+	OverflowToolbar.prototype._handleResize = function() {
+		this._bResized = true;
+
+		// fully executing _doLayout at this point poses risk of
+		// measuring the wrong DOM, since the control is invalidated
+		// but not yet rerendered
+		if (this._bInvalidatedAndNotRendered) {
+			return;
+		}
+
+		this._callDoLayout();
+	};
+
+	// Media Change Handler
+	OverflowToolbar.prototype._fnMediaChange = function() {
+		// There are some predefined device-dependent CSS classes, which depend on media queries and show/hide controls with CSS.
+		// In some cases, upon device orientation change, some controls (previously hidden) become visible, but their width is cached as 0.
+		// That is why here we reset _bControlsInfoCached property and _iPreviousToolbarWidth, if there is a device change (based on media queries).
+		this._bControlsInfoCached = false;
+		this._iPreviousToolbarWidth = null;
+		this._callDoLayout();
+	};
+
+	// Calls doLayout, depending on the "asyncMode"
+	OverflowToolbar.prototype._callDoLayout = function () {
+		if (this.getAsyncMode()) {
+			this._doLayoutAsync();
+		} else {
+			this._doLayout();
+		}
+	};
 
 	/**
 	 * Stores the sizes and other info of controls so they don't need to be recalculated again until they change
 	 * @private
 	 */
 	OverflowToolbar.prototype._cacheControlsInfo = function () {
-		var sPriority,
-			bCanMoveToOverflow,
-			bAlwaysStaysInOverflow;
+		var aVisiblePopoverOnlyControls,
+			bHasVisiblePopoverOnlyControls,
+			iLeftPadding = parseInt(this.$().css("padding-right")) || 0,
+			iRightPadding =  parseInt(this.$().css("padding-left")) || 0,
+			iOverflowButtonSize = this._getOverflowButtonSize(),
+			iToolbarOnlyContentSize = this._iToolbarOnlyContentSize;
 
-		this._aMovableControls = []; // Controls that can be in the toolbar or action sheet
-		this._aToolbarOnlyControls = []; // Controls that can't go to the action sheet (inputs, labels, buttons with special layout, etc...)
-		this._aActionSheetOnlyControls = []; // Controls that are forced to stay in the action sheet (buttons with layout)
+		this._iOldContentSize = this._iContentSize;
 		this._iContentSize = 0; // The total *optimal* size of all controls in the toolbar
+		this._iToolbarOnlyContentSize = 0;
+		this._bNeedUpdateOnControlsCachedSizes = false;
 
-		this.getContent().forEach(function (oControl) {
+		this.getContent().forEach(this._updateControlsCachedSizes, this);
 
-			sPriority = OverflowToolbar._getControlPriority(oControl);
-
-			bCanMoveToOverflow = sPriority !== OverflowToolbarPriority.NeverOverflow;
-			bAlwaysStaysInOverflow = sPriority === OverflowToolbarPriority.AlwaysOverflow;
-
-			var iControlSize = OverflowToolbar._getOptimalControlWidth(oControl, this._aControlSizes[oControl.getId()]);
-			this._aControlSizes[oControl.getId()] = iControlSize;
-
-			if (OverflowToolbarAssociativePopoverControls.supportsControl(oControl) && bAlwaysStaysInOverflow) {
-				this._aActionSheetOnlyControls.push(oControl);
-			} else {
-				// Only add up the size of controls that can be shown in the toolbar, hence this addition is here
-				this._iContentSize += iControlSize;
-
-				if (OverflowToolbarAssociativePopoverControls.supportsControl(oControl) && bCanMoveToOverflow) {
-					this._aMovableControls.push(oControl);
-				} else {
-					this._aToolbarOnlyControls.push(oControl);
-				}
-			}
-		}, this);
+		if (iToolbarOnlyContentSize !== this._iToolbarOnlyContentSize) {
+			this.fireEvent("_minWidthChange", {
+				minWidth: this._iToolbarOnlyContentSize > 0 ? this._iToolbarOnlyContentSize + iOverflowButtonSize : 0
+			});
+		}
 
 		// If the system is a phone sometimes due to specificity in the flex the content can be rendered 1px larger that it should be.
-		// This causes a overflow of the last element/button
-		if (sap.ui.Device.system.phone) {
+		// This causes an overflow of the last element/button
+		if (Device.system.phone) {
 			this._iContentSize -= 1;
 		}
 
+		if (this._aPopoverOnlyControls.length) {
+
+			aVisiblePopoverOnlyControls = this._aPopoverOnlyControls.filter(function(oControl) {
+				return oControl.getVisible();
+			});
+			bHasVisiblePopoverOnlyControls = (aVisiblePopoverOnlyControls.length > 0);
+
+			if (bHasVisiblePopoverOnlyControls) {
+				// At least one control will be in the Popover, so the overflow button is required within content
+				this._iContentSize += iOverflowButtonSize;
+			}
+		}
+
 		this._bControlsInfoCached = true;
+
+		// If the total width of all overflow-enabled children changed, fire a private event to notify interested parties
+		if (this._iOldContentSize !== this._iContentSize) {
+			this.fireEvent("_contentSizeChange", {
+				contentSize: this._iContentSize + iLeftPadding + iRightPadding + 1 // Additional 1px to fix Browser rounding issues
+			});
+		}
+	};
+
+	/**
+	 * Updates the cached sizes of the controls
+	 * @param oControl
+	 * @private
+	 */
+	OverflowToolbar.prototype._updateControlsCachedSizes = function (oControl) {
+		var sPriority,
+			iControlSize,
+			sWidth;
+
+		sPriority = this._getControlPriority(oControl);
+		iControlSize = this._calculateControlSize(oControl);
+		this._aControlSizes[oControl.getId()] = iControlSize;
+
+		sWidth = Toolbar.getOrigWidth(oControl.getId());
+		if (sWidth && Toolbar.isRelativeWidth(sWidth)) {
+			this._bNeedUpdateOnControlsCachedSizes = true;
+		}
+
+		// Only add up the size of controls that can be shown in the toolbar, hence this addition is here
+		if (sPriority !== OverflowToolbarPriority.AlwaysOverflow) {
+			this._iContentSize += iControlSize;
+		}
+
+		if (sPriority === OverflowToolbarPriority.NeverOverflow) {
+			this._iToolbarOnlyContentSize += iControlSize;
+		}
+	};
+
+	/**
+	 * Calculates control's size
+	 * @param oControl
+	 * @returns {number}
+	 * @private
+	 */
+	OverflowToolbar.prototype._calculateControlSize = function (oControl) {
+		return this._getOptimalControlWidth(oControl, this._aControlSizes[oControl.getId()]);
 	};
 
 	/**
@@ -253,192 +660,314 @@ sap.ui.define([
 	};
 
 	/**
-	 * Moves controls from/to the action sheet
+	 * Moves buttons to Popover
+	 * @private
+	 */
+	OverflowToolbar.prototype._flushButtonsToPopover = function () {
+		this._aButtonsToMoveToPopover.forEach(this._moveButtonToPopover, this);
+	};
+
+	/**
+	 * Invalidates OverflowToolbar if the signature of the Popover is changed
+	 * @private
+	 */
+	OverflowToolbar.prototype._invalidateIfHashChanged = function (sHash) {
+		// helper: invalidate the toolbar if the signature of the Popover changed (i.e. buttons moved)
+		if (typeof sHash === "undefined" || this._getPopover()._getContentIdsHash() !== sHash) {
+			// Preserve focus info
+			this._preserveChildControlFocusInfo();
+			this.invalidate();
+		}
+	};
+
+	/**
+	 * Adds Overflow button and updates iContentSize, if it hasn't been added so far
+	 * @private
+	 */
+	OverflowToolbar.prototype._addOverflowButton = function () {
+		if (!this._getOverflowButtonNeeded()) {
+			this._iCurrentContentSize += this._getOverflowButtonSize();
+			this._setOverflowButtonNeeded(true);
+		}
+	};
+
+	/**
+	 * Aggregate the controls from this array of elements [el1, el2, el3] to an array of arrays and elements [el1, [el2, el3]].
+	 * This is needed because groups of elements and single elements share same overflow logic.
+	 * In order to sort elements and group arrays there are _index and _priority property to group array.
+	 * @returns {*|Array.<T>}
+	 * @private
+	 */
+	OverflowToolbar.prototype._aggregateMovableControls = function () {
+		var oGroups = {},
+			aAggregatedControls = [],
+			iControlGroup,
+			oPriorityOrder,
+			sControlPriority,
+			iControlIndex,
+			aGroup;
+
+		this._aMovableControls.forEach(function (oControl) {
+				iControlGroup = OverflowToolbar._getControlGroup(oControl);
+				oPriorityOrder = OverflowToolbar._oPriorityOrder;
+
+			if (iControlGroup) {
+				sControlPriority = this._getControlPriority(oControl);
+				iControlIndex = this._getControlIndex(oControl);
+
+				oGroups[iControlGroup] = oGroups[iControlGroup] || [];
+				aGroup = oGroups[iControlGroup];
+				aGroup.unshift(oControl);
+
+				// The overall group priority is the max priority of its elements
+				if (!aGroup._priority || oPriorityOrder[aGroup._priority] < oPriorityOrder[sControlPriority]) {
+					aGroup._priority = sControlPriority;
+				}
+				// The overall group index is the max index of its elements
+				if (!aGroup._index || aGroup._index < iControlIndex) {
+					aGroup._index = iControlIndex;
+				}
+			} else {
+				aAggregatedControls.push(oControl);
+			}
+		}, this);
+
+		// combine not grouped elements with group arrays
+		Object.keys(oGroups).forEach(function (key) {
+			aAggregatedControls.push(oGroups[key]);
+		});
+
+		return aAggregatedControls;
+	};
+
+	/**
+	 * Extracts controls to move to Overflow
+	 * @param aAggregatedMovableControls array of movable controls
+	 * @param iToolbarSize
+	 * @private
+	 */
+	OverflowToolbar.prototype._extractControlsToMoveToOverflow = function (aAggregatedMovableControls, iToolbarSize) {
+		var i,
+			vMovableControl;
+
+		for (i = 0; i < aAggregatedMovableControls.length; i++) {
+			vMovableControl = aAggregatedMovableControls[i];
+
+			// when vMovableControl is a group array
+			if (vMovableControl.length) {
+				vMovableControl.forEach(this._addToPopoverArrAndUpdateContentSize, this);
+			} else { // when vMovableControl is a single element
+				this._addToPopoverArrAndUpdateContentSize(vMovableControl);
+			}
+
+			// Add the overflow button only if there is at least one control, which will be shown in the Popover.
+			if (this._getControlPriority(vMovableControl) !== OverflowToolbarPriority.Disappear && !vMovableControl.isA?.("sap.m.ToolbarSeparator")) {
+				this._addOverflowButton();
+			}
+
+			if (this._iCurrentContentSize <= iToolbarSize) {
+				break;
+			}
+		}
+	};
+
+	/**
+	 * Adds controls to Popover Array and updates the current content size
+	 * @param oControl
+	 * @private
+	 */
+	OverflowToolbar.prototype._addToPopoverArrAndUpdateContentSize = function (oControl) {
+		this._aButtonsToMoveToPopover.unshift(oControl);
+		this._iCurrentContentSize -= this._aControlSizes[oControl.getId()];
+	};
+
+	/**
+	 * Sorts controls by priority and index.
+	 * vControlA or vControlB can be control or group array(array of controls) they share same sorting logic.
+	 * @param vControlA
+	 * @param vControlB
+	 * @private
+	 */
+	OverflowToolbar.prototype._sortByPriorityAndIndex = function (vControlA, vControlB) {
+		var oPriorityOrder = OverflowToolbar._oPriorityOrder,
+			sControlAPriority = this._getControlPriority(vControlA),
+			sControlBPriority = this._getControlPriority(vControlB),
+			iPriorityCompare = oPriorityOrder[sControlAPriority] - oPriorityOrder[sControlBPriority];
+
+		if (iPriorityCompare !== 0) {
+			return iPriorityCompare;
+		} else {
+			return this._getControlIndex(vControlB) - this._getControlIndex(vControlA);
+		}
+	};
+
+	/**
+	 * Moves controls from/to the Popover
 	 * Sets/removes flexbox css classes to/from controls
+	 * @param iToolbarSize
 	 * @private
 	 */
 	OverflowToolbar.prototype._setControlsOverflowAndShrinking = function (iToolbarSize) {
-		var iContentSize = this._iContentSize,// total optimal control width in pixels, cached in _cacheControlsInfo and used until invalidated
-			aButtonsToMoveToActionSheet = [], // buttons that must go to the action sheet
-			sIdsHash,
-			i,
-			aAggregatedMovableControls,
-			fnFlushButtonsToActionSheet = function (aButtons) { // helper: moves the buttons in the array to the action sheet
-				aButtons.forEach(function (oControl) {
-					this._moveButtonToActionSheet(oControl);
-				}, this);
-			},
-			fnInvalidateIfHashChanged = function (sHash) { // helper: invalidate the toolbar if the signature of the action sheet changed (i.e. buttons moved)
-				if (typeof sHash === "undefined" || this._getPopover()._getContentIdsHash() !== sHash) {
-					this.invalidate();
+		var sIdsHash;
 
-					// Preserve focus info
-					if (this._getControlsIds().indexOf(sap.ui.getCore().getCurrentFocusedControlId()) !== -1) {
-						this._bControlWasFocused = true;
-					}
-					if (sap.ui.getCore().getCurrentFocusedControlId() === this._getOverflowButton().getId()) {
-						this._bOverflowButtonWasFocused = true;
-					}
-				}
-			},
-			fnAddOverflowButton = function (iContentSize) { // helper: show the overflow button and increase content size accordingly, if not shown already
-				if (!this._getOverflowButtonNeeded()) {
-					iContentSize += this._getOverflowButtonSize();
-					this._setOverflowButtonNeeded(true);
-				}
-				return iContentSize;
-			},
-		// Aggregate the controls from this array of elements [el1, el2, el3] to an array of arrays and elements [el1, [el2, el3]].
-		// This is needed because groups of elements and single elements share same overflow logic
-		// In order to sort elements and group arrays there are _index and _priority property to group array.
-			fnAggregateMovableControls = function (aMovableControls) {
-				var oGroups = {},
-					aAggregatedControls = [];
-
-				aMovableControls.forEach(function (oControl) {
-					var iControlGroup = OverflowToolbar._getControlGroup(oControl),
-						oPriorityOrder = OverflowToolbar._oPriorityOrder,
-						sControlPriority, iControlIndex, aGroup;
-
-					if (iControlGroup) {
-						sControlPriority = OverflowToolbar._getControlPriority(oControl);
-						iControlIndex = OverflowToolbar._getControlIndex(oControl);
-
-						oGroups[iControlGroup] = oGroups[iControlGroup] || [];
-						aGroup = oGroups[iControlGroup];
-						aGroup.push(oControl);
-
-						// The overall group priority is the max priority of its elements
-						if (!aGroup._priority || oPriorityOrder[aGroup._priority] < oPriorityOrder[sControlPriority]) {
-							aGroup._priority = sControlPriority;
-						}
-						// The overall group index is the max index of its elements
-						if (!aGroup._index || aGroup._index < iControlIndex) {
-							aGroup._index = iControlIndex;
-						}
-					} else {
-						aAggregatedControls.push(oControl);
-					}
-				});
-
-				// combine not grouped elements with group arrays
-				Object.keys(oGroups).forEach(function (key) {
-					aAggregatedControls.push(oGroups[key]);
-				});
-
-				return aAggregatedControls;
-			},
-			fnExtractControlsToMoveToOverflow = function (vMovableControl) {
-				// when vMovableControl is group array
-				if (vMovableControl.length) {
-					vMovableControl.forEach(fnAddToActionSheetArrAndUpdateContentSize, this);
-				} else { // when vMovableControl is a single element
-					fnAddToActionSheetArrAndUpdateContentSize.call(this, vMovableControl);
-				}
-
-				if (iContentSize <= iToolbarSize) {
-					return true;
-				}
-			},
-		// vControlA or vControlB can be control or group array(array of controls) they share same sorting logic
-			fnSortByPriorityAndIndex = function (vControlA, vControlB) {
-				var oPriorityOrder = OverflowToolbar._oPriorityOrder,
-					sControlAPriority = OverflowToolbar._getControlPriority(vControlA),
-					sControlBPriority = OverflowToolbar._getControlPriority(vControlB),
-					iPriorityCompare = oPriorityOrder[sControlAPriority] - oPriorityOrder[sControlBPriority];
-
-				if (iPriorityCompare !== 0) {
-					return iPriorityCompare;
-				} else {
-					return OverflowToolbar._getControlIndex(vControlB) - OverflowToolbar._getControlIndex(vControlA);
-				}
-			},
-			fnAddToActionSheetArrAndUpdateContentSize = function (oControl) {
-				aButtonsToMoveToActionSheet.unshift(oControl);
-				iContentSize -= this._aControlSizes[oControl.getId()];
-			};
+		this._iCurrentContentSize = this._iContentSize;
+		this._aButtonsToMoveToPopover = []; // buttons that must go to the Popover
 
 		// If _bSkipOptimization is set to true, this means that no controls moved from/to the overflow, but they rather changed internally
-		// In this case we can't rely on the action sheet hash to determine whether to skip one invalidation
+		// In this case we can't rely on the Popover hash to determine whether to skip one invalidation
 		if (this._bSkipOptimization) {
 			this._bSkipOptimization = false;
 		} else {
-			sIdsHash = this._getPopover()._getContentIdsHash(); // Hash of the buttons in the action sheet, f.e. "__button1.__button2.__button3"
+			sIdsHash = this._getPopover()._getContentIdsHash(); // Hash of the buttons in the Popover, f.e. "__button1.__button2.__button3"
 		}
 
-		// Clean up the action sheet, hide the overflow button, remove flexbox css from controls
+		// Clean up the Popover, hide the overflow button, remove flexbox css from controls
 		this._resetToolbar();
 
-		// If there are any action sheet only controls and they are visible, move them to the action sheet first
-		if (this._aActionSheetOnlyControls.length) {
-			for (i = this._aActionSheetOnlyControls.length - 1; i >= 0; i--) {
-				if (this._aActionSheetOnlyControls[i].getVisible()){
-					aButtonsToMoveToActionSheet.unshift(this._aActionSheetOnlyControls[i]);
-				}
-			}
+		// If there are any Popover only controls and they are visible, add them to the PopoverOnly collection
+		this._collectPopoverOnlyControls();
 
-			if (aButtonsToMoveToActionSheet.length > 0) {
-				// At least one control will be in the action sheet, so the overflow button is needed
-				iContentSize = fnAddOverflowButton.call(this, iContentSize);
-			}
-		}
+		this._markControlsWithShrinkableLayoutData();
 
-		// If all content fits - put the buttons from the previous step (if any) in the action sheet and stop here
-		if (iContentSize <= iToolbarSize) {
-			fnFlushButtonsToActionSheet.call(this, aButtonsToMoveToActionSheet);
-			fnInvalidateIfHashChanged.call(this, sIdsHash);
+		// If all content fits - put the PopoverOnly controls (if any) in the Popover and stop here
+		// Due to rounding issues, add 1px size tolerance
+		if (this._iCurrentContentSize <= (iToolbarSize + OverflowToolbar.CONTENT_SIZE_TOLERANCE)) {
+			this._flushButtonsToPopover();
+			this._invalidateIfHashChanged(sIdsHash);
 			return;
 		}
 
 		// Not all content fits
-		// If there are buttons that can be moved, start moving them to the action sheet until there is no more overflow left
-		if (this._aMovableControls.length) {
+		// If there are buttons that can be moved, start moving them to the Popover until there is no more overflow left
+		this._moveControlsToPopover(iToolbarSize);
 
-			// There is at least one button that will go to the action sheet - add the overflow button, but only if it wasn't added already
-			iContentSize = fnAddOverflowButton.call(this, iContentSize);
-			aAggregatedMovableControls = fnAggregateMovableControls(this._aMovableControls);
+		// At this point all that could be moved to the Popover, was moved (Popover only buttons, some/all movable buttons)
+		this._flushButtonsToPopover();
 
-			// Define the overflow order, depending on items` priority and index.
-			aAggregatedMovableControls.sort(fnSortByPriorityAndIndex);
-
-			// Hide controls or groups while iContentSize <= iToolbarSize/
-			aAggregatedMovableControls.some(fnExtractControlsToMoveToOverflow, this);
-		}
-
-		// At this point all that could be moved to the action sheet, was moved (action sheet only buttons, some/all movable buttons)
-		fnFlushButtonsToActionSheet.call(this, aButtonsToMoveToActionSheet);
-
-		// If content still doesn't fit despite moving all movable items to the action sheet, set the flexbox classes
-		if (iContentSize > iToolbarSize) {
+		// If content still doesn't fit despite moving all movable items to the Popover, set the flexbox classes
+		if (this._iCurrentContentSize > iToolbarSize) {
 			this._checkContents(); // This function sets the css classes to make flexbox work, despite its name
 		}
 
-		fnInvalidateIfHashChanged.call(this, sIdsHash);
+		this._invalidateIfHashChanged(sIdsHash);
+	};
+
+	/*
+	 * Iterrates through controls and marks them with shrinkable class if needed
+	 *
+	 * @private
+	 */
+	OverflowToolbar.prototype._markControlsWithShrinkableLayoutData = function() {
+		this.getContent().forEach(this._markControlWithShrinkableLayoutData, this);
+	};
+
+	/*
+	 * Moves PopoverOnly controls in Accossiative Popover
+	 *
+	 * @private
+	 */
+	OverflowToolbar.prototype._collectPopoverOnlyControls = function() {
+		var oPopoverOnlyControlsLength = this._aPopoverOnlyControls.length,
+			i,
+			oControl;
+
+		if (oPopoverOnlyControlsLength) {
+			for (i = oPopoverOnlyControlsLength - 1; i >= 0; i--) {
+				oControl = this._aPopoverOnlyControls[i];
+				if (oControl.getVisible()) {
+					this._aButtonsToMoveToPopover.unshift(oControl);
+				}
+			}
+
+			if (this._aButtonsToMoveToPopover.length > 0) {
+				// At least one control will be in the Popover, so the overflow button is needed
+				this._setOverflowButtonNeeded(true);
+			}
+		}
+	};
+
+	/*
+	 * Moves controls to Popover
+	 * @param iToolbarSize
+	 * @private
+	 */
+	OverflowToolbar.prototype._moveControlsToPopover = function(iToolbarSize) {
+		var aAggregatedMovableControls = [];
+
+		if (this._aMovableControls.length) {
+
+			aAggregatedMovableControls = this._aggregateMovableControls();
+
+			// Define the overflow order, depending on items` priority and index.
+			aAggregatedMovableControls.sort(this._sortByPriorityAndIndex.bind(this));
+
+			// Hide controls or groups while iContentSize <= iToolbarSize/
+			this._extractControlsToMoveToOverflow(aAggregatedMovableControls, iToolbarSize);
+		}
+	};
+
+	/*
+	 * Checks if the given control has shrinkable <code>LayoutData</code> or not and marks it with shrinkable class.
+	 *
+	 * @private
+	 */
+	OverflowToolbar.prototype._markControlWithShrinkableLayoutData = function(oControl) {
+		var sWidth,
+			oLayout,
+			bShrinkable,
+			bBreadcrumbs;
+
+		// remove old class
+		oControl.removeStyleClass(Toolbar.shrinkClass);
+
+		// ignore the controls that have fixed width
+		sWidth = Toolbar.getOrigWidth(oControl.getId());
+		if (!Toolbar.isRelativeWidth(sWidth)) {
+			return;
+		}
+
+		// check shrinkable via layout data
+		oLayout = oControl.getLayoutData();
+		bShrinkable = oLayout && oLayout.isA("sap.m.ToolbarLayoutData") && oLayout.getShrinkable();
+
+		// check explicitly for sap.m.Breadcrumbs, as text
+		// controls implement sap.ui.core.IShrinkable too,
+		// and they are not meant to be included
+		bBreadcrumbs = oControl.isA("sap.m.Breadcrumbs");
+
+		if (bShrinkable || bBreadcrumbs) {
+			oControl.addStyleClass(Toolbar.shrinkClass);
+		}
 	};
 
 	/**
 	 * Resets the toolbar by removing all special behavior from controls, returning it to its default natural state:
-	 * - all buttons removed from the action sheet and put back to the toolbar
+	 * - all buttons removed from the Popover and put back to the toolbar
 	 * - the overflow button is removed
 	 * - all flexbox classes are removed from items
 	 * @private
 	 */
 	OverflowToolbar.prototype._resetToolbar = function () {
 
-		// 1. Close the action sheet and remove everything from it (reset overflow behavior)
-		// Note: when the action sheet is closed because of toolbar invalidation, we don't want the animation in order to avoid flickering
+		// 1. Close the Popover and remove everything from it (reset overflow behavior)
+		// Note: when the Popover is closed because of toolbar invalidation, we don't want the animation in order to avoid flickering
 		this._getPopover().close();
-		this._getPopover()._getAllContent().forEach(function (oButton) {
-			this._restoreButtonInToolbar(oButton);
-		}, this);
+		this._getPopover()._getAllContent().forEach(this._restoreButtonInToolbar, this);
 
 		// 2. Hide the overflow button
 		this._setOverflowButtonNeeded(false);
 
 		// 3 Remove flex classes (reset shrinking behavior)
-		this.getContent().forEach(function (oControl) {
-			oControl.removeStyleClass(Toolbar.shrinkClass);
-		});
+		this.getContent().forEach(this._removeShrinkingClass);
+	};
+
+	/**
+	 * Removes CSS class for shrinking
+	 * @param oControl
+	 * @private
+	 */
+	OverflowToolbar.prototype._removeShrinkingClass = function (oControl) {
+		oControl.removeStyleClass(Toolbar.shrinkClass);
 	};
 
 	/**
@@ -446,7 +975,7 @@ sap.ui.define([
 	 * @param oButton
 	 * @private
 	 */
-	OverflowToolbar.prototype._moveButtonToActionSheet = function (oButton) {
+	OverflowToolbar.prototype._moveButtonToPopover = function (oButton) {
 		this._getPopover().addAssociatedContent(oButton);
 	};
 
@@ -463,11 +992,14 @@ sap.ui.define([
 	};
 
 	/**
-	 * Closes the action sheet, resets the toolbar, and re-initializes variables to force a full layout recalc
-	 * @param bHardReset - skip the optimization, described in _setControlsOverflowAndShrinking
+	 * Closes the Popover, resets the toolbar, and re-initializes variables to force a full layout recalc
+	 * @param {boolean} bHardReset - skip the optimization, described in _setControlsOverflowAndShrinking
 	 * @private
 	 */
 	OverflowToolbar.prototype._resetAndInvalidateToolbar = function (bHardReset) {
+		if (this._bIsBeingDestroyed) {
+			return;
+		}
 
 		this._resetToolbar();
 
@@ -477,7 +1009,16 @@ sap.ui.define([
 			this._bSkipOptimization = true;
 		}
 
-		this.invalidate();
+		if (this.$().length) {
+			this._preserveChildControlFocusInfo();
+			this.invalidate();
+		}
+	};
+
+	OverflowToolbar.prototype.invalidate = function() {
+		this._bInvalidatedAndNotRendered = true;
+
+		Control.prototype.invalidate.apply(this, arguments);
 	};
 
 
@@ -485,15 +1026,39 @@ sap.ui.define([
 
 
 	/**
-	 * Returns all controls from the toolbar that are not in the action sheet
-	 * @returns {*|Array.<T>}
+	 * Returns all controls from the toolbar that are not in the Popover
+	 * @returns {*|Array.<sap.ui.core.Control>}
 	 */
 	OverflowToolbar.prototype._getVisibleContent = function () {
 		var aToolbarContent = this.getContent(),
-			aActionSheetContent = this._getPopover()._getAllContent();
+			aPopoverContent = this._getPopover()._getAllContent();
 
 		return aToolbarContent.filter(function (oControl) {
-			return aActionSheetContent.indexOf(oControl) === -1;
+			return aPopoverContent.indexOf(oControl) === -1;
+		});
+	};
+
+	/**
+	* Returns all the controls from the <code>sap.m.OverflowToolbar</code>,
+	* that are not in the overflow area and their <code>visible</code> property is <code>true</code>.
+	* @private
+	* @ui5-restricted
+	* @returns {*|Array.<sap.ui.core.Control>}
+	*/
+	OverflowToolbar.prototype._getVisibleAndNonOverflowContent = function () {
+		return this._getVisibleContent().filter(function (oControl) {
+			return oControl.getVisible();
+		});
+	};
+
+	OverflowToolbar.prototype._getToggleButton = function (sIdPrefix) {
+		return new ToggleButton({
+				ariaHasPopup: AriaHasPopup.Menu,
+				id: this.getId() + sIdPrefix,
+				icon: IconPool.getIconURI("overflow"),
+				press: this._overflowButtonPressed.bind(this),
+				tooltip: Library.getResourceBundleFor("sap.m").getText(OverflowToolbar.TOGGLE_BUTTON_TOOLTIP),
+				type: ButtonType.Transparent
 		});
 	};
 
@@ -510,13 +1075,7 @@ sap.ui.define([
 			// Create the overflow button
 			// A tooltip will be used automatically by the button
 			// using to the icon-name provided
-			oOverflowButton = new ToggleButton({
-				id: this.getId() + "-overflowButton",
-				icon: IconPool.getIconURI("overflow"),
-				press: this._overflowButtonPressed.bind(this),
-				ariaLabelledBy: this._sAriaOverflowButtonLabelId,
-				type: sap.m.ButtonType.Transparent
-			});
+			oOverflowButton = this._getToggleButton("-overflowButton");
 
 			this.setAggregation("_overflowButton", oOverflowButton, true);
 
@@ -525,14 +1084,27 @@ sap.ui.define([
 		return this.getAggregation("_overflowButton");
 	};
 
+	OverflowToolbar.prototype._getOverflowButtonClone = function () {
+		if (!this._oOverflowToolbarButtonClone) {
+			this._oOverflowToolbarButtonClone = this._getToggleButton("-overflowButtonClone")
+				.addStyleClass("sapMTBHiddenElement");
+		}
+
+		//Removing accessibility attributes
+		this._oOverflowToolbarButtonClone._getTooltip = function() { return ""; };
+		this._oOverflowToolbarButtonClone.removeAllAssociation("ariaLabelledBy");
+
+		return this._oOverflowToolbarButtonClone;
+	};
+
 	/**
-	 * Shows the action sheet
+	 * Shows the Popover
 	 * @param oEvent
 	 * @private
 	 */
 	OverflowToolbar.prototype._overflowButtonPressed = function (oEvent) {
 		var oPopover = this._getPopover(),
-			sBestPlacement = this._getBestActionSheetPlacement();
+			sBestPlacement = this._getBestPopoverPlacement();
 
 		if (oPopover.getPlacement() !== sBestPlacement) {
 			oPopover.setPlacement(sBestPlacement);
@@ -560,9 +1132,10 @@ sap.ui.define([
 				showHeader: false,
 				showArrow: false,
 				modal: false,
-				horizontalScrolling: sap.ui.Device.system.phone ? false : true,
-				contentWidth: sap.ui.Device.system.phone ? "100%" : "auto",
-				offsetY: this._detireminePopoverVerticalOffset()
+				horizontalScrolling: Device.system.phone ? false : true,
+				contentWidth: Device.system.phone ? "100%" : "auto",
+				offsetY: this._detireminePopoverVerticalOffset(),
+				ariaLabelledBy: InvisibleText.getStaticId("sap.m", "INPUT_AVALIABLE_VALUES")
 			});
 
 			// Override popover positioning mechanism
@@ -572,7 +1145,7 @@ sap.ui.define([
 				this._atPositions = ["end bottom", "end center", "end top", "begin center"];
 			};
 
-			if (sap.ui.Device.system.phone) {
+			if (Device.system.phone) {
 				oPopover.attachBeforeOpen(this._shiftPopupShadow, this);
 			}
 
@@ -595,10 +1168,10 @@ sap.ui.define([
 		var oPopover = this._getPopover(),
 			sPos = oPopover.getCurrentPosition();
 
-		if (sPos === sap.m.PlacementType.Bottom) {
+		if (sPos === PlacementType.Bottom) {
 			oPopover.addStyleClass("sapMOTAPopoverNoShadowTop");
 			oPopover.removeStyleClass("sapMOTAPopoverNoShadowBottom");
-		} else if (sPos === sap.m.PlacementType.Top) {
+		} else if (sPos === PlacementType.Top) {
 			oPopover.addStyleClass("sapMOTAPopoverNoShadowBottom");
 			oPopover.removeStyleClass("sapMOTAPopoverNoShadowTop");
 		}
@@ -610,19 +1183,10 @@ sap.ui.define([
 	 */
 	OverflowToolbar.prototype._popOverClosedHandler = function () {
 		this._getOverflowButton().setPressed(false); // Turn off the toggle button
-		this._getOverflowButton().$().focus(); // Focus the toggle button so that keyboard handling will work
-
-		// On IE/sometimes other browsers, if you click the toggle button again to close the popover, onAfterClose is triggered first, which closes the popup, and then the click event on the toggle button reopens it
-		// To prevent this behaviour, disable the overflow button till the end of the current javascript engine's "tick"
-		this._getOverflowButton().setEnabled(false);
-		jQuery.sap.delayedCall(0, this, function () {
-			this._getOverflowButton().setEnabled(true);
-
-			// In order to restore focus, we must wait another tick here to let the renderer enable it first
-			jQuery.sap.delayedCall(0, this, function () {
-				this._getOverflowButton().$().focus();
-			});
-		});
+		if (Element.closestTo(document.activeElement)) {
+			return;
+		}
+		this._getOverflowButton().focus();
 	};
 
 	/**
@@ -635,7 +1199,7 @@ sap.ui.define([
 
 	/**
 	 *
-	 * @param bValue
+	 * @param {boolean} bValue
 	 * @returns {OverflowToolbar}
 	 * @private
 	 */
@@ -646,48 +1210,148 @@ sap.ui.define([
 		return this;
 	};
 
+	OverflowToolbar.prototype._getToolbarInteractiveControls = function () {
+		var aVisibleControls = this._getVisibleContent(),
+		    aInteractiveControls = aVisibleControls.filter(function(oControl) {
+			return this._getControlPriority(oControl) !== OverflowToolbarPriority.AlwaysOverflow
+				&& oControl.isA("sap.m.IToolbarInteractiveControl")
+				&& typeof (oControl._getToolbarInteractive) === "function" && oControl._getToolbarInteractive();
+		}, this);
+		aInteractiveControls.push(this._getOverflowButton());
+
+		return aInteractiveControls;
+	};
+
+	/**
+	 *
+	 * @returns {number} Toolbar interactive Controls count
+	 * @private
+	 */
+	OverflowToolbar.prototype._getToolbarInteractiveControlsCount = function () {
+		var aInteractiveControlsRendered = this._getVisibleAndNonOverflowContent().filter(function(oControl) {
+			return this._getControlPriority(oControl) !== OverflowToolbarPriority.AlwaysOverflow
+				&& oControl.isA("sap.m.IToolbarInteractiveControl")
+				&& typeof (oControl._getToolbarInteractive) === "function" && oControl._getToolbarInteractive();
+		}, this);
+
+		return this._getOverflowButtonNeeded() ? aInteractiveControlsRendered.length + 1 : aInteractiveControlsRendered.length;
+	};
+
 	/***************************************AGGREGATIONS AND LISTENERS******************************************/
 
+	/**
+	 * Upon Control's update, move it in the suitable collections and remove it from where it is not needed any more
+	 * @private
+	 */
+	OverflowToolbar.prototype._updateContentInfoInControlsCollections = function () {
+		this.getContent().forEach(function (oControl) {
+			if (oControl) {
+				this._removeContentFromControlsCollections(oControl);
+				this._moveControlInSuitableCollection(oControl, this._getControlPriority(oControl));
+			}
+		}, this);
+	};
 
-	OverflowToolbar.prototype.onLayoutDataChange = function () {
+	/**
+	 * Moves each control in the suitable collection - Popover only, movable controls and toolbar only
+	 * @param oControl
+	 * @param sPriority
+	 * @public
+	 */
+	OverflowToolbar.prototype._moveControlInSuitableCollection = function (oControl, sPriority) {
+		var bCanMoveToOverflow = sPriority !== OverflowToolbarPriority.NeverOverflow,
+			bAlwaysStaysInOverflow = sPriority === OverflowToolbarPriority.AlwaysOverflow;
+
+		if (OverflowToolbarAssociativePopoverControls.supportsControl(oControl) && bAlwaysStaysInOverflow) {
+			this._aPopoverOnlyControls.push(oControl);
+		} else {
+			if (OverflowToolbarAssociativePopoverControls.supportsControl(oControl) && bCanMoveToOverflow && oControl.getVisible()) {
+				this._aMovableControls.push(oControl);
+			} else {
+				this._aToolbarOnlyControls.push(oControl);
+			}
+		}
+	};
+
+	/**
+	 * Removes Control from collections
+	 * @param oControl
+	 * @public
+	 */
+	OverflowToolbar.prototype._removeContentFromControlsCollections = function (oControl) {
+		var i,
+			aCurrentCollection,
+			iIndex;
+
+		for (i = 0; i < this._aAllCollections.length; i++) {
+				aCurrentCollection = this._aAllCollections[i];
+				iIndex = aCurrentCollection.indexOf(oControl);
+
+				if (iIndex !== -1) {
+					aCurrentCollection.splice(iIndex, 1);
+				}
+		}
+	};
+
+	OverflowToolbar.prototype._clearAllControlsCollections = function () {
+		this._aMovableControls = [];
+		this._aToolbarOnlyControls = [];
+		this._aPopoverOnlyControls = [];
+		this._aAllCollections = [this._aMovableControls, this._aToolbarOnlyControls, this._aPopoverOnlyControls];
+	};
+
+	OverflowToolbar.prototype.onLayoutDataChange = function (oEvent) {
 		this._resetAndInvalidateToolbar(true);
+		oEvent && this._updateContentInfoInControlsCollections();
 	};
 
 	OverflowToolbar.prototype.addContent = function (oControl) {
 		this._registerControlListener(oControl);
-		this._preProcessControl(oControl);
 		this._resetAndInvalidateToolbar(false);
+
+		if (oControl) {
+			this._moveControlInSuitableCollection(oControl, this._getControlPriority(oControl));
+		}
+
+		this._informNewFlexibleContentAdded(oControl);
+
 		return this._callToolbarMethod("addContent", arguments);
 	};
 
-
 	OverflowToolbar.prototype.insertContent = function (oControl, iIndex) {
 		this._registerControlListener(oControl);
-		this._preProcessControl(oControl);
 		this._resetAndInvalidateToolbar(false);
+
+		if (oControl) {
+			this._moveControlInSuitableCollection(oControl, this._getControlPriority(oControl));
+		}
+
+		this._informNewFlexibleContentAdded(oControl);
+
 		return this._callToolbarMethod("insertContent", arguments);
 	};
 
-
-	OverflowToolbar.prototype.removeContent = function (oControl) {
+	OverflowToolbar.prototype.removeContent = function () {
 		var vContent = this._callToolbarMethod("removeContent", arguments);
+		if (vContent) {
+			this._getPopover().removeAssociatedContent(vContent.getId());
+		}
 		this._resetAndInvalidateToolbar(false);
 
-		this._postProcessControl(vContent);
 		this._deregisterControlListener(vContent);
+		this._removeContentFromControlsCollections(vContent);
 
 		return vContent;
 	};
 
-
 	OverflowToolbar.prototype.removeAllContent = function () {
 		var aContents = this._callToolbarMethod("removeAllContent", arguments);
 
-		aContents.forEach(function (oControl) {
-			this._deregisterControlListener(oControl);
-			this._postProcessControl(oControl);
-		}, this);
+		aContents.forEach(this._deregisterControlListener, this);
+		aContents.forEach(this._removeContentFromControlsCollections, this);
+
 		this._resetAndInvalidateToolbar(false);
+		this._clearAllControlsCollections();
 
 		return aContents;
 	};
@@ -695,11 +1359,27 @@ sap.ui.define([
 	OverflowToolbar.prototype.destroyContent = function () {
 		this._resetAndInvalidateToolbar(false);
 
-		jQuery.sap.delayedCall(0, this, function () {
+		setTimeout(function () {
 			this._resetAndInvalidateToolbar(false);
-		});
+		}.bind(this), 0);
+
+		this._clearAllControlsCollections();
 
 		return this._callToolbarMethod("destroyContent", arguments);
+	};
+
+	/**
+	 * Every time a flexible control (like sap.m.GenericTag) is added to the content aggregation,
+	 * a "_contentSizeChange" event is fired to reset the DynamicPageTitle's area flex-basis.
+	 * @param oControl
+	 * @private
+	 */
+	OverflowToolbar.prototype._informNewFlexibleContentAdded = function (oControl) {
+		if (oControl && oControl.isA("sap.m.IOverflowToolbarFlexibleContent")) {
+			this.fireEvent("_contentSizeChange", {
+				contentSize: null
+			});
+		}
 	};
 
 	/**
@@ -708,8 +1388,22 @@ sap.ui.define([
 	 * @private
 	 */
 	OverflowToolbar.prototype._registerControlListener = function (oControl) {
+		var aInvalidationEvents;
+
 		if (oControl) {
 			oControl.attachEvent("_change", this._onContentPropertyChangedOverflowToolbar, this);
+
+			// Check if the control implements sap.m.IOverflowToolbarContent interface
+			if (oControl.isA("sap.m.IOverflowToolbarContent")) {
+				aInvalidationEvents = oControl.getOverflowToolbarConfig().invalidationEvents;
+
+				if (aInvalidationEvents && Array.isArray(aInvalidationEvents)) {
+					// We start to listen for events listed in invalidationEvents array of the OverflowToolbarConfig
+					aInvalidationEvents.forEach(function (sEvent) {
+						oControl.attachEvent(sEvent, this._onInvalidationEventFired, this);
+					}, this);
+				}
+			}
 		}
 	};
 
@@ -719,8 +1413,22 @@ sap.ui.define([
 	 * @private
 	 */
 	OverflowToolbar.prototype._deregisterControlListener = function (oControl) {
+		var aInvalidationEvents;
+
 		if (oControl) {
 			oControl.detachEvent("_change", this._onContentPropertyChangedOverflowToolbar, this);
+
+			// Check if the control implements sap.m.IOverflowToolbarContent interface
+			if (oControl.isA("sap.m.IOverflowToolbarContent")) {
+				aInvalidationEvents = oControl.getOverflowToolbarConfig().invalidationEvents;
+
+				if (aInvalidationEvents && Array.isArray(aInvalidationEvents)) {
+					// We stop to listen for events listed in invalidationEvents array of the OverflowToolbarConfig
+					aInvalidationEvents.forEach(function (sEvent) {
+						oControl.detachEvent(sEvent, this._onInvalidationEventFired, this);
+					}, this);
+				}
+			}
 		}
 	};
 
@@ -731,20 +1439,66 @@ sap.ui.define([
 	 * @private
 	 */
 	OverflowToolbar.prototype._onContentPropertyChangedOverflowToolbar = function (oEvent) {
+		var oSourceControl = oEvent.getSource(),
+			oControlConfig,
+			sParameterName;
+
+		// Move control in suitable collections if one of its properties has changed between the init and doLayout functions execution
+		this._updateContentInfoInControlsCollections();
 
 		// Listening for property changes is turned off during layout recalculation to avoid infinite loops
 		if (!this._bListenForControlPropertyChanges) {
 			return;
 		}
 
-		var sSourceControlClass = oEvent.getSource().getMetadata().getName();
-		var oControlConfig = OverflowToolbarAssociativePopoverControls.getControlConfig(sSourceControlClass);
-		var sParameterName = oEvent.getParameter("name");
+		oControlConfig = OverflowToolbarAssociativePopoverControls.getControlConfig(oSourceControl);
+		sParameterName = oEvent.getParameter("name");
 
-		// Do nothing if the changed property is in the blacklist above
+		// Do nothing if the changed property belongs to invisible control
+		if (sParameterName !== 'visible' && !oSourceControl.getVisible()) {
+			return;
+		}
+
+		// Do nothing if the changed property is in the blocklist above
 		if (typeof oControlConfig !== "undefined" &&
 			oControlConfig.noInvalidationProps.indexOf(sParameterName) !== -1) {
 			return;
+		}
+
+		// If the visibility of the conent has changed, in onAfterRendering method we assure that
+		// the cached controls' sizes will be updated, as they might not be accurate
+		if (sParameterName === "visible") {
+			this._bContentVisibilityChanged = true;
+		}
+
+		// If a flexible control has property modification, which might influence width,
+		// we should notify DynamicPageTitle to reset the flex-basis of its content area
+		if (oSourceControl.isA("sap.m.IOverflowToolbarFlexibleContent") && oSourceControl.getVisible()) {
+			this.fireEvent("_contentSizeChange", {
+				contentSize: null
+			});
+		}
+
+		// Trigger a recalculation
+		this._resetAndInvalidateToolbar(true);
+	};
+
+	/**
+	 * Triggered when invalidation event is fired. Resets and invalidates the OverflowToolbar.
+	 * @private
+	 */
+	OverflowToolbar.prototype._onInvalidationEventFired = function (oEvent) {
+		var oSource = oEvent.getSource();
+
+		// Listening for invalidation events is turned off during layout recalculation to avoid infinite loops
+		if (!this._bListenForInvalidationEvents) {
+			return;
+		}
+
+		if (oSource.isA("sap.m.IOverflowToolbarFlexibleContent")) {
+			this.fireEvent("_contentSizeChange", {
+				contentSize: null
+			});
 		}
 
 		// Trigger a recalculation
@@ -758,31 +1512,28 @@ sap.ui.define([
 	 * @private
 	 */
 	OverflowToolbar.prototype._getOverflowButtonSize = function () {
-		var iBaseFontSize = parseInt(sap.m.BaseFontSize, 10),
-			fCoefficient = this.$().parents().hasClass('sapUiSizeCompact') ? 2.5 : 3;
-
-		return parseInt(iBaseFontSize * fCoefficient, 10);
+		return this._iOverflowToolbarButtonSize;
 	};
 
 
 	/**
-	 * Determines the optimal placement of the action sheet depending on the position of the toolbar in the page
+	 * Determines the optimal placement of the Popover depending on the position of the toolbar in the page
 	 * For footer and header tags, the placement is hard-coded, for other tags - automatically detected
 	 * @returns {sap.m.PlacementType}
 	 * @private
 	 */
-	OverflowToolbar.prototype._getBestActionSheetPlacement = function () {
+	OverflowToolbar.prototype._getBestPopoverPlacement = function () {
 		var sHtmlTag = this.getHTMLTag();
 
 		// Always open above
 		if (sHtmlTag === "Footer") {
-			return sap.m.PlacementType.Top;
+			return PlacementType.Top;
 			// Always open below
 		} else if (sHtmlTag === "Header") {
-			return sap.m.PlacementType.Bottom;
+			return PlacementType.Bottom;
 		}
 
-		return sap.m.PlacementType.Vertical;
+		return PlacementType.Vertical;
 	};
 
 	/**
@@ -796,42 +1547,16 @@ sap.ui.define([
 		});
 	};
 
-
 	/**
-	 * Make changes to certain controls before entering the overflow toolbar
-	 * SearchField - always keep selectOnFocus to false while inside the toolbar
-	 * @param oControl
+	 * Returns the control index in the OverflowToolbar content aggregation or the index of a group, which is defined by the rightmost item in the group.
+	 * @param vControl array of controls or single control
 	 * @private
 	 */
-	OverflowToolbar.prototype._preProcessControl = function (oControl) {
-		if (!(oControl instanceof SearchField)) {
-			return;
-		}
-
-		if (oControl.getSelectOnFocus()) {
-			oControl.setProperty("selectOnFocus", false, true);
-			oControl._origSelectOnFocus = true;
-		}
-	};
-
-	/**
-	 * Restore changes to controls when removing them from the overflow toolbar
-	 * @param oControl
-	 * @private
-	 */
-	OverflowToolbar.prototype._postProcessControl = function (oControl) {
-		if (!(oControl instanceof SearchField)) {
-			return;
-		}
-
-		if (typeof oControl._origSelectOnFocus !== "undefined") {
-			oControl.setProperty("selectOnFocus", oControl._origSelectOnFocus, true);
-			delete oControl._origSelectOnFocus;
-		}
+	OverflowToolbar.prototype._getControlIndex = function (vControl) {
+		return vControl.length ? vControl._index : this.indexOfContent(vControl);
 	};
 
 	/************************************************** STATIC ***************************************************/
-
 
 	/**
 	 * Returns the optimal width of an element for the purpose of calculating the content width of the OverflowToolbar
@@ -840,15 +1565,37 @@ sap.ui.define([
 	 * @returns {*}
 	 * @private
 	 */
-	OverflowToolbar._getOptimalControlWidth = function (oControl, iOldSize) {
-		var iOptimalWidth;
+	OverflowToolbar.prototype._getOptimalControlWidth = function (oControl, iOldSize) {
+		var iOptimalWidth,
+			oLayoutData = oControl.getLayoutData(),
+			bLayoutData = oLayoutData && oLayoutData.isA("sap.m.ToolbarLayoutData"),
+			bVisible = oControl.getVisible(),
+			bBreadcrumbs = oControl.isA("sap.m.Breadcrumbs"),
+			bShrinkable = false,
+			iMinWidth,
+			iSpacerWidth;
 
-		// For spacers, get the min-width + margins
-		if (oControl instanceof ToolbarSpacer) {
-			iOptimalWidth = parseInt(oControl.$().css('min-width'), 10) || 0 + oControl.$().outerWidth(true) - oControl.$().outerWidth();
-			// For other elements, get the outer width
+		// sap.m.Breadcrumbs is always shrinkable, regardless of sap.m.ToolbarLayoutData.shrinkable
+		if (bBreadcrumbs) {
+			bShrinkable = true;
+		} else if (bLayoutData) {
+			bShrinkable = oLayoutData.getShrinkable();
+		}
+
+		iMinWidth = bShrinkable ? this._getMinWidthOfShrinkableControl(oControl) : 0;
+
+		// For spacers, get the width (if specified) + margins
+		if (oControl.isA("sap.m.ToolbarSpacer")) {
+			iSpacerWidth = parseInt(oControl.$().css('width'));
+			// If spacer is already rendered and it has specified width, take it for calculations
+			iMinWidth = (oControl.getWidth() && iSpacerWidth) ? iSpacerWidth : 0;
+			iOptimalWidth = OverflowToolbar._getOptimalWidthOfShrinkableControl(oControl, iMinWidth);
+		// For elements with LayoutData get minWidth + margins
+		} else if (bShrinkable && iMinWidth > 0 && bVisible) {
+			iOptimalWidth = OverflowToolbar._getOptimalWidthOfShrinkableControl(oControl, iMinWidth);
+		// For other elements, get the outer width
 		} else {
-			iOptimalWidth = oControl.$().outerWidth(true);
+			iOptimalWidth = bVisible ? OverflowToolbar._getControlWidth(oControl) : 0;
 		}
 
 		if (iOptimalWidth === null) {
@@ -859,42 +1606,142 @@ sap.ui.define([
 	};
 
 	/**
+	 * Returns the minimum width of a Control with shrinkable LayoutData
+	 * @param oControl
+	 * @returns {int} iMinWidth of the Control
+	 * @private
+	 */
+	OverflowToolbar.prototype._getMinWidthOfShrinkableControl = function (oControl) {
+		var sMinWidth = oControl.$().css("min-width"),
+			iMinWidth = parseInt(sMinWidth),
+			bRelativeWidth = Toolbar.isRelativeWidth(sMinWidth);
+
+		if (bRelativeWidth) {
+			return (iMinWidth * this.$().width()) / 100;
+		} else {
+			return iMinWidth;
+		}
+	};
+
+	/**
 	 * Returns the control priority based on the layout data (old values are converted) or the priority of the group, which is defined by the max priority of its items.
-	 * @static
 	 * @param vControl array of controls or single control
 	 * @private
 	 */
-	OverflowToolbar._getControlPriority = function (vControl) {
+	OverflowToolbar.prototype._getControlPriority = function (vControl) {
+		var bImplementsIOTBContent,
+			oLayoutData,
+			sPriority,
+			fnGetCustomImportance;
+
+		// 1. Check if it is a group of controls (treated as a single entity in terms of overflow), rather a single control
 		if (vControl.length) {
 			return vControl._priority;
 		}
 
-		var oLayoutData = vControl.getLayoutData && vControl.getLayoutData();
+		// 2. Check if the control has custom priority given by implementing sap.m.IOverflowToolbarContent
+		bImplementsIOTBContent = vControl.getMetadata().getInterfaces().indexOf("sap.m.IOverflowToolbarContent") > -1;
+		fnGetCustomImportance = bImplementsIOTBContent && vControl.getOverflowToolbarConfig().getCustomImportance;
+		if (bImplementsIOTBContent && typeof fnGetCustomImportance === "function") {
+			return fnGetCustomImportance();
+		}
 
+		// 3. Check for priority given by layout data (standard use case)
+		oLayoutData = vControl.getLayoutData && vControl.getLayoutData();
 		if (oLayoutData && oLayoutData instanceof OverflowToolbarLayoutData) {
 
+			/**
+			 * @deprecated since 1.32
+			 */
 			if (oLayoutData.getMoveToOverflow() === false) {
 				return OverflowToolbarPriority.NeverOverflow;
 			}
 
+			/**
+			 * @deprecated since 1.32
+			 */
 			if (oLayoutData.getStayInOverflow() === true) {
 				return OverflowToolbarPriority.AlwaysOverflow;
 			}
 
-			return oLayoutData.getPriority();
+			sPriority = oLayoutData.getPriority();
+
+			/**
+			 * @deprecated since 1.48
+			 */
+			if (sPriority === OverflowToolbarPriority.Never) {
+				return OverflowToolbarPriority.NeverOverflow;
+			}
+
+			/**
+			 * @deprecated since 1.48
+			 */
+			if (sPriority === OverflowToolbarPriority.Always) {
+				return OverflowToolbarPriority.AlwaysOverflow;
+			}
+
+			return sPriority;
 		}
 
+		// 4. Default priority (High) as a fallback if nothing else was supplied
 		return OverflowToolbarPriority.High;
 	};
 
 	/**
-	 * Returns the control index in the OverflowToolbar content aggregation or the index of a group, which is defined by the rightmost item in the group.
+	 * Returns the sum of the left and right margins of a Control in pixels.
 	 * @static
-	 * @param vControl array of controls or single control
+	 * @param oControl
 	 * @private
 	 */
-	OverflowToolbar._getControlIndex = function (vControl) {
-		return vControl.length ? vControl._index : vControl.getParent().indexOfContent(vControl);
+	OverflowToolbar._getControlMargins = function (oControl) {
+		return oControl.$().outerWidth(true) - oControl.$().outerWidth();
+	};
+
+	/**
+	 * Returns the optimal width of shrinkable controls, including the spacer,
+	 * which also adjusts its size, depending of the available width
+	 * @static
+	 * @param oControl
+	 * @param iMinWidth - min width of the Control
+	 * @private
+	 */
+	OverflowToolbar._getOptimalWidthOfShrinkableControl = function (oControl, iMinWidth) {
+		return iMinWidth + OverflowToolbar._getControlMargins(oControl);
+	};
+
+	/**
+	 * Returns ceiled width of a Control + margins
+	 * @static
+	 * @param oControl
+	 * @private
+	 */
+	OverflowToolbar._getControlWidth = function (oControl) {
+		var oDomRef = oControl && oControl.getDomRef();
+
+		if (oDomRef && oControl.$().is(":visible")) {
+			// Getting the precise width of the control, as sometimes JQuery's .outerWidth() returns different values
+			// for the same element.
+			return Math.round(oDomRef.getBoundingClientRect().width + OverflowToolbar._getControlMargins(oControl));
+		}
+
+		return null;
+	};
+
+	OverflowToolbar.prototype.getAccessibilityInfo = function () {
+		var aContent = [],
+			aVisibleContent = this._getVisibleAndNonOverflowContent();
+
+		if (aVisibleContent.length > 0) {
+			aContent = aContent.concat(aVisibleContent);
+		}
+
+		if (this._getOverflowButtonNeeded()) {
+			aContent.push(this._getOverflowButton());
+		}
+
+		return {
+			children: aContent
+		};
 	};
 
 	/**
@@ -921,7 +1768,10 @@ sap.ui.define([
 
 		oPriorityOrder[OverflowToolbarPriority.Disappear] = 1;
 		oPriorityOrder[OverflowToolbarPriority.Low] = 2;
-		oPriorityOrder[OverflowToolbarPriority.High] = 3;
+		// If a control sets custom priority (by implementing sap.m.IOverflowToolbarContent), the string "Medium" is
+		// also accepted along with the standard priority values, such as High, Low, NeverOverflow, etc... therefore "Medium" should also be mapped
+		oPriorityOrder["Medium"] = 3;
+		oPriorityOrder[OverflowToolbarPriority.High] = 4;
 
 		return oPriorityOrder;
 	})();
@@ -930,6 +1780,42 @@ sap.ui.define([
 		return this.$().parents().hasClass('sapUiSizeCompact') ? 2 : 3;
 	};
 
-	return OverflowToolbar;
+	OverflowToolbar.prototype._recalculateOverflowButtonSize = function () {
+		var $OTBtn = this._getOverflowButtonClone().$(),
+			iOTBtnSize;
 
-}, /* bExport= */ true);
+		// When a parent element is with display=block, but visibility: hidden, the overflow button does not have width,
+		// but it still has left margin. In this case .outerWidth(true) returns the margin, and a wrong width value is set.
+		// When the OFT is not visible, the value of the _iOverflowToolbarButtonSize property should be 0.
+		if (!this._getOverflowButtonSize() && $OTBtn.width() > 0) {
+			iOTBtnSize = $OTBtn.outerWidth(true);
+
+			this._iOverflowToolbarButtonSize = iOTBtnSize ? iOTBtnSize : 0;
+		}
+	};
+
+	OverflowToolbar.prototype.onThemeChanged = function () {
+		this._resetAndInvalidateToolbar();
+		this._iOverflowToolbarButtonSize = 0;
+		this._recalculateOverflowButtonSize();
+
+		for (var iControlSize in this._aControlSizes) {
+			if (this._aControlSizes.hasOwnProperty(iControlSize)) {
+				this._aControlSizes[iControlSize] = 0; // reset saved control sizes
+			}
+		}
+	};
+
+	/**
+	 * Closes the overflow area.
+	 * Useful to manually close the overflow after having suppressed automatic closing with "closeOverflowOnInteraction=false".
+	 *
+	 * @public
+	 * @since 1.40
+	 */
+	OverflowToolbar.prototype.closeOverflow = function () {
+		this._getPopover().close();
+	};
+
+	return OverflowToolbar;
+});

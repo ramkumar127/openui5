@@ -4,9 +4,8 @@
 
 // Provides control sap.ui.core.tmpl.DOMAttribute.
 sap.ui.define(['sap/ui/core/Element', 'sap/ui/core/library'],
-	function(Element, library) {
+	function(Element) {
 	"use strict";
-
 
 
 	/**
@@ -20,12 +19,10 @@ sap.ui.define(['sap/ui/core/Element', 'sap/ui/core/library'],
 	 * @extends sap.ui.core.Element
 	 * @version ${version}
 	 *
-	 * @constructor
 	 * @public
-	 * @experimental Since version 1.15.
-	 * The templating might be changed in future versions.
+	 * @since 1.15
+	 * @deprecated as of version 1.56. Use an {@link sap.ui.core.mvc.XMLView XMLView} or a {@link topic:e6bb33d076dc4f23be50c082c271b9f0 Typed View} instead.
 	 * @alias sap.ui.core.tmpl.DOMAttribute
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var DOMAttribute = Element.extend("sap.ui.core.tmpl.DOMAttribute", /** @lends sap.ui.core.tmpl.DOMAttribute.prototype */ { metadata : {
 

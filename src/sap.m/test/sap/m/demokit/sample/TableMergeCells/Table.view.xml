@@ -1,6 +1,5 @@
 <mvc:View
 	controllerName="sap.m.sample.TableMergeCells.Table"
-	xmlns:l="sap.ui.layout"
 	xmlns:mvc="sap.ui.core.mvc"
 	xmlns="sap.m">
 	<Table
@@ -26,7 +25,7 @@
 			<Column
 				minScreenWidth="Tablet"
 				demandPopin="true"
-				hAlign="Right" >
+				hAlign="End" >
 				<header>
 					<Text text="Dimensions" />
 				</header>
@@ -39,13 +38,13 @@
 					<Text text="Weight" />
 				</header>
 			</Column>
-			<Column hAlign="Right" >
+			<Column hAlign="End">
 				<header>
 					<Text text="Price" />
 				</header>
 			</Column>
 		</columns>
-		<ColumnListItem>
+		<ColumnListItem vAlign="Middle">
 			<Text text="{SupplierName}" />
 			<ObjectIdentifier title="{Name}" text="{ProductId}" />
 			<Text text="{Width} x {Depth} x {Height} {DimUnit}" />
@@ -53,15 +52,15 @@
 				number="{WeightMeasure}" unit="{WeightUnit}"
 				state="{
 					path: 'WeightMeasure',
-					formatter: 'sap.m.sample.TableMergeCells.Formatter.weightState'
+					formatter: '.formatter.weightState'
 				}" />
 			<ObjectNumber
-					number="{
-						parts:[{path:'Price'},{path:'CurrencyCode'}],
-						type: 'sap.ui.model.type.Currency',
-						formatOptions: {showMeasure: false}
-					}"
-					unit="{CurrencyCode}" />
+				number="{
+					parts:[{path:'Price'},{path:'CurrencyCode'}],
+					type: 'sap.ui.model.type.Currency',
+					formatOptions: {showMeasure: false}
+				}"
+				unit="{CurrencyCode}" />
 		</ColumnListItem>
 	</Table>
 </mvc:View>

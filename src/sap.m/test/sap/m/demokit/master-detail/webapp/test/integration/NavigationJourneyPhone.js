@@ -1,51 +1,51 @@
+/*global QUnit*/
+
 sap.ui.define([
-		"sap/ui/test/opaQunit"
-	], function (opaTest) {
-		"use strict";
+	"sap/ui/test/opaQunit",
+	"./pages/Master",
+	"./pages/Browser",
+	"./pages/Detail"
+], function (opaTest) {
+	"use strict";
 
-		QUnit.module("Phone navigation");
+	QUnit.module("Phone navigation");
 
-		opaTest("Should see the objects list", function (Given, When, Then) {
-			// Arrangements
-			Given.iStartTheApp();
+	opaTest("Should see the objects list", function (Given, When, Then) {
+		// Arrangements
+		Given.iStartMyApp();
 
-			//Actions
-			When.onTheMasterPage.iLookAtTheScreen();
+		// Assertions
+		Then.onTheMasterPage.iShouldSeeTheList();
+		Then.onTheBrowserPage.iShouldSeeAnEmptyHash();
+	});
 
-			// Assertions
-			Then.onTheMasterPage.iShouldSeeTheList();
-			Then.onTheBrowserPage.iShouldSeeAnEmptyHash();
-		});
+	opaTest("Should react on hash change", function (Given, When, Then) {
+		// Actions
+		When.onTheMasterPage.iRememberTheIdOfListItemAtPosition(1);
+		When.onTheBrowserPage.iChangeTheHashToTheRememberedItem();
 
-		opaTest("Should react on hashchange", function (Given, When, Then) {
-			// Actions
-			When.onTheMasterPage.iRememberTheIdOfListItemAtPosition(3);
-			When.onTheBrowserPage.iChangeTheHashToTheRememberedItem();
+		// Assertions
+		Then.onTheDetailPage.iShouldSeeTheRememberedObject();
+	});
 
-			// Assertions
-			Then.onTheDetailPage.iShouldSeeTheRememberedObject();
-		});
+	opaTest("Detail Page Shows Object Details", function (Given, When, Then) {
+		// Assertions
+		Then.onTheDetailPage.iShouldSeeTheObjectLineItemsList().
+			and.theLineItemsListShouldHaveTheCorrectNumberOfItems().
+			and.theLineItemsHeaderShouldDisplayTheAmountOfEntries();
+	});
 
-		opaTest("Detail Page Shows Object Details", function (Given, When, Then) {
-			// Actions
-			When.onTheDetailPage.iLookAtTheScreen();
+	opaTest("Should navigate on press", function (Given, When, Then) {
+		// Actions
+		When.onTheDetailPage.iPressTheHeaderActionButton("closeColumn");
+		When.onTheMasterPage.iRememberTheIdOfListItemAtPosition(2).
+			and.iPressOnTheObjectAtPosition(2);
 
-			// Assertions
-			Then.onTheDetailPage.iShouldSeeTheObjectLineItemsList().
-				and.theLineItemsListShouldHaveTheCorrectNumberOfItems().
-				and.theLineItemsHeaderShouldDisplayTheAmountOfEntries();
-		});
+		// Assertions
+		Then.onTheDetailPage.iShouldSeeTheRememberedObject();
 
-		opaTest("Should navigate on press", function (Given, When, Then) {
-			// Actions
-			When.onTheDetailPage.iPressTheBackButton();
-			When.onTheMasterPage.iRememberTheIdOfListItemAtPosition(2).
-				and.iPressOnTheObjectAtPosition(2);
+		// Cleanup
+		Then.iTeardownMyApp();
+	});
 
-			// Assertions
-			Then.onTheDetailPage.iShouldSeeTheRememberedObject().
-				and.iTeardownMyAppFrame();
-		});
-
-	}
-);
+});

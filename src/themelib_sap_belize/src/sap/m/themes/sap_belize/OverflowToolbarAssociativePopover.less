@@ -3,16 +3,22 @@
 /* Belize theme                                             */
 /* ======================================================== */
 
-.sap-phone {
+html.sap-phone {
   .sapMOTAPopover {
-
 	&.sapMOTAPopoverNoShadowTop {
-	  box-shadow: 0px 16px 30px 2px fade(@sapUiContentShadowColor, 15);
+		border-radius: 0 0 0.25rem 0.25rem;
 	}
-
 	&.sapMOTAPopoverNoShadowBottom {
-	  box-shadow: 0px -16px 30px 2px fade(@sapUiContentShadowColor, 15);
+		border-radius: 0.25rem 0.25rem 0 0;
 	}
-
   }
+}
+
+.sapUiSizeCompact {
+	.sapMOTAPopover {
+		.sapMBtnInner.sapMBtnIconFirst:not(.sapMBtnBack) {
+			padding-left: 0.75rem;
+			padding-right: 0.75rem;
+		}
+	}
 }

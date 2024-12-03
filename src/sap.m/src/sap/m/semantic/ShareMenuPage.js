@@ -2,9 +2,12 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', "sap/m/semantic/SemanticPage", "sap/m/semantic/SemanticConfiguration", "sap/m/semantic/SemanticPageRenderer", "sap/m/semantic/SegmentedContainer", "sap/m/semantic/ShareMenu", "sap/m/ActionSheet", "sap/m/Button"],
-		function(jQuery, SemanticPage, SemanticConfiguration, SemanticPageRenderer, SegmentedContainer, ShareMenu, ActionSheet, Button) {
+sap.ui.define(["sap/m/semantic/SemanticPage", "sap/m/semantic/SemanticConfiguration", "sap/m/semantic/SemanticPageRenderer", "sap/m/semantic/SegmentedContainer", "sap/m/semantic/ShareMenu", "sap/m/ActionSheet", "sap/m/library"],
+		function(SemanticPage, SemanticConfiguration, SemanticPageRenderer, SegmentedContainer, ShareMenu, ActionSheet, library) {
 	"use strict";
+
+	// shortcut for sap.m.PlacementType
+	var PlacementType = library.PlacementType;
 
 	/**
 	 * Constructor for a new ShareMenuPage
@@ -23,7 +26,6 @@ sap.ui.define(['jquery.sap.global', "sap/m/semantic/SemanticPage", "sap/m/semant
 	 * @public
 	 * @since 1.30.0
 	 * @alias sap.m.semantic.ShareMenuPage
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 
 	var ShareMenuPage = SemanticPage.extend("sap.m.semantic.ShareMenuPage", /** @lends sap.m.semantic.ShareMenuPage.prototype */ {
@@ -52,9 +54,9 @@ sap.ui.define(['jquery.sap.global', "sap/m/semantic/SemanticPage", "sap/m/semant
 				}
 
 			},
-			designTime : true
+			designtime: "sap/m/designtime/semantic/ShareMenuPage.designtime"
 		},
-		renderer: SemanticPageRenderer.render
+		renderer: SemanticPageRenderer
 	});
 
 	ShareMenuPage.prototype._getSemanticPositionsMap = function (oControl, oConfig) {
@@ -138,6 +140,34 @@ sap.ui.define(['jquery.sap.global', "sap/m/semantic/SemanticPage", "sap/m/semant
 		return this;
 	};
 
+	ShareMenuPage.prototype.setSemanticRuleSet = function(sNewRuleSet) {
+
+		var iOldRuleSet = this.getSemanticRuleSet();
+		if (iOldRuleSet === sNewRuleSet) {
+			return this;
+		}
+		this.setProperty("semanticRuleSet", sNewRuleSet, true);
+
+		// update ruleset-specific positioning
+		var oOldShareMenuConfig = SemanticConfiguration.getShareMenuConfig(iOldRuleSet),
+			oShareMenuSection = this._getShareBaseButtonContainer(oOldShareMenuConfig.baseButtonPlacement).getSection("shareMenu");
+
+		if (oShareMenuSection) { //share menu is created already
+			this._moveShareMenu(oOldShareMenuConfig, SemanticConfiguration.getShareMenuConfig(this.getSemanticRuleSet()));
+		}
+
+		return this;
+	};
+
+	ShareMenuPage.prototype._moveShareMenu = function (oOldShareMenuConfig, oNewShareMenuConfig) {
+
+		var oOldBaseButtonSection = this._getShareBaseButtonContainer(oOldShareMenuConfig.baseButtonPlacement).getSection("shareMenu"),
+			aOldBaseButtonContent = oOldBaseButtonSection && oOldBaseButtonSection.removeAllContent(),
+			oOldBaseButton = aOldBaseButtonContent.length && aOldBaseButtonContent[0];
+
+		this._placeShareMenu(oOldBaseButton, oNewShareMenuConfig);
+	};
+
 	/**
 	 * Create the internal action sheet of the "share" menu
 	 * @returns {sap.m.IBar}
@@ -147,8 +177,7 @@ sap.ui.define(['jquery.sap.global', "sap/m/semantic/SemanticPage", "sap/m/semant
 
 		var oActionSheet = this.getAggregation("_actionSheet");
 		if (!oActionSheet) {
-			this.setAggregation("_actionSheet", new ActionSheet(
-					{placement: sap.m.PlacementType.Top}));
+			this.setAggregation("_actionSheet", new ActionSheet(), true);
 			oActionSheet = this.getAggregation("_actionSheet");
 		}
 
@@ -166,14 +195,35 @@ sap.ui.define(['jquery.sap.global', "sap/m/semantic/SemanticPage", "sap/m/semant
 				this._oSegmentedShareMenu.addSection({sTag: "custom"});
 				this._oSegmentedShareMenu.addSection({sTag: "semantic"});
 
-				this._getSegmentedFooter().addSection({
-					sTag: "shareMenu",
-					aContent: [oShareMenuBtn]
-				});
+				this._placeShareMenu(oShareMenuBtn, SemanticConfiguration.getShareMenuConfig(this.getSemanticRuleSet()));
 			}
 		}
 		return this._oSegmentedShareMenu;
 	};
 
+	ShareMenuPage.prototype._placeShareMenu = function(oShareMenuBaseBtn, oShareMenuConfig) {
+
+		var oShareMenuBtnPlacement = oShareMenuConfig.baseButtonPlacement,
+			vActionSheetPlacement = oShareMenuConfig.actionSheetPlacement;
+
+		var oDestinationContainer = this._getShareBaseButtonContainer(oShareMenuBtnPlacement),
+			oDestinationSection = oDestinationContainer.getSection("shareMenu");
+
+		if (!oDestinationSection) {
+			oDestinationContainer.addSection({sTag: "shareMenu"});
+			oDestinationSection = oDestinationContainer.getSection("shareMenu");
+		}
+
+		if (oShareMenuBaseBtn) {
+			oDestinationSection.addContent(oShareMenuBaseBtn);
+		}
+		this._getActionSheet().setPlacement(vActionSheetPlacement);
+	};
+
+	ShareMenuPage.prototype._getShareBaseButtonContainer = function(vBaseButtonPlacement) {
+		return (vBaseButtonPlacement === PlacementType.Bottom) ?
+			this._getSegmentedFooter() : this._getSegmentedHeader();
+	};
+
 	return ShareMenuPage;
-}, /* bExport= */ false);
+});

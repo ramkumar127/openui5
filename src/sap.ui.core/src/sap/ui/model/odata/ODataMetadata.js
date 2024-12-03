@@ -1,31 +1,54 @@
 /*!
  * ${copyright}
  */
-
+/*eslint-disable max-len */
 
 
 // Provides class sap.ui.model.odata.ODataMetadata
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdparty/datajs'],
-	function(jQuery, EventProvider, OData) {
+sap.ui.define([
+	"./_ODataMetaModelUtils",
+	"./AnnotationParser",
+	"sap/base/assert",
+	"sap/base/Log",
+	"sap/base/i18n/Localization",
+	"sap/base/util/each",
+	"sap/base/util/extend",
+	"sap/base/util/isEmptyObject",
+	"sap/base/util/uid",
+	"sap/ui/base/EventProvider",
+	"sap/ui/core/cache/CacheManager",
+	"sap/ui/thirdparty/datajs"
+],
+	function(Utils, AnnotationParser, assert, Log, Localization, each, extend, isEmptyObject, uid, EventProvider,
+		CacheManager, OData) {
 	"use strict";
+	/*eslint max-nested-callbacks: 0*/
+
+	var sClassName = "sap.ui.model.odata.ODataMetadata",
+		sSAPAnnotationNamespace = "http://www.sap.com/Protocols/SAPData";
 
 	/**
 	 * Constructor for a new ODataMetadata.
 	 *
 	 * @param {string} sMetadataURI needs the correct metadata uri including $metadata
-	 * @param {object} [mParams] optional map of parameters.
+	 * @param {object} mParams map of parameters.
 	 * @param {boolean} [mParams.async=true] request is per default async
-	 * @param {string} [mParams.user] user for the service,
-	 * @param {string} [mParams.password] password for service
+	 * @param {string} [mParams.user] <b>Deprecated</b> for security reasons. Use strong server side
+	 *   authentication instead. UserID for the service.
+	 * @param {string} [mParams.password] <b>Deprecated</b> for security reasons. Use strong server
+	 *   side authentication instead. Password for the service.
 	 * @param {object} [mParams.headers] (optional) map of custom headers which should be set with the request.
+	 * @param {string} [mParams.cacheKey] (optional) A valid cache key
+	 * @param {string} [mParams.metadata] The metadata XML as string as provided in a back-end response; the
+	 *   <code>sMetadataURI</code> parameter is ignored if this parameter is set, and there is no request for the
+	 *   metadata.
 	 *
 	 * @class
-	 * Implementation to access oData metadata
+	 * Implementation to access OData metadata
 	 *
 	 * @author SAP SE
 	 * @version ${version}
 	 *
-	 * @constructor
 	 * @public
 	 * @alias sap.ui.model.odata.ODataMetadata
 	 * @extends sap.ui.base.EventProvider
@@ -45,26 +68,63 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 			this.bWithCredentials = mParams.withCredentials;
 			this.sPassword = mParams.password;
 			this.mHeaders = mParams.headers;
+			this.sCacheKey = mParams.cacheKey;
+			this.sMetadata = mParams.metadata;
 			this.oLoadEvent = null;
 			this.oFailedEvent = null;
 			this.oMetadata = null;
+			this.bMessageScopeSupported = false;
 			this.mNamespaces = mParams.namespaces || {
 				sap:"http://www.sap.com/Protocols/SAPData",
 				m:"http://schemas.microsoft.com/ado/2007/08/dataservices/metadata",
 				"":"http://schemas.microsoft.com/ado/2007/06/edmx"
 			};
 			var that = this;
-			this.fnResolve;
-			// global promise
-			this.pLoaded = new Promise(function(resolve, reject) {
+
+			// global promises
+			this.pLoadedWithReject = new Promise(function (resolve, reject) {
+				that.fnResolve = resolve;
+				that.fnReject = reject;
+			});
+			this.pLoaded = this.pLoadedWithReject.catch(function (oError) {
+				return new Promise(function (resolve, reject) {
 					that.fnResolve = resolve;
+				});
 			});
 
-			this._loadMetadata()
-				.catch(function() {
-					// Ignored for initial metadata loading. Error handling is done inside _loadMetadata
-					jQuery.sap.assert(false, "[ODataMetadata] initial loading of metadata failed");
-				});
+			function writeCache(mParams) {
+				CacheManager.set(that.sCacheKey, JSON.stringify({
+					metadata: that.oMetadata,
+					params: mParams
+				}));
+			}
+
+			function logError(oError) {
+				Log.error("[ODataMetadata] initial loading of metadata failed");
+				if (oError && oError.message) {
+					Log.error("Error: " + oError.message);
+				}
+			}
+
+			//check cache
+			if (this.sCacheKey) {
+				CacheManager.get(this.sCacheKey)
+					.then(function(sMetadata) {
+						if (sMetadata) {
+							var oCacheMetadata = JSON.parse(sMetadata);
+							this.oMetadata = oCacheMetadata.metadata;
+							this._handleLoaded(this.oMetadata, oCacheMetadata.params, false);
+						} else {
+							this._loadMetadata()
+								.then(writeCache)
+								.catch(logError);
+						}
+					}.bind(this))
+					.catch(logError);
+			} else {
+				this._loadMetadata()
+					.catch(logError);
+			}
 		},
 
 		metadata : {
@@ -73,26 +133,76 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 
 	});
 
+	/**
+	 * Returns whether the function returns a collection.
+	 *
+	 * @param {object} mFunctionInfo The function info map
+	 * @returns {boolean} Whether the function returns a collection
+	 * @private
+	 */
+	ODataMetadata._returnsCollection = function (mFunctionInfo) {
+		if (mFunctionInfo && mFunctionInfo.returnType
+				&& mFunctionInfo.returnType.startsWith("Collection(")) {
+			return true;
+		}
+
+		return false;
+	};
+
 	ODataMetadata.prototype._setNamespaces = function(mNamespaces) {
 		this.mNamespaces = mNamespaces;
 	};
-	/**
-	 * Loads the metadata for the service
+
+	/*
+	 * Handle Promise resolving/eventing when metadata is loaded
 	 *
-	 * @param string sUrl The metadata url
-	 * @param boolean bSuppressEvents Suppress metadata events
-	 * @returns Promise Promise for metadata loading
+	 */
+	ODataMetadata.prototype._handleLoaded = function(oMetadata, mParams, bSuppressEvents) {
+		var aEntitySets = [];
+
+		this.oMetadata = this.oMetadata ? this.merge(this.oMetadata, oMetadata, aEntitySets) : oMetadata;
+		this.oRequestHandle = null;
+
+		mParams.entitySets = aEntitySets;
+
+		// resolve global promises
+		this.fnResolve(mParams);
+
+		if (this.bAsync && !bSuppressEvents) {
+			this.fireLoaded(this);
+		} else if (!this.bAsync && !bSuppressEvents){
+			//delay the event so anyone can attach to this _before_ it is fired, but make
+			//sure that bLoaded is already set properly
+			this.bLoaded = true;
+			this.bFailed = false;
+			this.oLoadEvent = setTimeout(this.fireLoaded.bind(this, mParams), 0);
+		}
+	};
+
+	/**
+	 * Loads the metadata for the service.
+	 *
+	 * @param {string} sUrl The metadata URL
+	 * @param {boolean} bSuppressEvents Suppress metadata events
+	 * @param {function} [fnRequest] Request function which can handle 503 "Retry-After" responses,
+	 *   see {@link sap.ui.model.odata.v2.ODataModel#_request}
+	 * @returns {Promise} Promise for metadata loading
 	 * @private
 	 */
-	ODataMetadata.prototype._loadMetadata = function(sUrl, bSuppressEvents) {
+	ODataMetadata.prototype._loadMetadata = function(sUrl, bSuppressEvents, fnRequest) {
 
 		// request the metadata of the service
 		var that = this;
 		sUrl = sUrl || this.sUrl;
-		var oRequest = this._createRequest(sUrl);
+
+		let oRequest;
+		if (!this.sMetadata) {
+			oRequest = this._createRequest(sUrl);
+		}
 
 		return new Promise(function(resolve, reject) {
-			var oRequestHandle, aEntitySets = [];
+			var oRequestHandle;
+
 			function _handleSuccess(oMetadata, oResponse) {
 				if (!oMetadata || !oMetadata.dataServices) {
 					var mParameters = {
@@ -105,27 +215,22 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 				}
 
 				that.sMetadataBody = oResponse.body;
-				that.oMetadata = that.oMetadata ? that.merge(that.oMetadata, oMetadata, aEntitySets) : oMetadata;
 				that.oRequestHandle = null;
 
 				var mParams = {
-					metadataString: that.sMetadataBody,
-					entitySets: aEntitySets
+					metadataString: that.sMetadataBody
 				};
-				// resolve global promise
-				that.fnResolve(mParams);
-				// resolve this promise
-				resolve(mParams);
 
-				if (that.bAsync && !bSuppressEvents) {
-					that.fireLoaded(that);
-				} else if (!that.bAsync && !bSuppressEvents){
-					//delay the event so anyone can attach to this _before_ it is fired, but make
-					//sure that bLoaded is already set properly
-					that.bLoaded = true;
-					that.bFailed = false;
-					that.oLoadEvent = jQuery.sap.delayedCall(0, that, that.fireLoaded, [ mParams ]);
+				var sLastModified = oResponse.headers["Last-Modified"];
+				if (sLastModified) {
+					mParams.lastModified = sLastModified;
 				}
+				var sETag = oResponse.headers["eTag"];
+				if (sETag) {
+					mParams.eTag = sETag;
+				}
+				that._handleLoaded(oMetadata, mParams, bSuppressEvents);
+				resolve(mParams);
 			}
 
 			function _handleError(oError) {
@@ -147,18 +252,35 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 					delete that.mRequestHandles[oRequestHandle.id];
 				}
 				reject(mParams);
+				that.fnReject(mParams);
 				if (that.bAsync && !bSuppressEvents) {
 					that.fireFailed(mParams);
 				} else if (!that.bAsync && !bSuppressEvents){
 					that.bFailed = true;
-					that.oFailedEvent = jQuery.sap.delayedCall(0, that, that.fireFailed, [mParams]);
+					that.oFailedEvent = setTimeout(that.fireFailed.bind(that, mParams), 0);
 				}
 			}
 
+			if (that.sMetadata) { // response available synchronously
+				const oResponse = {
+					headers : {"Content-Type" : "application/xml"},
+					body : that.sMetadata
+				};
+				// trigger response processing in datajs: this sets the parsed response to oResponse.data
+				OData.metadataHandler.read(oResponse, /*oDatajsContext*/ {});
+				_handleSuccess(oResponse.data, oResponse);
+				return;
+			}
+
 			// execute the request
-			oRequestHandle = OData.request(oRequest, _handleSuccess, _handleError, OData.metadataHandler);
+			if (fnRequest) {
+				oRequestHandle = fnRequest(oRequest, _handleSuccess, _handleError, OData.metadataHandler,
+					/*oHttpClient*/undefined, /*oMetadata*/undefined, /*bSkipHandleTracking*/true);
+			} else {
+				oRequestHandle = OData.request(oRequest, _handleSuccess, _handleError, OData.metadataHandler);
+			}
 			if (that.bAsync) {
-				oRequestHandle.id = jQuery.sap.uid();
+				oRequestHandle.id = uid();
 				that.mRequestHandles[oRequestHandle.id] = oRequestHandle;
 			}
 		});
@@ -167,9 +289,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 
 	/**
 	 * Refreshes the metadata creating a new request to the server.
+	 *
 	 * Returns a new promise which can be resolved or rejected depending on the metadata loading state.
 	 *
-	 * @returns {Promise} returns a promise on metadata loaded state
+	 * @returns {Promise} A promise on metadata loaded state
 	 *
 	 * @public
 	 */
@@ -179,9 +302,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 
 
 	/**
-	 * Return the metadata object
+	 * Return the metadata object.
 	 *
-	 * @return {Object} metdata object
+	 * @return {Object} Metadata object
 	 * @public
 	 */
 	ODataMetadata.prototype.getServiceMetadata = function() {
@@ -189,62 +312,82 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	};
 
 	/**
-	 * Checks whether metadata is available
+	 * Checks whether metadata is available.
 	 *
 	 * @public
-	 * @returns {boolean} returns whether metadata is already loaded
+	 * @returns {boolean} Whether metadata is already loaded
 	 */
 	ODataMetadata.prototype.isLoaded = function() {
 		return this.bLoaded;
 	};
 
 	/**
-	 * Returns a promise for the loaded state of the metadata
+	 * Returns a promise for the loaded state of the metadata.
 	 *
+	 * @param {boolean} [bRejectOnFailure=false]
+	 *   With <code>bRejectOnFailure=false</code> the returned promise is not rejected. In case of
+	 *   failure this promise stays pending.
+	 *   Since 1.79 with <code>bRejectOnFailure=true</code> the returned promise is rejected when
+	 *   the initial loading of the metadata fails.
+	 *
+	 * @returns {Promise} A promise on metadata loaded state
 	 * @public
-	 * @returns {Promise} returns a promise on metadata loaded state
 	 */
-	ODataMetadata.prototype.loaded = function() {
-		return this.pLoaded;
+	ODataMetadata.prototype.loaded = function (bRejectOnFailure) {
+		return bRejectOnFailure ? this.pLoadedWithReject : this.pLoaded;
 	};
 
 	/**
-	 * Checks whether metadata loading has already failed
+	 * Checks whether metadata loading has already failed.
 	 *
 	 * @public
-	 * @returns {boolean} returns whether metadata request has failed
+	 * @returns {boolean} Whether metadata request has failed
 	 */
 	ODataMetadata.prototype.isFailed = function() {
 		return this.bFailed;
 	};
 
 	/**
-	 * Fire event loaded to attached listeners.
+	 * The <code>loaded</code> event is fired after metadata has been loaded and parsed.
 	 *
-	 * @return {sap.ui.model.odata.ODataMetadata} <code>this</code> to allow method chaining
+	 * @name sap.ui.model.odata.ODataMetadata#loaded
+	 * @event
+	 * @param {sap.ui.base.Event} oEvent
+	 * @public
+	 */
+
+	/**
+	 * Fires event {@link #event:loaded loaded} to attached listeners.
+	 *
+	 * @param {object} [oParameters] Parameters to pass along with the event
+	 * @returns {this} Reference to <code>this</code> in order to allow method chaining
 	 * @protected
 	 */
-	ODataMetadata.prototype.fireLoaded = function(mParams) {
+	ODataMetadata.prototype.fireLoaded = function(oParameters) {
 		this.bLoaded = true;
 		this.bFailed = false;
-		this.fireEvent("loaded", mParams);
-		jQuery.sap.log.debug(this + " - loaded was fired");
+		this.fireEvent("loaded", oParameters);
+		Log.debug(this + " - loaded was fired");
 		return this;
 	};
 
 	/**
-	 * Attach event-handler <code>fnFunction</code> to the 'loaded' event of this <code>sap.ui.model.odata.ODataMetadata</code>.
+	 * Attaches event handler <code>fnFunction</code> to the {@link #event:loaded loaded} event of this
+	 * <code>sap.ui.model.odata.ODataMetadata</code>.
 	 *
+	 * When called, the context of the event handler (its <code>this</code>) will be bound to <code>oListener</code>
+	 * if specified, otherwise it will be bound to this <code>sap.ui.model.odata.ODataMetadata</code> itself.
 	 *
 	 * @param {object}
-	 *            [oData] The object, that should be passed along with the event-object when firing the event.
+	 *            [oData] An application-specific payload object that will be passed to the event handler
+	 *            along with the event object when firing the event
 	 * @param {function}
-	 *            fnFunction The function to call, when the event occurs. This function will be called on the
-	 *            oListener-instance (if present) or in a 'static way'.
+	 *            fnFunction The function to be called, when the event occurs
 	 * @param {object}
-	 *            [oListener] Object on which to call the given function. If empty, the global context (window) is used.
+	 *            [oListener] Context object to call the event handler with. Defaults to this
+	 *            <code>sap.ui.model.odata.ODataMetadata</code> itself
 	 *
-	 * @return {sap.ui.model.odata.ODataMetadata} <code>this</code> to allow method chaining
+	 * @returns {this} Reference to <code>this</code> in order to allow method chaining
 	 * @public
 	 */
 	ODataMetadata.prototype.attachLoaded = function(oData, fnFunction, oListener) {
@@ -253,15 +396,16 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	};
 
 	/**
-	 * Detach event-handler <code>fnFunction</code> from the 'loaded' event of this <code>sap.ui.model.odata.ODataMetadata</code>.
+	 * Detaches event handler <code>fnFunction</code> from the {@link #event:loaded loaded} event of this
+	 * <code>sap.ui.model.odata.ODataMetadata</code>.
 	 *
-	 * The passed function and listener object must match the ones previously used for event registration.
+	 * The passed function and listener object must match the ones used for event registration.
 	 *
 	 * @param {function}
-	 *            fnFunction The function to call, when the event occurs.
+	 *            fnFunction The function to be called, when the event occurs
 	 * @param {object}
-	 *            oListener Object on which the given function had to be called.
-	 * @return {sap.ui.model.odata.ODataMetadata} <code>this</code> to allow method chaining
+	 *            [oListener] Context object on which the given function had to be called
+	 * @returns {this} Reference to <code>this</code> in order to allow method chaining
 	 * @public
 	 */
 	ODataMetadata.prototype.detachLoaded = function(fnFunction, oListener) {
@@ -271,37 +415,50 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 
 
 	/**
-	 * Fire event failed to attached listeners.
+	 * The <code>failed</code> event is fired when loading or parsing metadata failed.
 	 *
-	 * @param {object} [mArguments] the arguments to pass along with the event.
-	 * @param {string} [mArguments.message]  A text that describes the failure.
-	 * @param {string} [mArguments.statusCode]  HTTP status code returned by the request (if available)
-	 * @param {string} [mArguments.statusText] The status as a text, details not specified, intended only for diagnosis output
-	 * @param {string} [mArguments.responseText] Response that has been received for the request ,as a text string
+	 * @name sap.ui.model.odata.ODataMetadata#failed
+	 * @event
+	 * @param {sap.ui.base.Event} oEvent
+	 * @public
+	 */
+
+	/**
+	 * Fires event {@link #event:failed failed} to attached listeners.
 	 *
-	 * @return {sap.ui.model.odata.ODataMetadata} <code>this</code> to allow method chaining
+	 * @param {object} [oParameters] Parameters to pass along with the event
+	 * @param {string} [oParameters.message] A text that describes the failure.
+	 * @param {string} [oParameters.statusCode] HTTP status code returned by the request (if available)
+	 * @param {string} [oParameters.statusText] The status as a text, details not specified, intended only for diagnosis output
+	 * @param {string} [oParameters.responseText] Response that has been received for the request, as a text string
+	 *
+	 * @returns {this} Reference to <code>this</code> in order to allow method chaining
 	 * @protected
 	 */
-	ODataMetadata.prototype.fireFailed = function(mArguments) {
+	ODataMetadata.prototype.fireFailed = function(oParameters) {
 		this.bFailed = true;
-		this.fireEvent("failed", mArguments);
+		this.fireEvent("failed", oParameters);
 		return this;
 	};
 
 
 	/**
-	 * Attach event-handler <code>fnFunction</code> to the 'failed' event of this <code>sap.ui.model.odata.ODataMetadata</code>.
+	 * Attaches event handler <code>fnFunction</code> to the {@link #event:failed failed} event of this
+	 * <code>sap.ui.model.odata.ODataMetadata</code>.
 	 *
+	 * When called, the context of the event handler (its <code>this</code>) will be bound to <code>oListener</code>
+	 * if specified, otherwise it will be bound to this <code>sap.ui.model.odata.ODataMetadata</code> itself.
 	 *
 	 * @param {object}
-	 *            [oData] The object, that should be passed along with the event-object when firing the event.
+	 *            [oData] An application-specific payload object that will be passed to the event handler
+	 *            along with the event object when firing the event
 	 * @param {function}
-	 *            fnFunction The function to call, when the event occurs. This function will be called on the
-	 *            oListener-instance (if present) or in a 'static way'.
+	 *            fnFunction The function to be called, when the event occurs
 	 * @param {object}
-	 *            [oListener] Object on which to call the given function. If empty, the global context (window) is used.
+	 *            [oListener] Context object to call the event handler with. Defaults to this
+	 *            <code>sap.ui.model.odata.ODataMetadata</code> itself
 	 *
-	 * @return {sap.ui.model.odata.ODataMetadata} <code>this</code> to allow method chaining
+	 * @returns {this} Reference to <code>this</code> in order to allow method chaining
 	 * @public
 	 */
 	ODataMetadata.prototype.attachFailed = function(oData, fnFunction, oListener) {
@@ -310,15 +467,16 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	};
 
 	/**
-	 * Detach event-handler <code>fnFunction</code> from the 'failed' event of this <code>sap.ui.model.odata.ODataMetadata</code>.
+	 * Detaches event handler <code>fnFunction</code> from the {@link #event:failed failed} event of this
+	 * <code>sap.ui.model.odata.ODataMetadata</code>.
 	 *
-	 * The passed function and listener object must match the ones previously used for event registration.
+	 * The passed function and listener object must match the ones used for event registration.
 	 *
 	 * @param {function}
-	 *            fnFunction The function to call, when the event occurs.
+	 *            fnFunction The function to be called, when the event occurs
 	 * @param {object}
-	 *            oListener Object on which the given function had to be called.
-	 * @return {sap.ui.model.odata.ODataMetadata} <code>this</code> to allow method chaining
+	 *            [oListener] Context object on which the given function had to be called
+	 * @returns {this} Reference to <code>this</code> in order to allow method chaining
 	 * @public
 	 */
 	ODataMetadata.prototype.detachFailed = function(fnFunction, oListener) {
@@ -326,21 +484,88 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 		return this;
 	};
 
+	/**
+	 * Retrieves the association end which contains the multiplicity.
+	 * @param {object} oEntityType the entity type
+	 * @param {string} sName the name
+	 * @returns {*} entity association end
+	 * @private
+	 */
+	ODataMetadata.prototype._getEntityAssociationEnd = function(oEntityType, sName) {
+		var sCacheKey;
+
+		if (!this._checkMetadataLoaded()) {
+			return null;
+		}
+
+		this._mGetEntityAssociationEndCache = this._mGetEntityAssociationEndCache || {};
+		sCacheKey = oEntityType.namespace + "." + oEntityType.name + "/" + sName;
+		// fill the cache
+		if (this._mGetEntityAssociationEndCache[sCacheKey] === undefined) {
+			var oNavigationProperty = oEntityType
+					? Utils.findObject(oEntityType.navigationProperty, sName)
+					: null,
+				oAssociation = oNavigationProperty
+					? Utils.getObject(this.oMetadata.dataServices.schema, "association", oNavigationProperty.relationship)
+					: null,
+				oAssociationEnd = oAssociation
+					? Utils.findObject(oAssociation.end, oNavigationProperty.toRole, "role")
+					: null;
+
+			this._mGetEntityAssociationEndCache[sCacheKey] = oAssociationEnd;
+		}
+
+		// return the value from the cache
+		return this._mGetEntityAssociationEndCache[sCacheKey];
+	};
+
+	function getEntitySetsMap(schema){
+		var mEntitySets = {};
+		for (var i = 0; i < schema.length; i++) {
+			var oSchema = schema[i];
+			if (oSchema.entityContainer) {
+				for (var j = 0; j < oSchema.entityContainer.length; j++) {
+					var oEntityContainer = oSchema.entityContainer[j];
+					if (oEntityContainer.entitySet) {
+						for (var k = 0; k < oEntityContainer.entitySet.length; k++) {
+							if (oEntityContainer.entitySet[k].name != null) {
+								mEntitySets[oEntityContainer.entitySet[k].name] = oEntityContainer.entitySet[k];
+							}
+						}
+					}
+				}
+			}
+		}
+		return mEntitySets;
+	}
 
 	/**
-	 * Extract the entity type name of a given sPath. Also navigation properties in the path will be followed to get the right entity type for that property.
+	 * Finds the first matching entity set by name.
+	 * @param {string} sName Name of the entityset
+	 * @returns {*} The first matching entity set by name
+	 * @private
+	 */
+	ODataMetadata.prototype._findEntitySetByName = function(sName) {
+		// fill the cache
+		if (!this.mEntitySets) {
+			this.mEntitySets = getEntitySetsMap(this.oMetadata.dataServices.schema);
+		}
+		return this.mEntitySets[sName];
+	};
+
+	/**
+	 * Extract the entity type name of a given path. Also navigation properties in the path will be
+	 * followed to get the right entity type for that property.
 	 * eg.
 	 * /Categories(1)/Products(1)/Category --> will get the Categories entity type
 	 * /Products --> will get the Products entity type
-	 * @return {object} the entity type or null if not found
+	 *
+	 * @param {string} sPath The entity types path
+	 * @return {object} The entity type or null if not found
 	 */
 	ODataMetadata.prototype._getEntityTypeByPath = function(sPath) {
 		if (!sPath) {
-			jQuery.sap.assert(undefined, "sPath not defined!");
-			return null;
-		}
-		if (!this.oMetadata || jQuery.isEmptyObject(this.oMetadata)) {
-			jQuery.sap.assert(undefined, "No metadata loaded!");
+			assert(undefined, "sPath not defined!");
 			return null;
 		}
 
@@ -348,12 +573,17 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 			return this.mEntityTypes[sPath];
 		}
 
+		if (!this._checkMetadataLoaded()) {
+			return null;
+		}
+
+
 		// remove starting and trailing /
 		var sCandidate = sPath.replace(/^\/|\/$/g, ""),
 			aParts = sCandidate.split("/"),
 			iLength = aParts.length,
 			oParentEntityType,
-			aEntityTypeName,
+			oEntityTypeInfo,
 			oEntityType,
 			oResultEntityType,
 			that = this;
@@ -389,8 +619,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 			}
 		} else {
 			// if only one part exists it should be the name of the collection and we can get the entity type for it
-			aEntityTypeName = this._splitName(this._getEntityTypeName(aParts[0]));
-			oEntityType = this._getObjectMetadata("entityType", aEntityTypeName[0], aEntityTypeName[1]);
+			oEntityTypeInfo = this._splitName(this._getEntityTypeName(aParts[0]));
+			oEntityType = this._getObjectMetadata("entityType", oEntityTypeInfo.name, oEntityTypeInfo.namespace);
 			if (oEntityType) {
 				// store the type name also in the oEntityType
 				oEntityType.entityType = this._getEntityTypeName(aParts[0]);
@@ -405,10 +635,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 				oFuncType = this._getFunctionImportMetadata(sFuncCandName, "POST");
 			}
 			if (oFuncType && oFuncType.entitySet) { // only collections supported which have an entitySet
-				oEntityType = this._getEntityTypeByPath(oFuncType.entitySet);
+				oEntityType = Object.assign({}, this._getEntityTypeByPath(oFuncType.entitySet));
 				if (oEntityType) {
 					// store the type name also in the oEntityType
 					oEntityType.entityType = this._getEntityTypeName(oFuncType.entitySet);
+					oEntityType.isFunction = true;
 				}
 			}
 		}
@@ -417,7 +648,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 			this.mEntityTypes[sPath] = oEntityType;
 		}
 
-		//jQuery.sap.assert(oEntityType, "EntityType for path " + sPath + " could not be found!");
 		return oEntityType;
 	};
 
@@ -430,35 +660,33 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	 * @return {object} the entity type or null if not found
 	 */
 	ODataMetadata.prototype._getEntityTypeByName = function(sName) {
-		var oEntityType, that = this, sEntityName, sNamespace, iSeparator;
+		var oEntityType, that = this, sEntityName, sNamespace, oEntityTypeInfo;
 
 		if (!sName) {
-			jQuery.sap.assert(undefined, "sName not defined!");
+			assert(undefined, "sName not defined!");
 			return null;
 		}
-		iSeparator = sName.indexOf(".");
-		if (iSeparator > 0) {
-			sNamespace = sName.substr(0, iSeparator);
-			sEntityName = sName.substr(iSeparator + 1);
-		} else {
-			sEntityName = sName;
-		}
-		if (!this.oMetadata || jQuery.isEmptyObject(this.oMetadata)) {
-			jQuery.sap.assert(undefined, "No metadata loaded!");
+		oEntityTypeInfo = this._splitName(sName);
+		sNamespace = oEntityTypeInfo.namespace;
+		sEntityName = oEntityTypeInfo.name;
+
+		if (!this._checkMetadataLoaded()) {
 			return null;
 		}
 		if (this.mEntityTypes[sName]) {
 			oEntityType = this.mEntityTypes[sName];
 		} else {
-			jQuery.each(this.oMetadata.dataServices.schema, function(i, oSchema) {
+			each(this.oMetadata.dataServices.schema, function(i, oSchema) {
 				if (oSchema.entityType && (!sNamespace || oSchema.namespace === sNamespace)) {
-					jQuery.each(oSchema.entityType, function(k, oEntity) {
+					each(oSchema.entityType, function(k, oEntity) {
 						if (oEntity.name === sEntityName) {
 							oEntityType = oEntity;
 							that.mEntityTypes[sName] = oEntityType;
 							oEntityType.namespace = oSchema.namespace;
 							return false;
 						}
+
+						return true;
 					});
 				}
 			});
@@ -466,10 +694,29 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 		return oEntityType;
 	};
 
+
 	/**
-	 * Extracts an Annotation from given path parts
-	 * @param {array} aMetaParts
-	 * @returns {any}
+	 * Checks whether the metadata was loaded.
+	 *
+	 * @returns {boolean} Returns true, if the metadata was loaded.
+	 */
+	ODataMetadata.prototype._checkMetadataLoaded = function(){
+		if (!this.oMetadata || isEmptyObject(this.oMetadata)) {
+			assert(undefined, "No metadata loaded!");
+			return false;
+		}
+		return true;
+	};
+
+	/**
+	 * Extracts an Annotation from given path parts.
+	 *
+	 * @param {string} sPath
+	 *   The metadata path to the annotation
+	 * @returns {object|undefined}
+	 *   The annotation for the given metadata path; returns <code>undefined</code> if no annotation
+	 *   can be found for that path
+	 *
 	 * @private
 	 */
 	ODataMetadata.prototype._getAnnotation = function(sPath) {
@@ -483,19 +730,19 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 			// first part must be the entityType
 			oEntityType = this._getEntityTypeByName(aMetaParts[0]);
 
-			jQuery.sap.assert(oEntityType, aMetaParts[0] + " is not a valid EnityType");
+			assert(oEntityType, aMetaParts[0] + " is not a valid EntityType");
 
 			if (!oEntityType) {
-				return;
+				return undefined;
 			}
 
 			//extract property
 			sPropertyPath = aParts[1].substr(aParts[1].indexOf('/') + 1);
 			oProperty = this._getPropertyMetadata(oEntityType,sPropertyPath);
 
-			jQuery.sap.assert(oProperty, sPropertyPath + " is not a valid property path");
+			assert(oProperty, sPropertyPath + " is not a valid property path");
 			if (!oProperty) {
-				return;
+				return undefined;
 			}
 
 			sMetaPath = sPropertyPath.substr(sPropertyPath.indexOf(oProperty.name));
@@ -504,20 +751,23 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 			//getentityType from data Path
 			oEntityType = this._getEntityTypeByPath(aParts[0]);
 
-			jQuery.sap.assert(oEntityType, aParts[0] + " is not a valid path");
+			assert(oEntityType, aParts[0] + " is not a valid path");
 
 			if (!oEntityType) {
-				return;
+				return undefined;
 			}
 
 			//extract property
 			sPath = aParts[0].replace(/^\/|\/$/g, "");
-			sPropertyPath = sPath.substr(sPath.indexOf('/') + 1);
-			oProperty = this._getPropertyMetadata(oEntityType,sPropertyPath);
+			sPropertyPath = sPath;
+			while (!oProperty && sPropertyPath.indexOf("/") > 0) {
+				sPropertyPath = sPropertyPath.substr(sPropertyPath.indexOf('/') + 1);
+				oProperty = this._getPropertyMetadata(oEntityType, sPropertyPath);
+			}
 
-			jQuery.sap.assert(oProperty, sPropertyPath + " is not a valid property path");
+			assert(oProperty, sPropertyPath + " is not a valid property path");
 			if (!oProperty) {
-				return;
+				return undefined;
 			}
 
 			sMetaPath = aMetaParts.join('/');
@@ -531,15 +781,19 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	};
 
 	/**
-	 * Extract the Annotation Object from a given oProperty and a metadata path
+	 * Gets the annotation specified by the given metadata path in the given metadata object for the
+	 * given type.
 	 *
-	 * @return {object} the annotation object/value
+	 * @param {object} oEntityType The entity type of the property
+	 * @param {object} oObject The metadata object
+	 * @param {string} sMetaDataPath The metadata path
+	 * @return {object|undefined} The annotation object/value
 	 */
 	ODataMetadata.prototype._getAnnotationObject = function(oEntityType, oObject, sMetaDataPath) {
-		var aAnnotationParts, aParts, oAnnotation, oNode, sAnnotation;
+		var oAnnotation, sAnnotation, aAnnotationParts, oExtension, i, oNode, aParts;
 
 		if (!oObject) {
-			return;
+			return undefined;
 		}
 
 		oNode = oObject;
@@ -548,48 +802,45 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 		//V4 annotation
 		if (aParts[0].indexOf('.') > -1) {
 			return this._getV4AnnotationObject(oEntityType, oObject, aParts);
-		} else {
-			if (aParts.length > 1) {
-				//TODO:namespace handling
-				oNode = oNode[aParts[0]];
-				if (!oNode && oObject.extensions) {
-					for (var i = 0; i < oObject.extensions.length; i++) {
-						var oExtension = oObject.extensions[i];
-						if (oExtension.name == aParts[0]) {
-							oNode = oExtension;
-							break;
-						}
+		} else if (aParts.length > 1) {
+			// Additional namespace handling cannot be done to keep compatibility
+			oNode = oNode[aParts[0]];
+			if (!oNode && oObject.extensions) {
+				for (i = 0; i < oObject.extensions.length; i++) {
+					oExtension = oObject.extensions[i];
+					if (oExtension.name == aParts[0]) {
+						oNode = oExtension;
+						break;
 					}
 				}
-				sMetaDataPath = aParts.splice(0,1);
-				oAnnotation = this._getAnnotationObject(oEntityType, oNode, aParts.join('/'));
-			} else {
-				//handle attributes
-				if (aParts[0].indexOf('@') > -1) {
-					sAnnotation = aParts[0].substr(1);
-					aAnnotationParts = sAnnotation.split(':');
-					oAnnotation = oNode[aAnnotationParts[0]];
-					if (!oAnnotation && oNode.extensions) {
-						for (var i = 0; i < oNode.extensions.length; i++) {
-							var oExtension = oNode.extensions[i];
-							if (oExtension.name === aAnnotationParts[1] && oExtension.namespace === this.mNamespaces[aAnnotationParts[0]]) {
-								oAnnotation = oExtension.value;
-								break;
-							}
-						}
+			}
+			sMetaDataPath = aParts.splice(0,1);
+			oAnnotation = this._getAnnotationObject(oEntityType, oNode, aParts.join('/'));
+		} else if (aParts[0].indexOf('@') > -1) { //handle attributes
+			sAnnotation = aParts[0].substr(1);
+			aAnnotationParts = sAnnotation.split(':');
+			oAnnotation = oNode[aAnnotationParts[0]];
+			if (!oAnnotation && oNode.extensions) {
+				for (i = 0; i < oNode.extensions.length; i++) {
+					oExtension = oNode.extensions[i];
+					if (oExtension.name === aAnnotationParts[1]
+							&& oExtension.namespace === this.mNamespaces[aAnnotationParts[0]]) {
+						oAnnotation = oExtension.value;
+						break;
 					}
-				} else { // handle nodes
-					aAnnotationParts = aParts[0].split(':');
-					oAnnotation = oNode[aAnnotationParts[0]];
-					oAnnotation = oNode[aParts[0]];
-					if (!oAnnotation && oNode.extensions) {
-						for (var i = 0; i < oNode.extensions.length; i++) {
-							var oExtension = oNode.extensions[i];
-							if (oExtension.name === aAnnotationParts[1] && oExtension.namespace === this.mNamespaces[aAnnotationParts[0]]) {
-								oAnnotation = oExtension;
-								break;
-							}
-						}
+				}
+			}
+		} else { // handle nodes
+			aAnnotationParts = aParts[0].split(':');
+			oAnnotation = oNode[aAnnotationParts[0]];
+			oAnnotation = oNode[aParts[0]];
+			if (!oAnnotation && oNode.extensions) {
+				for (i = 0; i < oNode.extensions.length; i++) {
+					oExtension = oNode.extensions[i];
+					if (oExtension.name === aAnnotationParts[1]
+							&& oExtension.namespace === this.mNamespaces[aAnnotationParts[0]]) {
+						oAnnotation = oExtension;
+						break;
 					}
 				}
 			}
@@ -597,34 +848,43 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 		return oAnnotation;
 	};
 
-	/*
+	/**
+	 * Gets the annotation specified by the given metadata path in the given metadata object for the
+	 * given type.
+	 *
+	 * @param {object} oEntityType The entity type of the property
+	 * @param {object} oObject The metadata object
+	 * @param {string[]} aParts The metadata path; must contain exactly one element
+	 * @return {object|undefined} The annotation object/value
+	 *
 	 * @private
 	 */
 	ODataMetadata.prototype._getV4AnnotationObject = function(oEntityType, oObject, aParts) {
 		var oAnnotationNode, aAnnotations = [];
 
 		if (aParts.length > 1) {
-			jQuery.sap.assert(aParts.length == 1, "'" + aParts.join('/') + "' is not a valid annotation path");
-			return;
+			assert(aParts.length == 1, "'" + aParts.join('/') + "' is not a valid annotation path");
+			return undefined;
 		}
 
 		var sTargetName = oEntityType.namespace ? oEntityType.namespace + "." : "";
 		sTargetName += oEntityType.name + "/" + oObject.name;
 
-		jQuery.each(this.oMetadata.dataServices.schema, function(i, oSchema) {
+		each(this.oMetadata.dataServices.schema, function(i, oSchema) {
 			if (oSchema.annotations) {
-				jQuery.each(oSchema.annotations, function(k, oObject) {
+				each(oSchema.annotations, function(k, oObject) {
 					//we do not support qualifiers on target level
 					if (oObject.target === sTargetName && !oObject.qualifier) {
 						aAnnotations.push(oObject.annotation);
 						return false;
 					}
+					return true;
 				});
 			}
 		});
 		if (aAnnotations) {
-			jQuery.each(aAnnotations, function(i, aAnnotation) {
-				jQuery.each(aAnnotation, function(j, oAnnotation) {
+			each(aAnnotations, function(i, aAnnotation) {
+				each(aAnnotation, function(j, oAnnotation) {
 					if (oAnnotation.term === aParts[0]) {
 						oAnnotationNode = oAnnotation;
 					}
@@ -635,86 +895,92 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	};
 
 	/**
-	 * splits a name e.g. Namespace.Name into [Name, Namespace]
+	 * Splits a full qualified name into its namespace and its name, for example splits
+	 * "my.namespace.Foo" into {name : "Foo", namespace : "my.namespace"}.
+	 *
+	 * @param {string} sFullName
+	 *   The full name
+	 * @returns {object}
+	 *   An object containing the properties <code>name</code> and <code>namespace</code>
 	 */
 	ODataMetadata.prototype._splitName = function(sFullName) {
-		var aParts = [];
+		var oInfo = {};
 		if (sFullName) {
 			var iSepIdx = sFullName.lastIndexOf(".");
-			aParts[0] = sFullName.substr(iSepIdx + 1);
-			aParts[1] = sFullName.substr(0, iSepIdx);
+			oInfo.name = sFullName.substr(iSepIdx + 1);
+			oInfo.namespace = sFullName.substr(0, iSepIdx);
 		}
-		return aParts;
+		return oInfo;
 	};
 
 
 	/**
-	*  search metadata for specified collection name (= entity set name)
-	*/
-	ODataMetadata.prototype._getEntityTypeName = function(sCollection) {
-		var sEntityTypeName;
-		if (sCollection) {
-			jQuery.each(this.oMetadata.dataServices.schema, function(i, oSchema) {
-				if (oSchema.entityContainer) {
-					jQuery.each(oSchema.entityContainer, function(k, oEntityContainer) {
-						if (oEntityContainer.entitySet) {
-							jQuery.each(oEntityContainer.entitySet, function(j, oEntitySet) {
-								if (oEntitySet.name === sCollection) {
-									sEntityTypeName = oEntitySet.entityType;
-									return false;
-								}
-							});
-						}
-					});
-				}
-			});
+	 * Gets the entity type name for the given entity set name.
+	 *
+	 * @param {string} sEntitySetName The collection name
+	 * @returns {string} The name of the collection's entity type
+	 */
+	ODataMetadata.prototype._getEntityTypeName = function(sEntitySetName) {
+		var sEntityTypeName, oEntitySet;
+
+		if (sEntitySetName) {
+			oEntitySet = this._findEntitySetByName(sEntitySetName);
+			if (oEntitySet){
+				sEntityTypeName = oEntitySet.entityType;
+			}
 		}
-		//jQuery.sap.assert(sEntityTypeName, "EntityType name of EntitySet "+ sCollection + " not found!");
 		return sEntityTypeName;
 	};
 
 	/**
-	 * get the object of a specified type name and namespace
+	 * Gets the object of a specified type name and namespace.
+	 *
+	 * @param {string} sObjectType The object's type
+	 * @param {string} sObjectName The object's name
+	 * @param {string} sNamespace The object's namespace
+	 * @returns {object} The found object
 	 */
 	ODataMetadata.prototype._getObjectMetadata = function(sObjectType, sObjectName, sNamespace) {
 		var oObject;
 		if (sObjectName && sNamespace) {
 			// search in all schemas for the sObjectName
-			jQuery.each(this.oMetadata.dataServices.schema, function(i, oSchema) {
+			each(this.oMetadata.dataServices.schema, function(i, oSchema) {
 				// check if we found the right schema which will contain the sObjectName
 				if (oSchema[sObjectType] && oSchema.namespace === sNamespace) {
-					jQuery.each(oSchema[sObjectType], function(j, oCurrentObject) {
+					each(oSchema[sObjectType], function(j, oCurrentObject) {
 						if (oCurrentObject.name === sObjectName) {
 							oObject = oCurrentObject;
 							oObject.namespace = oSchema.namespace;
 							return false;
 						}
+						return true;
 					});
 					return !oObject;
 				}
+				return true;
 			});
 		}
-		//jQuery.sap.assert(oObject, "ObjectType " + sObjectType + " for name " + sObjectName + " not found!");
 		return oObject;
 	};
 
 	/**
-	 * Get the the use-batch extension value if any
+	 * Get the use-batch extension value if any
 	 * @return {boolean} true/false
 	 * @public
 	 */
 	ODataMetadata.prototype.getUseBatch = function() {
 		var bUseBatch = false;
 		// search in all schemas for the use batch extension
-		jQuery.each(this.oMetadata.dataServices.schema, function(i, oSchema) {
+		each(this.oMetadata.dataServices.schema, function(i, oSchema) {
 			if (oSchema.entityContainer) {
-				jQuery.each(oSchema.entityContainer, function(k, oEntityContainer) {
+				each(oSchema.entityContainer, function(k, oEntityContainer) {
 					if (oEntityContainer.extensions) {
-						jQuery.each(oEntityContainer.extensions, function(l, oExtension) {
+						each(oEntityContainer.extensions, function(l, oExtension) {
 							if (oExtension.name === "use-batch" && oExtension.namespace === "http://www.sap.com/Protocols/SAPData") {
 								bUseBatch = (typeof oExtension.value === 'string') ? (oExtension.value.toLowerCase() === 'true') : !!oExtension.value;
 								return false;
 							}
+							return true;
 						});
 					}
 				});
@@ -723,41 +989,75 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 		return bUseBatch;
 	};
 
+
+	ODataMetadata.prototype._getFunctionImportMetadataIterate = function(fnCheck, bSingleEntry) {
+		var aObjects = [];
+		// search in all schemas for the sObjectName
+		each(this.oMetadata.dataServices.schema, function(iSchema, oSchema) {
+			// check if we found the right schema which will contain the sObjectName
+			if (oSchema["entityContainer"]) {
+				each(oSchema["entityContainer"], function(iEntityContainer, oEntityContainer) {
+					if (oEntityContainer["functionImport"]) {
+						each(oEntityContainer["functionImport"], function(iFunctionImport, oFunctionImport) {
+							if (fnCheck(oFunctionImport)) {
+								aObjects.push(oFunctionImport);
+								if (bSingleEntry) {
+									return false;
+								}
+							}
+							return true;
+						});
+					}
+					// break if single entry is wanted and there is exactly one
+					return !(bSingleEntry && aObjects.length === 1);
+				});
+			}
+			// break if single entry is wanted and there is exactly one
+			return !(bSingleEntry && aObjects.length === 1);
+		});
+		return aObjects;
+	};
+
+	ODataMetadata.prototype._getFirstMatchingFunctionImportMetadata = function(fnCheck){
+		var aObjects = this._getFunctionImportMetadataIterate(fnCheck, true);
+		return aObjects.length === 1 ? aObjects[0] : null;
+	};
+
+	/**
+	 * Retrieve the function import metadata for a name.
+	 *
+	 * @param {string} sFunctionName The name of the function import to look up
+	 * @return {object[]} array of matching function import metadata
+	 */
+	ODataMetadata.prototype._getFunctionImportMetadataByName = function(sFunctionName) {
+		if (sFunctionName.indexOf("/") > -1) {
+			sFunctionName = sFunctionName.substr(sFunctionName.indexOf("/") + 1);
+		}
+		return this._getFunctionImportMetadataIterate(function(oFunctionImport) {
+			return oFunctionImport.name === sFunctionName;
+		});
+	};
+
 	/**
 	 * Retrieve the function import metadata for a name and a method.
 	 *
 	 * @param {string} sFunctionName The name of the function import to look up
 	 * @param {string} sMethod The HTTP Method for which this function is requested
+	 *
+	 * @returns {object|null} The function import metadata
 	 */
 	ODataMetadata.prototype._getFunctionImportMetadata = function(sFunctionName, sMethod) {
-		var oObject = null;
 		if (sFunctionName.indexOf("/") > -1) {
 			sFunctionName = sFunctionName.substr(sFunctionName.indexOf("/") + 1);
 		}
-		// search in all schemas for the sObjectName
-		jQuery.each(this.oMetadata.dataServices.schema, function(i, oSchema) {
-			// check if we found the right schema which will contain the sObjectName
-			if (oSchema["entityContainer"]) {
-				jQuery.each(oSchema["entityContainer"], function(j,oEntityContainer) {
-					if (oEntityContainer["functionImport"]) {
-						jQuery.each(oEntityContainer["functionImport"], function(k,oFunctionImport) {
-							if (oFunctionImport.name === sFunctionName && oFunctionImport.httpMethod === sMethod) {
-								oObject = oFunctionImport;
-								return false;
-							}
-						});
-					}
-					return !oObject;
-				});
-			}
-			return !oObject;
+		return this._getFirstMatchingFunctionImportMetadata(function(oFunctionImport) {
+			return oFunctionImport.name === sFunctionName && oFunctionImport.httpMethod === sMethod;
 		});
-		return oObject;
 	};
 
 
 	/**
-	 * Returns the target EntityType for NavgigationProperty-name of another given Entytype object. The target is
+	 * Returns the target EntityType for the NavigationProperty of a given EntityType object. The target is
 	 * defined as the toRole of the navigationproperty; this method looks up the corresponding matching End in the
 	 * corresponding Association and returns the matching entityType
 	 * @see sap.ui.model.odata.ODataMetadata#_getEntityTypeByNavPropertyObject
@@ -784,7 +1084,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 
 
 	/**
-	 * Returns the target EntityType for a given NavgigationProperty object. The target is defined as the toRole of
+	 * Returns the target EntityType for a given NavigationProperty object. The target is defined as the toRole of
 	 * the navigationproperty; this method looks up the corresponding matching End in the corresponding Association
 	 * and returns the matching entityType
 	 *
@@ -795,8 +1095,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	ODataMetadata.prototype._getEntityTypeByNavPropertyObject = function(mNavProperty) {
 		var mToEntityType;
 
-		var aAssociationName = this._splitName(mNavProperty.relationship);
-		var mAssociation = this._getObjectMetadata("association", aAssociationName[0], aAssociationName[1]);
+		var oAssociationInfo = this._splitName(mNavProperty.relationship);
+		var mAssociation = this._getObjectMetadata("association", oAssociationInfo.name, oAssociationInfo.namespace);
 
 		// get association for navigation property and then the collection name
 		if (mAssociation) {
@@ -804,8 +1104,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 			if (mEnd.role !== mNavProperty.toRole) {
 				mEnd = mAssociation.end[1];
 			}
-			var aEntityTypeName = this._splitName(mEnd.type);
-			mToEntityType = this._getObjectMetadata("entityType", aEntityTypeName[0], aEntityTypeName[1]);
+			var oEntityTypeInfo = this._splitName(mEnd.type);
+			mToEntityType = this._getObjectMetadata("entityType", oEntityTypeInfo.name, oEntityTypeInfo.namespace);
 			if (mToEntityType) {
 				// store the type name also in the oEntityType
 				mToEntityType.entityType = mEnd.type;
@@ -815,12 +1115,15 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	};
 
 	/**
-	 * get all navigation property names in an array by the specified entity type
+	 * Get all navigation property names in an array by the specified entity type.
+	 *
+	 * @param {object} oEntityType The entity type
+	 * @returns {string[]} An array containing the navigation property names
 	 */
 	ODataMetadata.prototype._getNavigationPropertyNames = function(oEntityType) {
 		var aNavProps = [];
 		if (oEntityType.navigationProperty) {
-			jQuery.each(oEntityType.navigationProperty, function(k, oNavigationProperty) {
+			each(oEntityType.navigationProperty, function(k, oNavigationProperty) {
 				aNavProps.push(oNavigationProperty.name);
 			});
 		}
@@ -828,42 +1131,148 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	};
 
 	/**
-	*  extract the property metadata of a specified property of a entity type out of the metadata document
-	*/
-	ODataMetadata.prototype._getPropertyMetadata = function(oEntityType, sProperty) {
+	 * Get dependent nav property name, entityset and key properties for given entity and property
+	 * name. If the property name is contained as key property in a referential constraint of one of
+	 * the navigation properties, return the name of the navigation property, as well as the
+	 * referenced entityset and the array of key properties.
+	 *
+	 * @param {object} oEntityType The entity type
+	 * @param {string} sPropertyName The property name
+	 * @returns {object} An object containing information about the navigation property
+	 */
+	ODataMetadata.prototype._getNavPropertyRefInfo = function(oEntityType, sPropertyName) {
+		var oNavPropInfo, oAssociation, oAssociationInfo, oAssociationSet, oPrincipal, oDependent,
+			bContainsProperty, sRole, oEnd, sEntitySet, aKeys,
+			that = this;
+		each(oEntityType.navigationProperty, function(i, oNavProperty) {
+			oAssociationInfo = that._splitName(oNavProperty.relationship);
+			oAssociation = that._getObjectMetadata("association", oAssociationInfo.name, oAssociationInfo.namespace);
+			// Can't find referential info, if referentialConstraint isn't provided
+			if (!oAssociation || !oAssociation.referentialConstraint) {
+				return;
+			}
+			oDependent = oAssociation.referentialConstraint.dependent;
+			oEnd = oAssociation.end.find(function(oEnd) {
+				return oEnd.role === oDependent.role;
+			});
+			// Only if dependent role type matches entity type, look for properties
+			if (oEnd.type !== oEntityType.namespace + "." + oEntityType.name) {
+				return;
+			}
+			bContainsProperty = oDependent.propertyRef.some(function(oPropertyRef) {
+				return oPropertyRef.name === sPropertyName;
+			});
+			// If dependent doesn't contain the property return
+			if (!bContainsProperty) {
+				return;
+			}
+			oPrincipal = oAssociation.referentialConstraint.principal;
+			sRole = oPrincipal.role;
+			oAssociationSet = that._getAssociationSetByAssociation(oNavProperty.relationship);
+			oEnd = oAssociationSet.end.find(function(oEnd) {
+				return oEnd.role === sRole;
+			});
+			sEntitySet = oEnd.entitySet;
+			aKeys = oPrincipal.propertyRef.map(function(oPropertyRef) {
+				return oPropertyRef.name;
+			});
+			oNavPropInfo = {
+				name: oNavProperty.name,
+				entitySet: sEntitySet,
+				keys: aKeys
+			};
+		});
+		return oNavPropInfo;
+	};
+
+	/**
+	 * Gets the property metadata of the given property path relative to the given entity type.
+	 *
+	 * @param {object} oEntityType
+	 *   The entity type
+	 * @param {string} sPropertyPath
+	 *   The property path relative to the given entity type; may contain leading or trailing "/" and may contain
+	 *   navigation properties, complex types and annotation path, for example: "Description" (simple property),
+	 *   "ToProducts/Name" (property via navigation property), "Address/Street" (property via complex type),
+	 *   "ToSupplier/Address/Street" (property via navigation property and complex type), "Amount/@sap:label" (property
+	 *   with additional annotation path)
+	 * @returns {object|undefined}
+	 *   The property's metadata; or <code>undefined</code> if no property metadata could be found
+	 */
+	ODataMetadata.prototype._getPropertyMetadata = function(oEntityType, sPropertyPath) {
 		var oPropertyMetadata, that = this;
 
 		if (!oEntityType) {
-			return;
+			return undefined;
 		}
 
 		// remove starting/trailing /
-		sProperty = sProperty.replace(/^\/|\/$/g, "");
-		var aParts = sProperty.split("/"); // path could point to a complex type
+		sPropertyPath = sPropertyPath.replace(/^\/|\/$/g, "");
+		var aParts = sPropertyPath.split("/"); // path could point to a complex type or nav property
 
-		jQuery.each(oEntityType.property, function(k, oProperty) {
+		each(oEntityType.property, function(k, oProperty) {
 			if (oProperty.name === aParts[0]) {
 				oPropertyMetadata = oProperty;
 				return false;
 			}
+			return true;
 		});
 
-		// check if complex type
-		if (oPropertyMetadata && aParts.length > 1 && !jQuery.sap.startsWith(oPropertyMetadata.type.toLowerCase(), "edm.")) {
-			var aName = this._splitName(oPropertyMetadata.type);
-			oPropertyMetadata = this._getPropertyMetadata(this._getObjectMetadata("complexType", aName[0], aName[1]), aParts[1]);
+		if (aParts.length > 1) {
+			// check for navigation property and complex type
+			if (!oPropertyMetadata) {
+				var oLastEntityType;
+				while (oEntityType && aParts.length > 1) {
+					oEntityType = this._getEntityTypeByNavProperty(oEntityType, aParts[0]);
+					if (oEntityType) {
+						oLastEntityType = oEntityType;
+						aParts.shift();
+					}
+				}
+				if (oEntityType) { // then there is only one part left
+					oPropertyMetadata = that._getPropertyMetadata(oEntityType, aParts[0]);
+				} else if (oLastEntityType) {
+					// the remaining first part may be a complex type; retry with the last known entity type and the
+					// remaining path
+					oPropertyMetadata = that._getPropertyMetadata(oLastEntityType, aParts.join("/"));
+				} // else: then the first part is neither a complex type nor a navigation property -> return undefined
+			} else if (!oPropertyMetadata.type.toLowerCase().startsWith("edm.")) {
+				var oNameInfo = this._splitName(oPropertyMetadata.type);
+				oPropertyMetadata = this._getPropertyMetadata(this._getObjectMetadata("complexType", oNameInfo.name, oNameInfo.namespace), aParts[1]);
+			} // else: the rest of the path is not relevant as it may be a metadata path, e.g. @sap:label
 		}
 
-		// check if navigation property
-		if (!oPropertyMetadata && aParts.length > 1) {
-			var oParentEntityType = this._getEntityTypeByNavProperty(oEntityType, aParts[0]);
-			if (oParentEntityType) {
-				oPropertyMetadata = that._getPropertyMetadata(oParentEntityType, aParts[1]);
-			}
-		}
-
-		//jQuery.sap.assert(oPropertyMetadata, "PropertyType for property "+ aParts[0]+ " of EntityType " + oEntityType.name + " not found!");
 		return oPropertyMetadata;
+	};
+
+	/**
+	 * Gets a map of property names defined by referential constraints. Maps a key property name of the given entity to
+	 * the corresponding property name of the entity referenced by the given navigation property.
+	 *
+	 * @param {object} oSourceEntityType
+	 *   The entity type, for example the metadata object for "GWSAMPLE_BASIC.BusinessPartner"
+	 * @param {string} sNavigationProperty
+	 *   The navigation property name, for example "ToProducts"
+	 * @returns {Object<string, string>}
+	 *   Maps a key property name of the given entity to the foreign key property name of the entity referenced by the
+	 *   given navigation property based on the association's referential constraints; returns an empty object if no
+	 *   mapping is defined; for example <code>{"BusinessPartnerID" : "SupplierID"}</code>
+	 * @private
+	 */
+	ODataMetadata.prototype._getReferentialConstraintsMapping = function (oSourceEntityType, sNavigationProperty) {
+		const oNavigationPropertyInfo = oSourceEntityType.navigationProperty
+			.find((oNavigationProperty) => oNavigationProperty.name === sNavigationProperty);
+		const oAssociationInfo = this._splitName(oNavigationPropertyInfo.relationship);
+		const oAssociation = this._getObjectMetadata("association", oAssociationInfo.name, oAssociationInfo.namespace);
+		if (oNavigationPropertyInfo.fromRole === oAssociation.referentialConstraint?.principal.role) {
+			const aSourceProperties = oAssociation.referentialConstraint.principal.propertyRef;
+			const aTargetProperties = oAssociation.referentialConstraint.dependent.propertyRef;
+			return aSourceProperties.reduce((mSource2TargetProperty, oSourceProperty, iSourceIndex) => {
+				mSource2TargetProperty[oSourceProperty.name] = aTargetProperties[iSourceIndex].name;
+				return mSource2TargetProperty;
+			}, {});
+		}
+		return {};
 	};
 
 	ODataMetadata.prototype.destroy = function() {
@@ -871,41 +1280,83 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 		var that = this;
 
 		// Abort pending xml request
-		jQuery.each(this.mRequestHandles, function(sKey, oRequestHandle) {
+		each(this.mRequestHandles, function(sKey, oRequestHandle) {
 			oRequestHandle.bSuppressErrorHandlerCall = true;
 			oRequestHandle.abort();
 			delete that.mRequestHandles[sKey];
 		});
-		if (!!this.oLoadEvent) {
-			jQuery.sap.clearDelayedCall(this.oLoadEvent);
+		if (this.oLoadEvent) {
+			clearTimeout(this.oLoadEvent);
 		}
-		if (!!this.oFailedEvent) {
-			jQuery.sap.clearDelayedCall(this.oFailedEvent);
+		if (this.oFailedEvent) {
+			clearTimeout(this.oFailedEvent);
 		}
 
 		EventProvider.prototype.destroy.apply(this, arguments);
 	};
 
 	/**
-	 * creation of a request object for changes
+	 * Creates caches for entity sets, entity types and navigation properties if not yet done and if
+	 * the metadata are loaded, otherwise nothing is done.
 	 *
-	 * @return {object} request object
+	 * <code>this._entitySetMap</code> maps the name of an entity type (including the namespace,
+	 * for example "GWSAMPLE_BASIC.SalesOrder") to its corresponding entity set object as returned
+	 * by datajs.
+	 * At each entity set object contained in <code>this.oMetadata</code> the reference
+	 * <code>__entityType</code> to the corresponding entity type object is added.
+	 * At each entity type object contained in <code>this.oMetadata</code> the map
+	 * <code>__navigationPropertiesMap</code> is added which maps the navigation property name to
+	 * the corresponding navigation property object as returned by datajs.
+	 */
+	ODataMetadata.prototype._fillElementCaches = function () {
+		var that = this;
+
+		if (this._entitySetMap || !this._checkMetadataLoaded()) {
+			return;
+		}
+
+		this._entitySetMap = {};
+		this.oMetadata.dataServices.schema.forEach(function (mSchema) {
+			(mSchema.entityContainer || []).forEach(function (mContainer) {
+				(mContainer.entitySet || []).forEach(function (mEntitySet) {
+					var oEntityType = that._getEntityTypeByName(mEntitySet.entityType);
+					oEntityType.__navigationPropertiesMap = {};
+					(oEntityType.navigationProperty || []).forEach(function (oProp) {
+						oEntityType.__navigationPropertiesMap[oProp.name] = oProp;
+					});
+					mEntitySet.__entityType = oEntityType;
+					that._entitySetMap[mEntitySet.entityType] = mEntitySet;
+				});
+			});
+		});
+	};
+
+	/**
+	 * Creates a request object for changes.
+	 *
+	 * @param {string} sUrl The request URL
+	 * @return {object} The request object
+	 *
 	 * @private
 	 */
 	ODataMetadata.prototype._createRequest = function(sUrl) {
+		// The 'sap-cancel-on-close' header marks the OData metadata request as cancelable. This helps to save resources at the back-end.
+		var oDefaultHeaders = {
+				"sap-cancel-on-close": true
+			},
+			oLangHeader = {
+				"Accept-Language": Localization.getLanguageTag().toString()
+			};
 
-		var oHeaders = {}, oLangHeader = {"Accept-Language" : sap.ui.getCore().getConfiguration().getLanguageTag()};
-
-		jQuery.extend(oHeaders, this.mHeaders, oLangHeader);
-
+		extend(oDefaultHeaders, this.mHeaders, oLangHeader);
 
 		var oRequest = {
-				headers : oHeaders,
-				requestUri : sUrl,
-				method : 'GET',
-				user: this.sUser,
-				password: this.sPassword,
-				async: this.bAsync
+			headers: oDefaultHeaders,
+			requestUri: sUrl,
+			method: 'GET',
+			user: this.sUser,
+			password: this.sPassword,
+			async: this.bAsync
 		};
 
 		if (this.bAsync) {
@@ -922,45 +1373,30 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	 * @return {map|undefined} The EntitySet to which the path belongs or undefined if none
 	 */
 	ODataMetadata.prototype._getEntitySetByPath = function(sEntityPath) {
-		if (!this._entitySetMap) {
-			// Cache results of entity set lookup
-			this._entitySetMap = {};
-			this.oMetadata.dataServices.schema.forEach(function(mShema) {
-				if (mShema.entityContainer) {
-					mShema.entityContainer.forEach(function(mContainer) {
-						if (mContainer.entitySet) {
-							mContainer.entitySet.forEach(function(mEntitySet) {
-								this._entitySetMap[mEntitySet.entityType] = mEntitySet;
-							}, this);
-						}
-					}, this);
-				}
-			}, this);
-		}
+		var oEntityType;
 
-		var oEntityType = this._getEntityTypeByPath(sEntityPath);
+		this._fillElementCaches();
 
-		if (oEntityType) {
-			return this._entitySetMap[oEntityType.entityType];
-		}
+		oEntityType = this._getEntityTypeByPath(sEntityPath);
 
-		return;
+		return oEntityType && this._entitySetMap[oEntityType.entityType];
 	};
 
 	/**
-	 * Add metadata url: The response will be merged with the existing metadata object
+	 * Add metadata url: The response will be merged with the existing metadata object.
 	 *
-	 * @param string | array vUrl Either one URL as string or an array or Uri strings
-	 * @returns Promise The Promise for metadata loading
+	 * @param {string|string[]} vUrl Either one URL as string or an array of URI strings
+	 * @param {function} [fnRequest] Request function which can handle 503 "Retry-After" responses,
+	 *   see {@link sap.ui.model.odata.v2.ODataModel#_request}
+	 * @returns {Promise} The Promise for metadata loading
 	 * @private
 	 */
-	ODataMetadata.prototype._addUrl = function(vUrl) {
-		var aUrls = [].concat(vUrl),
-			that = this;
+	ODataMetadata.prototype._addUrl = function(vUrl, fnRequest) {
+		var aUrls = [].concat(vUrl);
 
-		return Promise.all(jQuery.map(aUrls, function(sUrl) {
-			return that._loadMetadata(sUrl, true);
-		}));
+		return Promise.all(aUrls.map(function(sUrl) {
+			return this._loadMetadata(sUrl, true, fnRequest);
+		}, this));
 	};
 
 	/**
@@ -974,9 +1410,14 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	 */
 	ODataMetadata.prototype.merge = function(oTarget, oSource, aEntitySets) {
 		var that = this;
-		jQuery.each(oTarget.dataServices.schema, function(i, oTargetSchema) {
+
+		// invalidate cache for entity set map
+		if (this.mEntitySets) {
+			delete this.mEntitySets;
+		}
+		each(oTarget.dataServices.schema, function(i, oTargetSchema) {
 			// find schema
-			jQuery.each(oSource.dataServices.schema, function(j, oSourceSchema) {
+			each(oSource.dataServices.schema, function(j, oSourceSchema) {
 				if (oSourceSchema.namespace === oTargetSchema.namespace) {
 					//merge entityTypes
 					if (oSourceSchema.entityType) {
@@ -997,9 +1438,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 					}
 					//find EntityContainer if any
 					if (oTargetSchema.entityContainer && oSourceSchema.entityContainer) {
-						jQuery.each(oTargetSchema.entityContainer, function(k, oTargetContainer) {
+						each(oTargetSchema.entityContainer, function(k, oTargetContainer) {
 							//merge entitySets
-							jQuery.each(oSourceSchema.entityContainer, function(l, oSourceContainer) {
+							each(oSourceSchema.entityContainer, function(l, oSourceContainer) {
 								if (oSourceContainer.entitySet) {
 									if (oSourceContainer.name === oTargetContainer.name) {
 										//cache entitySet names
@@ -1039,7 +1480,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 	 * Returns the first EntitySet from all EntityContainers that matches the namespace and name of the given EntityType
 	 *
 	 * @param {map} mEntityType - The EntityType object
-	 * @return {map|null} Retuns the EntitySet object or null if not found
+	 * @return {map|null} Returns the EntitySet object or null if not found
 	 */
 	ODataMetadata.prototype._getEntitySetByType = function(mEntityType) {
 		var sEntityType = mEntityType.namespace + "." + mEntityType.name;
@@ -1063,6 +1504,426 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/EventProvider', 'sap/ui/thirdpa
 		return null;
 	};
 
-	return ODataMetadata;
+	/**
+	 * Calculates the canonical path of the given deep path.
+	 *
+	 * @param {string} sPath The deep path
+	 * @return {string|undefined} The canonical path or undefined
+	 * @private
+	 */
+	ODataMetadata.prototype._calculateCanonicalPath = function(sPath) {
+		var sCanonicalPath, iIndex, aParts, sTempPath;
+		if (sPath) {
+			iIndex = sPath.lastIndexOf(")");
+			if (iIndex !== -1) {
+				sTempPath = sPath.substr(0, iIndex + 1);
+				var oEntitySet = this._getEntitySetByPath(sTempPath);
+				if (oEntitySet) {
+					if (oEntitySet.__entityType.isFunction) {
+						sCanonicalPath = sPath;
+					} else {
+						aParts = sPath.split("/");
+						if (sTempPath === "/" + aParts[1]) {
+							//check for nav prop
+							if (!(aParts[2] in oEntitySet.__entityType.__navigationPropertiesMap)) {
+								sCanonicalPath = sPath;
+							}
 
+						} else {
+							aParts = sTempPath.split("/");
+							sTempPath = '/' + oEntitySet.name + aParts[aParts.length - 1].substr(aParts[aParts.length - 1].indexOf("(")) + sPath.substr(iIndex + 1);
+							if (sTempPath !== sPath) {
+								sCanonicalPath = sTempPath;
+							}
+						}
+					}
+				}
+			}
+		}
+		return sCanonicalPath;
+	};
+	/**
+	 * Returns the first AssociationSet from all EntityContainers that matches the association name
+	 *
+	 * @param {string} sAssociation The full qualified association name
+	 * @return {map|null} Returns the AssociationSet object or null if not found
+	 */
+	ODataMetadata.prototype._getAssociationSetByAssociation = function(sAssociation) {
+		var aSchema = this.oMetadata.dataServices.schema;
+		for (var i = 0; i < aSchema.length; ++i) {
+			var aContainers = aSchema[i].entityContainer;
+			if (aContainers) {
+				for (var n = 0; n < aContainers.length; ++n) {
+					var aSets = aContainers[n].associationSet;
+					if (aSets) {
+						for (var m = 0; m < aSets.length; ++m) {
+							if (aSets[m].association === sAssociation) {
+								return aSets[m];
+							}
+						}
+					}
+				}
+			}
+		}
+		return null;
+	};
+
+	/**
+	 * Whether MessageScope is supported by service or not.
+	 *
+	 * @return {boolean} Whether MessageScope is supported
+	 * @private
+	 */
+	ODataMetadata.prototype._isMessageScopeSupported = function() {
+		var aSchema = this.oMetadata.dataServices.schema,
+			oContainer, aContainers;
+
+		// Note: "The edmx:DataServices element contains zero or more edm:Schema elements..."
+		if (!this.bMessageScopeSupported && aSchema) {
+			for (var i = 0; i < aSchema.length; ++i) {
+				aContainers = aSchema[i].entityContainer;
+				if (aContainers) {
+					for (var n = 0; n < aContainers.length; ++n) {
+						oContainer = aContainers[n];
+						if (oContainer.extensions && Array.isArray(oContainer.extensions)) {
+							for (var m = 0; m < oContainer.extensions.length; ++m) {
+								if (oContainer.extensions[m].name === "message-scope-supported" &&
+									oContainer.extensions[m].namespace === this.mNamespaces.sap) {
+									if (oContainer.extensions[m].value === "true") {
+										this.bMessageScopeSupported = true;
+										break;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		return this.bMessageScopeSupported;
+	};
+
+	/**
+	 * Check whether the given path points to a entity collection or not (single entity or not known).
+	 *
+	 * @param {string} sPath Entity path
+	 * @returns {boolean} Whether the path points to a collection.
+	 * @private
+	 */
+	ODataMetadata.prototype._isCollection = function(sPath){
+		var bCollection = false;
+		var iIndex = sPath.lastIndexOf("/");
+		if (iIndex > 0){ //e.g. 0:'/SalesOrderSet', -1:'empty string'
+			var sEntityPath = sPath.substring(0, iIndex);
+			var oEntityType = this._getEntityTypeByPath(sEntityPath);
+
+			if (oEntityType) {
+				var oAssociation = this._getEntityAssociationEnd(oEntityType, sPath.substring(iIndex + 1));
+				if (oAssociation && oAssociation.multiplicity === "*") {
+					bCollection = true;
+				}
+			}
+		} else {
+			bCollection = true;
+		}
+		return bCollection;
+	};
+
+	/**
+	 * Reduces the given path based on metadata by removing adjacent partner navigation properties.
+	 * If there are no adjacent partner navigation properties or if the path does not match the
+	 * metadata the given path is returned.
+	 *
+	 * Example: The reduced path for
+	 * "/SalesOrderSet('1')/ToLineItems(SalesOrderID='1',ItemPosition='10')/ToHeader/GrossAmount"
+	 * is "/SalesOrderSet('1')/GrossAmount" iff "ToLineItems" and "ToHeader" are marked as partners
+	 * of each other, that means both navigation properties have the same relationship attribute.
+	 *
+	 * The metadata must be available.
+	 *
+	 * @param {string} sPath
+	 *   The absolute data path to be reduced
+	 * @returns {string}
+	 *   The reduced absolute path
+	 *
+	 * @private
+	 */
+	ODataMetadata.prototype._getReducedPath = function (sPath) {
+		var oAssociationEnd,
+			i,
+			sKeyPredicate,
+			oNavigatedEntityType,
+			oNavigationProperty1,
+			oNavigationProperty2,
+			sNavigationPropertyName,
+			aSegments = sPath.split("/"),
+			oStartEntityType;
+
+		if (aSegments.length < 4) {
+			// no partner properties that can be removed
+			return sPath;
+		}
+		// ensure __navigationPropertiesMap is available at all entity types
+		this._fillElementCaches();
+
+		for (i = 1; i < aSegments.length - 2; i += 1) {
+			oStartEntityType = this._getEntityTypeByPath(aSegments.slice(0, i + 1).join('/'));
+			oNavigationProperty1 = oStartEntityType
+				&& oStartEntityType.__navigationPropertiesMap[aSegments[i + 1].split("(")[0]];
+			if (!oNavigationProperty1) { // segment could be a structural property
+				continue;
+			}
+			sNavigationPropertyName = aSegments[i + 2].split("(")[0];
+			oNavigatedEntityType = this._getEntityTypeByNavPropertyObject(oNavigationProperty1);
+			oNavigationProperty2 = oNavigatedEntityType
+				&& oNavigatedEntityType.__navigationPropertiesMap[sNavigationPropertyName];
+			if (!oNavigationProperty2
+					|| oNavigationProperty1.relationship !== oNavigationProperty2.relationship) {
+				continue;
+			}
+			sKeyPredicate = aSegments[i + 2].slice(sNavigationPropertyName.length);
+			oAssociationEnd
+				= this._getEntityAssociationEnd(oNavigatedEntityType, sNavigationPropertyName);
+
+			if (oAssociationEnd.multiplicity !== "*" // 1 or 0..1
+					|| sKeyPredicate && aSegments[i].endsWith(sKeyPredicate)) {
+				aSegments.splice(i + 1, 2);
+				return this._getReducedPath(aSegments.join("/"));
+			}
+		}
+		return aSegments.join("/");
+	};
+
+	/**
+	 * Returns an array of property names for the keys of the entity referenced by the given
+	 * absolute data path, e.g. "/Categories(1)/Products(1)/Category".
+	 *
+	 * @param {string} sPath
+	 *   The absolute data path
+	 * @returns {string[]}
+	 *   The names of the key properties, or <code>undefined</code> if the given path does not
+	 *   reference an entity type or a collection of entity types
+	 * @private
+	 */
+	ODataMetadata.prototype.getKeyPropertyNamesByPath = function (sPath) {
+		var oAssociation,
+			oEntityType,
+			iIndex = sPath.lastIndexOf("/");
+
+		if (iIndex > 0) {
+			// check that last segment is a navigation property and set oEntityType accordingly
+			oEntityType = this._getEntityTypeByPath(sPath.slice(0, iIndex));
+			if (oEntityType) {
+				oAssociation = this._getEntityAssociationEnd(oEntityType,
+					sPath.slice(iIndex + 1).split("(")[0]);
+				oEntityType = oAssociation
+					? this._getEntityTypeByName(oAssociation.type)
+					: undefined; // sPath references a property or a complex type
+			}
+		} else { // EntitySet or FunctionImport
+			oEntityType = this._getEntityTypeByPath(sPath);
+		}
+		return oEntityType && oEntityType.key.propertyRef.map(function (oKey) {
+			return oKey.name;
+		});
+	};
+
+	/**
+	 * Gets the canonical path of the entity referenced by the given function import and its
+	 * parameters based on the function import's metadata.
+	 *
+	 * @param {Object<string,any>} mFunctionInfo
+	 *   The function import metadata as returned by {@link #_getFunctionImportMetadata}
+	 * @param {Object<string,string>} mFunctionParameters
+	 *   Maps the function parameter name to its correct formatted value; for example
+	 *   {SalesOrderID : "'42'"}
+	 * @returns {string}
+	 *   The canonical path of the entity referenced by the given function import and its
+	 *   parameters; empty string if the path cannot be determined
+	 * @private
+	 */
+	ODataMetadata.prototype._getCanonicalPathOfFunctionImport = function (mFunctionInfo,
+			mFunctionParameters) {
+		var sActionFor, mEntitySet, mEntityType, i, aKeys, sParameterName, aPropertyReferences,
+			aExtensions = mFunctionInfo.extensions,
+			sFunctionReturnType = mFunctionInfo.returnType,
+			sId = "",
+			bIsCollection = false;
+
+		if (aExtensions) {
+			for (i = 0; i < aExtensions.length; i += 1) {
+				if (aExtensions[i].name === "action-for") {
+					sActionFor = aExtensions[i].value;
+					break;
+				}
+			}
+		}
+		if (ODataMetadata._returnsCollection(mFunctionInfo)) {
+			bIsCollection = true;
+			sFunctionReturnType = sFunctionReturnType.slice(11/* "Collection(".length */, -1);
+		}
+		if (sActionFor) {
+			mEntityType = this._getEntityTypeByName(sActionFor);
+		} else if (mFunctionInfo.entitySet) {
+			mEntityType = this._getEntityTypeByPath(mFunctionInfo.entitySet);
+		} else if (sFunctionReturnType) {
+			mEntityType = this._getEntityTypeByName(sFunctionReturnType);
+		}
+		if (mEntityType) {
+			mEntitySet = this._getEntitySetByType(mEntityType);
+			if (mEntitySet && mEntityType.key && mEntityType.key.propertyRef) {
+				if (bIsCollection) {
+					return "/" + mEntitySet.name;
+				}
+				aPropertyReferences = mEntityType.key.propertyRef;
+				// Only if the function import is annotated with the SAP OData V2 annotation
+				// <code>sap:action-for</code>, the  names of the function import parameters and the
+				// names of the entity keys are the same. Otherwise it is not guaranteed that the
+				// function parameter name is equal to the corresponding key property of the
+				// resulting entity type.
+				// Parameter values need to be encoded, property names contain only the characters
+				// _A-Za-z0-9 which don't need to be encoded.
+				if (aPropertyReferences.length === 1) {
+					sParameterName = aPropertyReferences[0].name;
+					if (mFunctionParameters[sParameterName]) {
+						sId = encodeURIComponent(mFunctionParameters[sParameterName]);
+					}
+				} else {
+					aKeys = [];
+					for (i = 0; i < aPropertyReferences.length; i += 1) {
+						sParameterName = aPropertyReferences[i].name;
+						if (mFunctionParameters[sParameterName]) {
+							aKeys.push(sParameterName + "="
+								+ encodeURIComponent(mFunctionParameters[sParameterName]));
+						}
+					}
+					sId = aKeys.join(",");
+				}
+
+				return "/" + mEntitySet.name + "(" + sId + ")";
+			} else if (!mEntitySet) {
+				Log.error("Cannot determine path of the entity set for the function import '"
+					+ mFunctionInfo.name + "'", this, sClassName);
+			} else {
+				Log.error("Cannot determine keys of the entity type '" + mEntityType.entityType
+					+ "' for the function import '" + mFunctionInfo.name + "'", this, sClassName);
+			}
+		}
+
+		return "";
+	};
+
+	/**
+	 * Splits the given absolute path by the last navigation property. Computation stops at the
+	 * first non-navigation property or if an entity type for a path segment cannot be determined.
+	 *
+	 * @param {string} sPath
+	 *   Absolute path to be split
+	 * @return {object}
+	 *   An object containing following properties:
+	 *   <ul>
+	 *     <li>{string} pathBeforeLastNavigationProperty: The absolute path in front of the last
+	 *       navigation property; if the given path does not have any navigation property, the
+	 *       given path is returned</li>
+	 *     <li>{string} lastNavigationProperty: The last navigation property in the given path,
+	 *       starting with a <code>/</code> and including the key predicate if available; maybe
+	 *       <code>""</code> if the given path does not contain any navigation property</li>
+	 *     <li>{string} pathAfterLastNavigationProperty: The part after the last navigation
+	 *       property in the given path, starting with a <code>/</code> or <code>""</code> if there
+	 *       is no navigation property in the given path</li>
+	 *     <li>{boolean} addressable: Whether the last navigation property references an
+	 *       addressable entity set</li>
+	 *   </ul>
+	 * @private
+	 */
+	ODataMetadata.prototype._splitByLastNavigationProperty = function (sPath) {
+		var oEntityType, i, iKeyPredicateIndex, iLastNavigationPropertyIndex, sSegment,
+			aSegments = sPath.split("/"),
+			sFirstPathSegment = "/" + aSegments[1],
+			iSegmentsLength = aSegments.length;
+
+		// ensure that caches for type and navigation properties are filled
+		this._fillElementCaches();
+		oEntityType = this._getEntityTypeByPath(sFirstPathSegment);
+		for (i = 2; i < iSegmentsLength; i += 1) {
+			sSegment = aSegments[i];
+			iKeyPredicateIndex = sSegment.indexOf("(");
+			if (iKeyPredicateIndex !== -1) {
+				sSegment = sSegment.slice(0, iKeyPredicateIndex);
+			}
+			if (oEntityType && oEntityType.__navigationPropertiesMap[sSegment]) {
+				iLastNavigationPropertyIndex = i;
+				oEntityType = this._getEntityTypeByNavProperty(oEntityType, sSegment);
+			} else {
+				break;
+			}
+		}
+
+		if (iLastNavigationPropertyIndex === undefined) {
+			return {
+				pathBeforeLastNavigationProperty : sPath,
+				lastNavigationProperty : "",
+				addressable : true,
+				pathAfterLastNavigationProperty : ""
+			};
+		}
+
+		return {
+			pathBeforeLastNavigationProperty :
+				aSegments.slice(0, iLastNavigationPropertyIndex).join("/"),
+			lastNavigationProperty : "/" + aSegments[iLastNavigationPropertyIndex],
+			addressable : this._isAddressable(oEntityType),
+			pathAfterLastNavigationProperty : (iLastNavigationPropertyIndex + 1) >= iSegmentsLength
+				? ""
+				: ("/" + aSegments.slice(iLastNavigationPropertyIndex + 1).join("/"))
+		};
+	};
+
+	/**
+	 * Whether the entity set for the given entity type is addressable. The entity set for the type
+	 * is not addressable if the set is annotated with <code>sap:addressable="false"</code>;
+	 * otherwise it is addressable. The element cache has to be filled, {@link #_fillElementCaches}.
+	 *
+	 * @param {object} [oEntityType]
+	 *   The metadata object representing an entity type
+	 * @return {boolean}
+	 *   Whether the entity set of the given entity type is addressable
+	 *
+	 * @private
+	 */
+	ODataMetadata.prototype._isAddressable = function (oEntityType) {
+		var oEntitySet;
+
+		if (!oEntityType) { // should not happen; for robustness
+			return true;
+		}
+		oEntitySet = this._entitySetMap[oEntityType.entityType];
+		if (!oEntitySet || !oEntitySet.extensions) {
+			// for robustness: oEntitySet should never be falsy if the metadata are correct
+			return true;
+		}
+
+		return !oEntitySet.extensions.some(function (oExtension) {
+			return oExtension.name === "addressable"
+				&& oExtension.namespace === sSAPAnnotationNamespace
+				&& oExtension.value === "false";
+		});
+	};
+
+	/**
+	 * Returns the annotations for the given metadata string.
+	 *
+	 * @param {string} sMetadata The service metadata string in XML format as contained in the service's $metadata
+	 * @returns {object} The annotation object
+	 *
+	 * @private
+	 * @ui5-restricted sap.ui.core.util.MockServer
+	 */
+	ODataMetadata.getServiceAnnotations = function (sMetadata) {
+		const oMetadata = new ODataMetadata(undefined, {metadata : sMetadata});
+		const oXMLDoc = new DOMParser().parseFromString(sMetadata, 'application/xml');
+		return AnnotationParser.parse(oMetadata, oXMLDoc);
+	};
+
+	return ODataMetadata;
 });

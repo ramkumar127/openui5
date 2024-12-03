@@ -4,7 +4,8 @@
 	xmlns:mvc="sap.ui.core.mvc"
 	xmlns:u="sap.ui.unified"
 	xmlns:c="sap.ui.core"
-	xmlns:m="sap.m">
+	xmlns:m="sap.m"
+	height="100%">
 	<m:Page
 		showHeader="false"
 		enableScrolling="false"
@@ -14,18 +15,15 @@
 				id="table"
 				selectionMode="MultiToggle"
 				rows="{/ProductCollection}"
-				visibleRowCount="7"
 				ariaLabelledBy="title">
-				<title>
+				<extension>
 					<m:HBox>
 						<m:items>
 							<c:Icon src="sap-icon://cart" alt="Cart" size="1.25rem"/>
 							<m:Title text="Shopping Portal" titleStyle="H3" class="sapUiTinyMarginBeginEnd"/>
 						</m:items>
 					</m:HBox>
-				</title>
-				<toolbar>
-					<m:Toolbar>
+					<m:OverflowToolbar style="Clear">
 						<m:Title id="title" text="Products"/>
 						<m:ToolbarSpacer/>
 						<m:SearchField
@@ -33,9 +31,7 @@
 							value="{ui>/filterValue}"
 							search="handleTxtFilter"
 							width="15rem"/>
-					</m:Toolbar>
-				</toolbar>
-				<extension>
+					</m:OverflowToolbar>
 					<m:FacetFilter
 						id="facetFilter"
 						type="Simple"
@@ -47,7 +43,7 @@
 							<m:FacetFilterList
 								title="{type}"
 								key="{key}"
-								multiselect="true"
+								mode="MultiSelect"
 								listClose="handleListClose"
 								items="{values}" >
 								<m:items>
@@ -69,19 +65,19 @@
 					<Column width="11rem">
 						<m:Label text="Product Name" />
 						<template>
-							<m:Text text="{Name}"/>
+							<m:Text text="{Name}" wrapping="false" />
 						</template>
 					</Column>
 					<Column width="11rem">
 						<m:Label text="Category" />
 						<template>
-							<m:Text text="{Category}"/>
+							<m:Text text="{Category}" wrapping="false" />
 						</template>
 					</Column>
 					<Column width="12rem">
 						<m:Label text="Supplier" />
 						<template>
-							<m:Text text="{SupplierName}"/>
+							<m:Text text="{SupplierName}" wrapping="false" />
 						</template>
 					</Column>
 					<Column width="9rem">
@@ -89,7 +85,7 @@
 						<template>
 							<m:ObjectStatus text="{Status}" state="{
 								path: 'Available',
-								formatter: 'sap.ui.table.sample.TableExampleUtils.formatAvailableToObjectState'
+								formatter: '.formatAvailableToObjectState'
 							}"/>
 						</template>
 					</Column>
@@ -101,13 +97,7 @@
 					</Column>
 				</columns>
 				<footer>
-					<m:Toolbar>
-						<m:ToolbarSpacer/>
-						<m:Button
-							icon="sap-icon://hint"
-							tooltip="Show information"
-							press="showInfo"/>
-					</m:Toolbar>
+					<m:OverflowToolbar id="infobar"></m:OverflowToolbar>
 				</footer>
 			</Table>
 		</m:content>

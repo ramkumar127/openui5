@@ -1,16 +1,18 @@
 sap.ui.define([
-		'jquery.sap.global',
 		'sap/ui/core/mvc/Controller',
 		'sap/ui/model/Filter',
+		'sap/ui/model/FilterOperator',
 		'sap/ui/model/Sorter',
-		'sap/ui/model/json/JSONModel'
-	], function(jQuery, Controller, Filter, Sorter, JSONModel) {
+		'sap/ui/model/json/JSONModel',
+		'sap/m/MessageToast',
+		'sap/m/MenuItem'
+	], function(Controller, Filter, FilterOperator, Sorter, JSONModel, MessageToast, MenuItem) {
 	"use strict";
 
 	var OverflowToolbarController = Controller.extend("sap.m.sample.OverflowToolbarFooter.OverflowToolbar", {
 
 		onInit : function (evt) {
-			var oModel = new JSONModel(jQuery.sap.getModulePath("sap.ui.demo.mock", "/products.json"));
+			var oModel = new JSONModel(sap.ui.require.toUrl("sap/ui/demo/mock/products.json"));
 			this.getView().setModel(oModel);
 
 			this.bGrouped = false;
@@ -20,8 +22,8 @@ sap.ui.define([
 
 		onSliderMoved: function (oEvent) {
 			var iValue = oEvent.getParameter("value");
-			this.getView().byId("otbSubheader").setWidth(iValue + "%");
-			this.getView().byId("otbFooter").setWidth(iValue + "%");
+			this.byId("otbSubheader").setWidth(iValue + "%");
+			this.byId("otbFooter").setWidth(iValue + "%");
 		},
 
 		_fnGroup : function (oContext){
@@ -57,6 +59,14 @@ sap.ui.define([
 			this.fnApplyFiltersAndOrdering();
 		},
 
+		onTogglePress: function(oEvent) {
+			var oButton = oEvent.getSource(),
+				bPressedState = oButton.getPressed(),
+				sStateToDisplay = bPressedState ? "Pressed" : "Unpressed";
+
+			MessageToast.show(oButton.getId() + " " + sStateToDisplay);
+		},
+
 		fnApplyFiltersAndOrdering: function (oEvent){
 			var aFilters = [],
 				aSorters = [];
@@ -68,11 +78,34 @@ sap.ui.define([
 			}
 
 			if (this.sSearchQuery) {
-				var oFilter = new Filter("Name", sap.ui.model.FilterOperator.Contains, this.sSearchQuery);
+				var oFilter = new Filter("Name", FilterOperator.Contains, this.sSearchQuery);
 				aFilters.push(oFilter);
 			}
 
 			this.byId("idProductsTable").getBinding("items").filter(aFilters).sort(aSorters);
+		},
+
+		onDefaultActionAccept: function() {
+			MessageToast.show("Default action triggered");
+		},
+		onBeforeMenuOpen: function (evt) {
+			MessageToast.show("beforeMenuOpen is fired");
+		},
+		onPress: function (evt) {
+			MessageToast.show(evt.getSource().getId() + " Pressed");
+		},
+		onMenuAction: function(oEvent) {
+			var oItem = oEvent.getParameter("item"),
+				sItemPath = "";
+
+			while (oItem instanceof MenuItem) {
+				sItemPath = oItem.getText() + " > " + sItemPath;
+				oItem = oItem.getParent();
+			}
+
+			sItemPath = sItemPath.substring(0, sItemPath.lastIndexOf(" > "));
+
+			MessageToast.show("Action triggered on item: " + sItemPath);
 		}
 	});
 

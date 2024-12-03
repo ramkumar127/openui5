@@ -3,13 +3,47 @@
  */
 
 //Provides control sap.ui.unified.CalendarMonthInterval.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleData', 'sap/ui/core/delegate/ItemNavigation',
-               'sap/ui/model/type/Date', 'sap/ui/unified/calendar/CalendarUtils', 'sap/ui/core/date/UniversalDate', 'sap/ui/unified/library'],
-               function(jQuery, Control, LocaleData, ItemNavigation, Date1, CalendarUtils, UniversalDate, library) {
+sap.ui.define([
+	"sap/base/i18n/Formatting",
+	'sap/ui/core/Control',
+	"sap/ui/core/Element",
+	"sap/ui/core/Lib",
+	'sap/ui/core/LocaleData',
+	'sap/ui/core/delegate/ItemNavigation',
+	'sap/ui/unified/calendar/CalendarUtils',
+	'sap/ui/unified/calendar/CalendarDate',
+	'sap/ui/unified/library',
+	'sap/ui/core/format/DateFormat',
+	'sap/ui/core/Locale',
+	"./MonthsRowRenderer",
+	"sap/ui/dom/containsOrEquals",
+	"sap/ui/thirdparty/jquery",
+	"sap/ui/unified/DateRange",
+	"sap/ui/core/date/UI5Date",
+	'sap/ui/core/InvisibleText'
+], function(
+	Formatting,
+	Control,
+	Element,
+	Library,
+	LocaleData,
+	ItemNavigation,
+	CalendarUtils,
+	CalendarDate,
+	library,
+	DateFormat,
+	Locale,
+	MonthsRowRenderer,
+	containsOrEquals,
+	jQuery,
+	DateRange,
+	UI5Date,
+	InvisibleText
+) {
 	"use strict";
 
 	/*
-	 * <code>UniversalDate</code> objects are used inside the <code>MonthsRow</code>, whereas JavaScript dates are used in the API.
+	 * <code>CalendarDate</code> objects are used inside the <code>MonthsRow</code>, whereas UI5Date or JavaScript dates are used in the API.
 	 * This means that a conversion must be performed for the API functions.
 	 */
 
@@ -27,7 +61,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 	 * If used inside the CalendarMonthInterval the properties and aggregation are directly taken from the parent
 	 * (to not duplicate and synchronize DateRanges and so on...).
 	 *
-	 * The MontsRow works with JavaScript Date objects, but only the month and the year are used to display and interact.
+	 * The MontsRow works with UI5Date or JavaScript Date objects, but only the month and the year are used to display and interact.
 	 * As representation for a month, the 1st of the month will always be returned in the API.
 	 * @extends sap.ui.core.Control
 	 * @version ${version}
@@ -36,14 +70,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 	 * @public
 	 * @since 1.32.0
 	 * @alias sap.ui.unified.calendar.MonthsRow
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var MonthsRow = Control.extend("sap.ui.unified.calendar.MonthsRow", /** @lends sap.ui.unified.calendar.MonthsRow.prototype */ { metadata : {
 
 		library : "sap.ui.unified",
 		properties : {
 			/**
-			 * A date as JavaScript Date object. The month including this date is rendered and this date is focused initially (if no other focus is set).
+			 * A date as UI5Date or JavaScript Date object. The month including this date is rendered and this date is focused initially (if no other focus is set).
 			 * If the date property is not in the range <code>startDate</code> + <code>months</code> in the rendering phase,
 			 * it is set to the <code>startDate</code>.
 			 * So after setting the <code>startDate</code> the date should be set to be in the visible range.
@@ -51,7 +84,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 			date : {type : "object", group : "Data"},
 
 			/**
-			 * Start date, as JavaScript Date object, of the row. The month of this date is the first month of the displayed row.
+			 * Start date, as UI5Date or JavaScript Date object, of the row. The month of this date is the first month of the displayed row.
 			 */
 			startDate : {type : "object", group : "Data"},
 
@@ -75,7 +108,25 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 			/**
 			 * If set, a header with the years is shown to visualize what month belongs to what year.
 			 */
-			showHeader : {type : "boolean", group : "Appearance", defaultValue : false}
+			showHeader : {type : "boolean", group : "Appearance", defaultValue : false},
+
+			/**
+			 * If set, the calendar type is used for display.
+			 * If not set, the calendar type of the global configuration is used.
+			 * @private
+			 * @ui5-restricted sap.ui.unified.MonthsRow
+			 * @since 1.108.0
+			 */
+			primaryCalendarType : {type : "sap.ui.core.CalendarType", group : "Appearance"},
+
+			/**
+			 * If set, the days are also displayed in this calendar type
+			 * If not set, the dates are only displayed in the primary calendar type
+			 * @private
+			 * @ui5-restricted sap.ui.unified.MonthsRow
+			 * @since 1.109.0
+			 */
+			 secondaryCalendarType : {type : "sap.ui.core.CalendarType", group : "Appearance"}
 		},
 		aggregations : {
 
@@ -100,7 +151,16 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 			/**
 			 * Association to controls / IDs which label this control (see WAI-ARIA attribute aria-labelledby).
 			 */
-			ariaLabelledBy: { type: "sap.ui.core.Control", multiple: true, singularName: "ariaLabelledBy" }
+			ariaLabelledBy: { type: "sap.ui.core.Control", multiple: true, singularName: "ariaLabelledBy" },
+
+
+			/**
+			 * Association to the <code>CalendarLegend</code> explaining the colors of the <code>specialDates</code>.
+			 *
+			 * <b>Note</b> The legend does not have to be rendered but must exist, and all required types must be assigned.
+			 * @since 1.38.5
+			 */
+			legend: { type: "sap.ui.unified.CalendarLegend", multiple: false}
 		},
 		events : {
 
@@ -115,7 +175,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 			focus : {
 				parameters : {
 					/**
-					 * First date, as JavaScript Date object, of the month that is focused.
+					 * First date, as UI5Date or JavaScript Date object, of the month that is focused.
 					 */
 					date : {type : "object"},
 					/**
@@ -125,18 +185,47 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 				}
 			}
 		}
-	}});
+	}, renderer: MonthsRowRenderer});
 
 	MonthsRow.prototype.init = function(){
-
+		var sCalendarType = this._getPrimaryCalendarType();
 		//need day in pattern because in islamic calendar 2 Month can start in one gregorianic calendar
-		this._oFormatYyyymm = sap.ui.core.format.DateFormat.getInstance({pattern: "yyyyMMdd", calendarType: sap.ui.core.CalendarType.Gregorian});
-		this._oFormatLong = sap.ui.core.format.DateFormat.getInstance({pattern: "MMMM y"});
-
+		this._oFormatYyyymm = DateFormat.getInstance({pattern: "yyyyMMdd", calendarType: sCalendarType});
+		this._oFormatOnlyYearLong = DateFormat.getInstance({pattern: "yyyy", calendarType: sCalendarType});
+		this._oFormatLong = DateFormat.getInstance({pattern: "MMMM y", calendarType: sCalendarType});
 		this._mouseMoveProxy = jQuery.proxy(this._handleMouseMove, this);
+		this._rb = Library.getResourceBundleFor("sap.ui.unified");
+	};
 
-		this._rb = sap.ui.getCore().getLibraryResourceBundle("sap.ui.unified");
+	MonthsRow.prototype.setPrimaryCalendarType = function (sCalendarType){
+		this.setProperty("primaryCalendarType", sCalendarType);
+		//need day in pattern because in islamic calendar 2 Month can start in one gregorianic calendar
+		this._oFormatYyyymm = DateFormat.getInstance({pattern: "yyyyMMdd", calendarType: sCalendarType});
+		this._oFormatLong = DateFormat.getInstance({pattern: "MMMM y", calendarType: sCalendarType});
 
+		return this;
+	};
+
+	MonthsRow.prototype._getPrimaryCalendarType = function(){
+		return this.getProperty("primaryCalendarType") || Formatting.getCalendarType();
+	};
+
+	MonthsRow.prototype.setSecondaryCalendarType = function (sCalendarType){
+		this.setProperty("secondaryCalendarType", sCalendarType);
+		this._oFormatYearInSecType = DateFormat.getDateInstance({format: "y", calendarType: sCalendarType});
+		this._oFormatLongInSecType = DateFormat.getInstance({pattern: "MMMM y", calendarType: sCalendarType});
+
+		return this;
+	};
+
+	MonthsRow.prototype._getSecondaryCalendarType = function () {
+		var sSecondaryCalendarType = this.getSecondaryCalendarType();
+
+		if (sSecondaryCalendarType === this._getPrimaryCalendarType()) {
+			return undefined;
+		}
+
+		return sSecondaryCalendarType;
 	};
 
 	MonthsRow.prototype.exit = function(){
@@ -148,9 +237,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		}
 
 		if (this._sInvalidateMonths) {
-			jQuery.sap.clearDelayedCall(this._sInvalidateMonths);
+			clearTimeout(this._sInvalidateMonths);
 		}
 
+		if (this._invisibleDayHint) {
+			this._invisibleDayHint.destroy();
+			this._invisibleDayHint = null;
+		}
 	};
 
 	MonthsRow.prototype.onAfterRendering = function(){
@@ -164,7 +257,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 	MonthsRow.prototype.onsapfocusleave = function(oEvent){
 
-		if (!oEvent.relatedControlId || !jQuery.sap.containsOrEquals(this.getDomRef(), sap.ui.getCore().byId(oEvent.relatedControlId).getFocusDomRef())) {
+		if (!oEvent.relatedControlId || !containsOrEquals(this.getDomRef(), Element.getElementById(oEvent.relatedControlId).getFocusDomRef())) {
 			if (this._bMouseMove) {
 				_unbindMousemove.call(this, true);
 
@@ -178,23 +271,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 				// mouseup somewhere outside of control -> if focus left finish selection
 				this._bMousedownChange = false;
 				_fireSelect.call(this);
-			}
-		}
-
-	};
-
-	// overwrite invalidate to recognize changes on selectedDates
-	MonthsRow.prototype.invalidate = function(oOrigin) {
-
-		if (!this._bDateRangeChanged && (!oOrigin || !(oOrigin instanceof sap.ui.unified.DateRange))) {
-			Control.prototype.invalidate.apply(this, arguments);
-		} else if (this.getDomRef() && !this._sInvalidateMonths) {
-			// DateRange changed -> only rerender months
-			// do this only once if more DateRanges / Special days are changed
-			if (this._bInvalidateSync) { // set if calendar already invalidates in delayed call
-				_invalidateMonths.call(this);
-			} else {
-				this._sInvalidateMonths = jQuery.sap.delayedCall(0, this, _invalidateMonths);
 			}
 		}
 
@@ -233,50 +309,89 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 	};
 
+	/**
+	 * Sets a date for the months row.
+	 *
+	 * @param {Date|module:sap/ui/core/date/UI5Date} oDate a date instance
+	 * @returns {this} Reference to <code>this</code> for method chaining
+	 * @public
+	 */
 	MonthsRow.prototype.setDate = function(oDate){
+		if (oDate) {
+			var oCalDate = CalendarDate.fromLocalJSDate(oDate, this.getProperty("primaryCalendarType"));
+			this._oDate = oCalDate;
+			_changeDate.call(this, oCalDate, false);
+		}
 
-		_changeDate.call(this, oDate, false);
-
-		return this;
-
-	};
-
-	MonthsRow.prototype._setDate = function(oDate){
-
-		var oLocaleDate = CalendarUtils._createLocalDate(oDate);
-		this.setProperty("date", oLocaleDate, true);
-		this._oUTCDate = oDate;
+		return this.setProperty("date", oDate);
 
 	};
 
+	/**
+	 * Calculates the first and last displayed date about a given month.
+	 * @param {integer} iCurrentMonth is the month on which the date calculations are based.
+	 * @param {integer} iCurrentYear is the year on which the date calculations are based.
+	 * @returns {object} object contains two values - start and end date (JSDates in secondary calendat type).
+	 */
+	MonthsRow.prototype._getDisplayedSecondaryDates = function (iCurrentMonth, iCurrentYear){
+		var sSecondaryCalendarType = this._getSecondaryCalendarType(),
+		oDate,
+		oFirstDate,
+		oLastDate;
+
+		if (this._oDate) {
+			oDate = new CalendarDate(this._oDate);
+		} else {
+			oDate = new CalendarDate(CalendarDate.fromLocalJSDate(UI5Date.getInstance()), this._getPrimaryCalendarType());
+		}
+
+		oDate.setYear(iCurrentYear);
+		oDate.setMonth(iCurrentMonth);
+		oDate.setDate(1);
+
+		oFirstDate = new CalendarDate(oDate, sSecondaryCalendarType);
+		oDate.setDate(CalendarUtils._daysInMonth(oDate));
+		oLastDate = new CalendarDate(oDate, sSecondaryCalendarType);
+
+		return {start: oFirstDate, end: oLastDate};
+	};
+
+	/**
+	* @returns {sap.ui.unified.calendar.CalendarDate} the last set calendar date or the current date
+	* @private
+	*/
 	MonthsRow.prototype._getDate = function(){
 
-		if (!this._oUTCDate) {
-			this._oUTCDate = CalendarUtils._createUniversalUTCDate(new Date());
+		if (!this._oDate) {
+			this._oDate  = CalendarDate.fromLocalJSDate(UI5Date.getInstance(), this.getProperty("primaryCalendarType"));
 		}
 
-		return this._oUTCDate;
+		return this._oDate;
 
 	};
 
+
+	/**
+	 * Sets start date of the month row.
+	 *
+	 * @param {Date|module:sap/ui/core/date/UI5Date} oStartDate A date instance
+	 * @returns {this} Reference to <code>this</code> in order to allow method chaining
+	 * @public
+	 */
 	MonthsRow.prototype.setStartDate = function(oStartDate){
+		CalendarUtils._checkJSDateObject(oStartDate);
+		var oCalDate, iYear, oOldDate;
 
-		if (!(oStartDate instanceof Date)) {
-			throw new Error("Date must be a JavaScript date object; " + this);
-		}
+		iYear = oStartDate.getFullYear();
+		CalendarUtils._checkYearInValidRange(iYear);
 
-		var iYear = oStartDate.getFullYear();
-		if (iYear < 1 || iYear > 9999) {
-			throw new Error("Date must not be in valid range (between 0001-01-01 and 9999-12-31); " + this);
-		}
-
-		var oUTCDate = CalendarUtils._createUniversalUTCDate(oStartDate);
+		oCalDate = CalendarDate.fromLocalJSDate(oStartDate, this.getProperty("primaryCalendarType"));
 		this.setProperty("startDate", oStartDate, true);
-		this._oUTCStartDate = oUTCDate;
-		this._oUTCStartDate.setUTCDate(1); // always use begin of month as start date
+		this._oStartDate = oCalDate;
+		this._oStartDate.setDate(1); // always use begin of month as start date
 
 		if (this.getDomRef()) {
-			var oOldDate = CalendarUtils._createLocalDate(this._getDate());
+			oOldDate = this._getDate().toLocalJSDate();
 			this._bNoRangeCheck = true;
 			this.displayDate(oStartDate); // don't set focus
 			this._bNoRangeCheck = false;
@@ -287,28 +402,29 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		return this;
 
 	};
-
+	/**
+	* @returns {sap.ui.unified.calendar.CalendarDate} the last start calendar date or 1st of the current month
+	*/
 	MonthsRow.prototype._getStartDate = function(){
 
-		if (!this._oUTCStartDate) {
-			this._oUTCStartDate = CalendarUtils._createUniversalUTCDate(new Date());
-			this._oUTCStartDate.setUTCDate(1); // always use begin of month as start date
+		if (!this._oStartDate) {
+			this._oStartDate = CalendarDate.fromLocalJSDate(UI5Date.getInstance(), this.getProperty("primaryCalendarType"));
+			this._oStartDate.setDate(1); // always use begin of month as start date
 		}
 
-		return this._oUTCStartDate;
+		return this._oStartDate;
 	};
 
 	/**
 	 * Displays the month of a given date without setting the focus
 	 *
-	 * @param {object} oDate JavaScript Date object for focused date.
-	 * @returns {sap.ui.unified.calendar.MonthsRow} <code>this</code> to allow method chaining
+	 * @param {Date|module:sap/ui/core/date/UI5Date} oDate date instance for focused date.
+	 * @returns {this} Reference to <code>this</code> for method chaining
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	MonthsRow.prototype.displayDate = function(oDate){
 
-		_changeDate.call(this, oDate, true);
+		_changeDate.call(this, CalendarDate.fromLocalJSDate(oDate, this.getProperty("primaryCalendarType")), true);
 
 		return this;
 
@@ -325,7 +441,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		if (oParent && oParent.getLocale) {
 			return oParent.getLocale();
 		} else if (!this._sLocale) {
-			this._sLocale = sap.ui.getCore().getConfiguration().getFormatSettings().getFormatLocale().toString();
+			this._sLocale = new Locale(Formatting.getLanguageTag()).toString();
 		}
 
 		return this._sLocale;
@@ -345,7 +461,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 			return oParent._getLocaleData();
 		} else if (!this._oLocaleData) {
 			var sLocale = this._getLocale();
-			var oLocale = new sap.ui.core.Locale(sLocale);
+			var oLocale = new Locale(sLocale);
 			this._oLocaleData = LocaleData.getInstance(oLocale);
 		}
 
@@ -361,8 +477,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		var sLocale = this._getLocale();
 
 		if (this._oFormatLong.oLocale.toString() != sLocale) {
-			var oLocale = new sap.ui.core.Locale(sLocale);
-			this._oFormatLong = sap.ui.core.format.DateFormat.getInstance({style: "long"} , oLocale);
+			var oLocale = new Locale(sLocale);
+			this._oFormatLong = DateFormat.getInstance({style: "long", calendarType: this.getProperty("primaryCalendarType")} , oLocale);
 		}
 
 		return this._oFormatLong;
@@ -465,39 +581,102 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 	};
 
+	/**
+	 * Sets the parent control instance which contains the legend
+	 * to the MonthsRow control instance
+	 * @ui5-restricted sap.m.PlanningCalendar
+	 * @private
+	 * @param {*} oControl containing the legend
+	 */
+	MonthsRow.prototype._setLegendControlOrigin = function (oControl) {
+		this._oLegendControlOrigin = oControl;
+	};
+
 	/*
+	 * if used inside CalendarMonthInterval get the value from the parent
+	 * To don't have sync issues...
+	 */
+	MonthsRow.prototype.getLegend = function(){
+
+		var oParent = this.getParent();
+
+		if (this._oLegendControlOrigin) {
+			return this._oLegendControlOrigin.getLegend();
+		}
+
+		if (oParent && oParent.getLegend) {
+			return oParent.getLegend();
+		} else {
+			return this.getAssociation("legend");
+		}
+
+	};
+
+	MonthsRow.prototype._setAriaRole = function(sRole){
+		this._ariaRole = sRole;
+
+		return this;
+	};
+
+	MonthsRow.prototype._getAriaRole = function(){
+
+		return this._ariaRole ? this._ariaRole : "gridcell";
+	};
+
+	MonthsRow.prototype._getMonthDescription = function() {
+		return this._fnInvisibleHintFactory().getId();
+	};
+
+	MonthsRow.prototype._fnInvisibleHintFactory = function() {
+		if (!this._invisibleDayHint) {
+			this._invisibleDayHint = new InvisibleText({
+				text: Library.getResourceBundleFor("sap.m").getText("SLIDETILE_ACTIVATE")
+			}).toStatic();
+		}
+
+		return this._invisibleDayHint;
+	};
+
+	/**
 	 * Checks if a date is selected and what kind of selected
-	 * @return {int} iSelected 0: not selected; 1: single day selected, 2: interval start, 3: interval end, 4: interval between, 5: one day interval (start = end)
+	 * @param {sap.ui.unified.calendar.CalendarDate} oDate A CalendarDate
+	 * @returns {int} iSelected 0: not selected; 1: single day selected, 2: interval start, 3: interval end, 4: interval between, 5: one day interval (start = end)
 	 * @private
 	 */
 	MonthsRow.prototype._checkDateSelected = function(oDate){
+		var oRange,
+			oStartDate, oEndDate,
+			oTimeStamp,
+			oStartTimeStamp = 0, oEndTimeStamp = 0,
+			iSelected = 0,
+			sCalendarType = this.getProperty("primaryCalendarType"),
+			i,
+			aSelectedDates,
+			oMyDate;
 
-		if (!(oDate instanceof UniversalDate)) {
-			throw new Error("Date must be a UniversalDate object " + this);
-		}
+		CalendarUtils._checkCalendarDate(oDate);
 
-		var iSelected = 0;
-		var aSelectedDates = this.getSelectedDates();
-		var oMyDate = new UniversalDate(oDate.getTime());
-		oMyDate.setUTCDate(1); //always use begin of month for test
-		var oTimeStamp = oMyDate.getTime();
+		aSelectedDates = this.getSelectedDates();
+		oMyDate = new CalendarDate(oDate);
+		oMyDate.setDate(1); //always use begin of month for test
+		oTimeStamp = oMyDate.toUTCJSDate().getTime();
 
-		for ( var i = 0; i < aSelectedDates.length; i++) {
+		for (i = 0; i < aSelectedDates.length; i++) {
 			// initalize the time part of the start and end time
-			var oRange = aSelectedDates[i];
-			var oStartDate = oRange.getStartDate();
-			var oStartTimeStamp = 0;
+			oRange = aSelectedDates[i];
+			oStartDate = oRange.getStartDate();
+			oStartTimeStamp = 0;
 			if (oStartDate) {
-				oStartDate = CalendarUtils._createUniversalUTCDate(oStartDate);
-				oStartDate.setUTCDate(1); // begin of month
-				oStartTimeStamp = oStartDate.getTime();
+				oStartDate = CalendarDate.fromLocalJSDate(oStartDate, sCalendarType);
+				oStartDate.setDate(1); // begin of month
+				oStartTimeStamp = oStartDate.toUTCJSDate().getTime();
 			}
-			var oEndDate = oRange.getEndDate();
-			var oEndTimeStamp = 0;
+			oEndDate = oRange.getEndDate();
+			oEndTimeStamp = 0;
 			if (oEndDate) {
-				oEndDate = CalendarUtils._createUniversalUTCDate(oEndDate);
-				oEndDate.setUTCDate(1); // begin of month
-				oEndTimeStamp = oEndDate.getTime();
+				oEndDate = CalendarDate.fromLocalJSDate(oEndDate, sCalendarType);
+				oEndDate.setDate(1); // begin of month
+				oEndTimeStamp = oEndDate.toUTCJSDate().getTime();
 			}
 
 			if (oTimeStamp == oStartTimeStamp && !oEndDate ) {
@@ -528,42 +707,43 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 	};
 
-	/*
-	 * gets the type of a single date checking the specialDates aggregation
+	/**
+	 * Gets the type of a single date checking the specialDates aggregation
 	 * the first hit is used
-	 * @return {object} date type and tooltip defined in CalendarDayType
+	 * @param {object} oDate A date object.
+	 * @returns {sap.ui.unified.calendar.CalendarDate} date type and tooltip defined in CalendarDayType
 	 * @private
 	 */
 	MonthsRow.prototype._getDateType = function(oDate){
+		CalendarUtils._checkCalendarDate(oDate);
 
-		if (!(oDate instanceof UniversalDate)) {
-			throw new Error("Date must be a UniversalDate object " + this);
-		}
+		var oType, oRange, i,
+			oStartDate, oStartTimeStamp = 0,
+			oEndDate, oEndTimeStamp = 0,
+			oTimeStamp,
+			aSpecialDates = this.getSpecialDates(),
+			oMyDate = new CalendarDate(oDate),
+			sCalendarType = this.getProperty("primaryCalendarType");
 
-		var oType;
-		var aSpecialDates = this.getSpecialDates();
-		var oMyDate = new UniversalDate(oDate.getTime());
-		oMyDate.setUTCDate(1); //always use begin of month for test
-		var oTimeStamp = oMyDate.getTime();
+		oMyDate.setDate(1); //always use begin of month for test
+		oTimeStamp = oMyDate.toUTCJSDate().getTime();
 
-		for ( var i = 0; i < aSpecialDates.length; i++) {
+		for (i = 0; i < aSpecialDates.length; i++) {
 			// initialize the time part of the start and end time
-			var oRange = aSpecialDates[i];
-			var oStartDate = oRange.getStartDate();
-			var oStartTimeStamp = 0;
+			oRange = aSpecialDates[i];
+			oStartDate = oRange.getStartDate();
+			oStartTimeStamp = 0;
 			if (oStartDate) {
-				oStartDate = CalendarUtils._createUniversalUTCDate(oStartDate);
-				oStartDate.setUTCDate(1); // begin of month
-				oStartTimeStamp = oStartDate.getTime();
+				oStartDate = CalendarDate.fromLocalJSDate(oStartDate, sCalendarType);
+				oStartDate.setDate(1); // begin of month
+				oStartTimeStamp = oStartDate.toUTCJSDate().getTime();
 			}
-			var oEndDate = oRange.getEndDate();
-			var oEndTimeStamp = 0;
+			oEndDate = oRange.getEndDate();
+			oEndTimeStamp = 0;
 			if (oEndDate) {
-				oEndDate = CalendarUtils._createUniversalUTCDate(oEndDate);
-				oEndDate.setUTCDate(1); // begin of month
-				oEndDate.setUTCMonth(oEndDate.getUTCMonth() + 1); // next month
-				oEndDate.setUTCDate(0); // end of needed Month
-				oEndTimeStamp = oEndDate.getTime();
+				oEndDate = CalendarDate.fromLocalJSDate(oEndDate, sCalendarType);
+				oEndDate.setDate(CalendarUtils._daysInMonth(oEndDate));// end of the Month
+				oEndTimeStamp = oEndDate.toUTCJSDate().getTime();
 			}
 
 			if ((oTimeStamp == oStartTimeStamp && !oEndDate) || (oTimeStamp >= oStartTimeStamp && oTimeStamp <= oEndTimeStamp)) {
@@ -573,6 +753,29 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		}
 
 		return oType;
+
+	};
+
+	/**
+	 * Checks if a Month is enabled
+	 * the min. and max. date of the CalendarMonthInterval are used
+	 * @param {sap.ui.unified.calendar.CalendarDate} oDate A CalendarDate
+	 * @returns {boolean} Flag if enabled
+	 * @private
+	 */
+	MonthsRow.prototype._checkMonthEnabled = function(oDate){
+
+		CalendarUtils._checkCalendarDate(oDate);
+
+		var oParent = this.getParent();
+
+		if (oParent && oParent._oMinDate && oParent._oMaxDate) {
+			if (CalendarUtils._isOutside(oDate, oParent._oMinDate, oParent._oMaxDate)) {
+				return false;
+			}
+		}
+
+		return true;
 
 	};
 
@@ -591,11 +794,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 		if ($Target.hasClass("sapUiCalItem")) {
 			var oOldFocusedDate = this._getDate();
-			var oFocusedDate = new UniversalDate(this._oFormatYyyymm.parse($Target.attr("data-sap-month"), true).getTime());
-			oFocusedDate.setUTCDate(1);
+			var oFocusedDate = CalendarDate.fromLocalJSDate(this._oFormatYyyymm.parse($Target.attr("data-sap-month"), this.getProperty("primaryCalendarType")));
+			oFocusedDate.setDate(1);
 
-			if (oFocusedDate.getTime() != oOldFocusedDate.getTime()) {
-				this._setDate(oFocusedDate);
+			if (!oFocusedDate.isSame(oOldFocusedDate)) {
+				this.setDate(oFocusedDate.toLocalJSDate());
 				_selectMonth.call(this, oFocusedDate, true);
 				this._bMoveChange = true;
 			}
@@ -614,8 +817,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 			for ( var i = 0; i < aDomRefs.length; i++) {
 				var $DomRef = jQuery(aDomRefs[i]);
-				if ($DomRef.attr("data-sap-month") == this._oFormatYyyymm.format(oFocusedDate.getJSDate(), true)) {
-					$DomRef.focus();
+				if ($DomRef.attr("data-sap-month") == this._oFormatYyyymm.format(oFocusedDate.toUTCJSDate(), true)) {
+					$DomRef.trigger("focus");
 					break;
 				}
 			}
@@ -629,8 +832,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 				}
 
 				if ($Target.hasClass("sapUiCalItem")) {
-					oFocusedDate = new UniversalDate(this._oFormatYyyymm.parse($Target.attr("data-sap-month"), true).getTime());
-					oFocusedDate.setUTCDate(1);
+					oFocusedDate = CalendarDate.fromLocalJSDate(this._oFormatYyyymm.parse($Target.attr("data-sap-month")));
+					oFocusedDate.setDate(1);
 				}
 
 				_selectMonth.call(this, oFocusedDate);
@@ -650,8 +853,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 	MonthsRow.prototype.onsapselect = function(oEvent){
 
 		// focused item must be selected
-		_selectMonth.call(this, this._getDate());
-		_fireSelect.call(this);
+		var bSelected = _selectMonth.call(this, this._getDate());
+		if (bSelected) {
+			_fireSelect.call(this);
+		}
 
 		//to prevent bubbling into input field if in DatePicker
 		oEvent.stopPropagation();
@@ -669,21 +874,21 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 		// not handled by ItemNavigation
 		// go one or 10 years back
-		var oFocusedDate = new UniversalDate(this._getDate().getTime());
-		var iYear = oFocusedDate.getUTCFullYear();
+		var oFocusedDate = new CalendarDate(this._getDate());
+		var iYear = oFocusedDate.getYear();
 
 		if (oEvent.metaKey || oEvent.ctrlKey) {
-			oFocusedDate.setUTCFullYear(iYear - 10);
+			oFocusedDate.setYear(iYear - 10);
 		} else {
 			var iMonths = this.getMonths();
 			if (iMonths <= 12) {
-				oFocusedDate.setUTCFullYear(iYear - 1);
+				oFocusedDate.setYear(iYear - 1);
 			} else {
-				oFocusedDate.setUTCMonths(oFocusedDate.getUTCMonth() - iMonths);
+				oFocusedDate.setMonth(oFocusedDate.getMonth() - iMonths);
 			}
 		}
 
-		this.fireFocus({date: CalendarUtils._createLocalDate(oFocusedDate), notVisible: true});
+		this.fireFocus({date: oFocusedDate.toLocalJSDate(), notVisible: true});
 
 		// cancel the event otherwise the browser select some text
 		oEvent.preventDefault();
@@ -694,21 +899,21 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 		// not handled by ItemNavigation
 		// go one or 10 years forward
-		var oFocusedDate = new UniversalDate(this._getDate().getTime());
-		var iYear = oFocusedDate.getUTCFullYear();
+		var oFocusedDate = new CalendarDate(this._getDate());
+		var iYear = oFocusedDate.getYear();
 
 		if (oEvent.metaKey || oEvent.ctrlKey) {
-			oFocusedDate.setUTCFullYear(iYear + 10);
+			oFocusedDate.setYear(iYear + 10);
 		} else {
 			var iMonths = this.getMonths();
 			if (iMonths <= 12) {
-				oFocusedDate.setUTCFullYear(iYear + 1);
+				oFocusedDate.setYear(iYear + 1);
 			} else {
-				oFocusedDate.setUTCMonths(oFocusedDate.getUTCMonth() + iMonths);
+				oFocusedDate.setMonth(oFocusedDate.getMonth() + iMonths);
 			}
 		}
 
-		this.fireFocus({date: CalendarUtils._createLocalDate(oFocusedDate), notVisible: true});
+		this.fireFocus({date: oFocusedDate.toLocalJSDate(), notVisible: true});
 
 		// cancel the event otherwise the browser select some text
 		oEvent.preventDefault();
@@ -725,9 +930,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		this._bNamesLengthChecked = undefined;
 		this._bLongWeekDays = undefined;
 		var oLocaleData = this._getLocaleData();
-		var aMonthNamesWide = oLocaleData.getMonthsStandAlone("wide");
+		var aMonthNamesWide = oLocaleData.getMonthsStandAlone("wide", this.getProperty("primaryCalendarType"));
 		var aMonths = this.$("months").children();
-		var iMonth = this._getStartDate().getUTCMonth();
+		var iMonth = this._getStartDate().getMonth();
 		for (var i = 0; i < aMonths.length; i++) {
 			var $Month = jQuery(jQuery(aMonths[i]).children(".sapUiCalItemText"));
 			$Month.text(aMonthNamesWide[(i + iMonth) % 12]);
@@ -741,16 +946,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 	 * Checks if a date is focusable in the current rendered output.
 	 * This means that if it is not rendered, it is not focusable.
 	 *
-	 * @param {object} oDate JavaScript Date object for focused date.
+	 * @param {Date|module:sap/ui/core/date/UI5Date} oDateTime date instance for focused date.
 	 * @returns {boolean} flag if focusable
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	MonthsRow.prototype.checkDateFocusable = function(oDate){
+	MonthsRow.prototype.checkDateFocusable = function(oDateTime){
 
-		if (!(oDate instanceof Date)) {
-			throw new Error("Date must be a JavaScript date object; " + this);
-		}
+		CalendarUtils._checkJSDateObject(oDateTime);
 
 		if (this._bNoRangeCheck) {
 			// to force to render months if start date is changed
@@ -760,23 +962,31 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		var oStartDate = this._getStartDate();
 
 		// set end date to begin of first month outside row
-		var oEndDate = new UniversalDate(oStartDate.getTime());
-		oEndDate.setUTCDate(1);
-		oEndDate.setUTCMonth(oEndDate.getUTCMonth() + this.getMonths());
-		var oUTCDate = CalendarUtils._createUniversalUTCDate(oDate);
+		var oEndDate = new CalendarDate(oStartDate);
+		oEndDate.setDate(1);
+		oEndDate.setMonth(oEndDate.getMonth() + this.getMonths());
+		var oCalDate = CalendarDate.fromLocalJSDate(oDateTime, this.getProperty("primaryCalendarType"));
 
-		if (oUTCDate.getTime() >= oStartDate.getTime() && oUTCDate.getTime() < oEndDate.getTime()) {
-			return true;
-		}else {
-			return false;
-		}
+		return oCalDate.isSameOrAfter(oStartDate) && oCalDate.isBefore(oEndDate);
+	};
 
+	/**
+	 * Overrides the applyFocusInfo in order to focus the given html element.
+	 * Focus handler does not work with DOM elements, but with UI5 controls only. That's why we need to take care that
+	 * when focus is being restored back (e.g. after rerendering), we focus the needed DOM element (in this case month)
+	 *
+	 * @param {object} oInfo the focus info
+	 * @returns {sap.ui.unified.calendar.MonthRow} <code>this</code> for method chaining.
+	 */
+	MonthsRow.prototype.applyFocusInfo = function(oInfo){
+		this._oItemNavigation.focusItem(this._oItemNavigation.getFocusedIndex());
+		return this;
 	};
 
 	function _initItemNavigation(){
 
 		var oDate = this._getDate();
-		var sYyyymm = this._oFormatYyyymm.format(oDate.getJSDate(), true);
+		var sYyyymm = this._oFormatYyyymm.format(oDate.toUTCJSDate(), true);
 		var iIndex = 0;
 
 		var oRootDomRef = this.$("months").get(0);
@@ -822,17 +1032,17 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		}
 
 		var oOldDate = this._getDate();
-		var oFocusedDate = new UniversalDate(oOldDate.getTime());
+		var oFocusedDate = new CalendarDate(oOldDate);
 		var aDomRefs = this._oItemNavigation.getItemDomRefs();
 
 		// find out what day was focused
 		var $DomRef = jQuery(aDomRefs[iIndex]);
 
-		oFocusedDate = new UniversalDate(this._oFormatYyyymm.parse($DomRef.attr("data-sap-month"), true).getTime());
-		oFocusedDate.setUTCDate(1);
-		this._setDate(oFocusedDate);
+		oFocusedDate = CalendarDate.fromLocalJSDate(this._oFormatYyyymm.parse($DomRef.attr("data-sap-month")));
+		oFocusedDate.setDate(1);
+		this.setDate(oFocusedDate.toLocalJSDate());
 
-		this.fireFocus({date: CalendarUtils._createLocalDate(oFocusedDate), notVisible: false});
+		this.fireFocus({date: oFocusedDate.toLocalJSDate(), notVisible: false});
 
 		if (oEvent.type == "mousedown") {
 			// as no click event is fired in some cases, e.g. if DOM changed select the month on mousedown
@@ -863,42 +1073,49 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		var oEvent = oControlEvent.getParameter("event");
 		var iMonths = this.getMonths();
 		var oOldDate = this._getDate();
-		var oFocusedDate = new UniversalDate(oOldDate.getTime());
+		var oFocusedDate = new CalendarDate(oOldDate);
 
 		if (oEvent.type) {
 			switch (oEvent.type) {
 			case "sapnext":
 			case "sapnextmodifiers":
 				//go to next month
-				oFocusedDate.setUTCMonth(oFocusedDate.getUTCMonth() + 1);
+				oFocusedDate.setMonth(oFocusedDate.getMonth() + 1);
 				break;
 
 			case "sapprevious":
 			case "sappreviousmodifiers":
 				//go to previous month
-				oFocusedDate.setUTCMonth(oFocusedDate.getUTCMonth() - 1);
+				oFocusedDate.setMonth(oFocusedDate.getMonth() - 1);
 				break;
 
 			case "sappagedown":
 				// go getMonths() month forward
-				oFocusedDate.setUTCMonth(oFocusedDate.getUTCMonth() + iMonths);
+				oFocusedDate.setMonth(oFocusedDate.getMonth() + iMonths);
 				break;
 
 			case "sappageup":
 				// go getMonths() months backwards
-				oFocusedDate.setUTCMonth(oFocusedDate.getUTCMonth() - iMonths);
+				oFocusedDate.setMonth(oFocusedDate.getMonth() - iMonths);
 				break;
 
 			default:
 				break;
 			}
 
-			this.fireFocus({date: CalendarUtils._createLocalDate(oFocusedDate), notVisible: true});
+			this.fireFocus({date: oFocusedDate.toLocalJSDate(), notVisible: true});
 
 		}
 
 	}
 
+	/**
+	*
+	* @param {object} oEvent The fired event
+	* @param {sap.ui.unified.calendar.CalendarDate} oFocusedDate The clicked date
+	* @param {int} iIndex
+	* @private
+	*/
 	function _handleMousedown(oEvent, oFocusedDate, iIndex){
 
 		if (oEvent.button) {
@@ -906,14 +1123,16 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 			return;
 		}
 
-		_selectMonth.call(this, oFocusedDate);
-		this._bMousedownChange = true;
+		var bSelected = _selectMonth.call(this, oFocusedDate);
+		if (bSelected) {
+			this._bMousedownChange = true;
+		}
 
 		if (this._bMouseMove) {
 			// a mouseup must be happened outside of control -> just end move
 			_unbindMousemove.call(this, true);
 			this._bMoveChange = false;
-		}else if (this.getIntervalSelection() && this.$().is(":visible")) {
+		} else if (bSelected && this.getIntervalSelection() && this.$().is(":visible")) {
 			// if closed in select event, do not add mousemove handler
 			_bindMousemove.call(this, true);
 		}
@@ -923,44 +1142,47 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 	}
 
+	/**
+	 * @param {sap.ui.unified.calendar.CalendarDate} oDate The date to be changed
+	 * @param {boolean} bNoFocus Whether the date is focused
+	 */
 	function _changeDate(oDate, bNoFocus){
 
-		if (!(oDate instanceof Date)) {
-			throw new Error("Date must be a JavaScript date object; " + this);
-		}
+		CalendarUtils._checkCalendarDate(oDate);
 
-		var iYear = oDate.getFullYear();
-		if (iYear < 1 || iYear > 9999) {
-			throw new Error("Date must not be in valid range (between 0001-01-01 and 9999-12-31); " + this);
-		}
+		var iYear = oDate.getYear();
+		CalendarUtils._checkYearInValidRange(iYear);
 
 		var bFocusable = true; // if date not changed it is still focusable
-		if (!jQuery.sap.equal(this.getDate(), oDate)) {
-			var oUTCDate = CalendarUtils._createUniversalUTCDate(oDate);
-			oUTCDate.setUTCDate(1); // always use begin of month
-			bFocusable = this.checkDateFocusable(oDate);
+		if (!this.getDate() || !oDate.isSame(CalendarDate.fromLocalJSDate(this.getDate(), this.getProperty("primaryCalendarType")))) {
+			var oCalDate = new CalendarDate(oDate);
+			oCalDate.setDate(1); // always use begin of month
+			bFocusable = this.checkDateFocusable(oDate.toLocalJSDate());
 
 			if (!this._bNoRangeCheck && !bFocusable) {
 				throw new Error("Date must be in visible date range; " + this);
 			}
 
-			this.setProperty("date", oDate, true);
-			this._oUTCDate = oUTCDate;
+			this.setProperty("date", oDate.toLocalJSDate());
+			this._oDate  = oCalDate;
 		}
 
 		if (this.getDomRef()) {
 			if (bFocusable) {
-				_focusDate.call(this, this._oUTCDate, bNoFocus);
-			} else {
-				_renderRow.call(this, bNoFocus);
+				_focusDate.call(this, this._oDate , bNoFocus);
 			}
 		}
 
 	}
 
+	/**
+	 * @param {sap.ui.unified.calendar.CalendarDate} oDate the calendar date to focus
+	 * @param {boolean} bNoFocus if true, item navigator's focus won't be set, but just the index will so.
+	 * @private
+	 */
 	function _focusDate(oDate, bNoFocus){
 
-		var sYyyymm = this._oFormatYyyymm.format(oDate.getJSDate(), true);
+		var sYyyymm = this._oFormatYyyymm.format(oDate.toUTCJSDate(), true);
 		var aDomRefs = this._oItemNavigation.getItemDomRefs();
 		var $DomRefDay;
 		for ( var i = 0; i < aDomRefs.length; i++) {
@@ -979,52 +1201,22 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 	}
 
-	function _renderRow(bNoFocus){
 
-		var oDate = this._getStartDate();
-		var $Container = this.$("months");
-
-		if ($Container.length > 0) {
-			var oRm = sap.ui.getCore().createRenderManager();
-			this.getRenderer().renderMonths(oRm, this, oDate);
-			oRm.flush($Container[0]);
-			oRm.destroy();
-		}
-
-		_renderHeader.call(this);
-
-		_initItemNavigation.call(this);
-		if (!bNoFocus) {
-			this._oItemNavigation.focusItem(this._oItemNavigation.getFocusedIndex());
-		}
-
-	}
-
-	function _renderHeader(){
-
-		var oStartDate = this._getStartDate();
-
-		if (this._getShowHeader()) {
-			var $Container = this.$("Head");
-
-			if ($Container.length > 0) {
-				var oLocaleData = this._getLocaleData();
-				var oRm = sap.ui.getCore().createRenderManager();
-				this.getRenderer().renderHeaderLine(oRm, this, oLocaleData, oStartDate);
-				oRm.flush($Container[0]);
-				oRm.destroy();
-			}
-		}
-
-	}
-
+	/**
+	* @param {sap.ui.unified.calendar.CalendarDate} oDate The date to be set to the month and the year in the header
+	* @param {boolean} bMove Whether move event is fired
+	* @returns {boolean} Whether the month is selected
+	* @private
+	*/
 	function _selectMonth(oDate, bMove){
+
+		if (!this._checkMonthEnabled(oDate)) {
+			// date is disabled -> do not select it
+			return false;
+		}
 
 		var aSelectedDates = this.getSelectedDates();
 		var oDateRange;
-		var aDomRefs = this._oItemNavigation.getItemDomRefs();
-		var $DomRef;
-		var sYyyymm;
 		var i = 0;
 		var oParent = this.getParent();
 		var oAggOwner = this;
@@ -1042,39 +1234,35 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 				oDateRange = aSelectedDates[0];
 				oStartDate = oDateRange.getStartDate();
 				if (oStartDate) {
-					oStartDate = CalendarUtils._createUniversalUTCDate(oStartDate);
-					oStartDate.setUTCDate(1); // begin of month
+					oStartDate = CalendarDate.fromLocalJSDate(oStartDate, this.getProperty("primaryCalendarType"));
+					oStartDate.setDate(1); // begin of month
 				}
 			} else {
-				oDateRange = new sap.ui.unified.DateRange();
-				oAggOwner.addAggregation("selectedDates", oDateRange, true); // no re-rendering
+				oDateRange = new DateRange();
+				oAggOwner.addAggregation("selectedDates", oDateRange);
 			}
 
 			if (this.getIntervalSelection() && (!oDateRange.getEndDate() || bMove) && oStartDate) {
 				// single interval selection
 				var oEndDate;
-				if (oDate.getTime() < oStartDate.getTime()) {
+				if (oDate.isBefore(oStartDate)) {
 					oEndDate = oStartDate;
 					oStartDate = oDate;
 					if (!bMove) {
-						// in move mode do not set date. this bring broblems if on backward move the start date would be changed
-						oDateRange.setProperty("startDate", CalendarUtils._createLocalDate(new Date(oStartDate.getTime())), true); // no-rerendering
-						oDateRange.setProperty("endDate", CalendarUtils._createLocalDate(new Date(oEndDate.getTime())), true); // no-rerendering
+						// in move mode do not set date. this bring problems if on backward move the start date would be changed
+						oDateRange.setProperty("startDate", oStartDate.toLocalJSDate());
+						oDateRange.setProperty("endDate", oEndDate.toLocalJSDate());
 					}
-				} else if (oDate.getTime() >= oStartDate.getTime()) {
+				} else if (oDate.isSameOrAfter(oStartDate)) {
 					// single day ranges are allowed
 					oEndDate = oDate;
 					if (!bMove) {
-						oDateRange.setProperty("endDate", CalendarUtils._createLocalDate(new Date(oEndDate.getTime())), true); // no-rerendering
+						oDateRange.setProperty("endDate", oEndDate.toLocalJSDate());
 					}
 				}
-				_updateSelection.call(this, oStartDate, oEndDate);
 			} else {
-				// single day selection or start a new interval
-				_updateSelection.call(this, oDate);
-
-				oDateRange.setProperty("startDate", CalendarUtils._createLocalDate(new Date(oDate.getTime())), true); // no-rerendering
-				oDateRange.setProperty("endDate", undefined, true); // no-rerendering
+				oDateRange.setProperty("startDate", oDate.toLocalJSDate());
+				oDateRange.setProperty("endDate", undefined);
 			}
 		} else {
 			// multiple selection
@@ -1088,173 +1276,23 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 					for ( i = 0; i < aSelectedDates.length; i++) {
 						oStartDate = aSelectedDates[i].getStartDate();
 						if (oStartDate) {
-							oStartDate = CalendarUtils._createUniversalUTCDate(oStartDate);
-							oStartDate.setUTCDate(1); // begin of month
-							if (oDate.getTime() == oStartDate.getTime()) {
-								oAggOwner.removeAggregation("selectedDates", i, true); // no re-rendering
+							oStartDate = CalendarDate.fromLocalJSDate(oStartDate, this.getProperty("primaryCalendarType"));
+							oStartDate.setDate(1); // begin of month
+							if (oDate.isSame(oStartDate)) {
+								oAggOwner.removeAggregation("selectedDates", i);
 								break;
 							}
 						}
 					}
 				} else {
 					// not selected -> select
-					oDateRange = new sap.ui.unified.DateRange({startDate: CalendarUtils._createLocalDate(new Date(oDate.getTime()))});
-					oAggOwner.addAggregation("selectedDates", oDateRange, true); // no re-rendering
-				}
-				sYyyymm = this._oFormatYyyymm.format(oDate.getJSDate(), true);
-				for ( i = 0; i < aDomRefs.length; i++) {
-					$DomRef = jQuery(aDomRefs[i]);
-					if ($DomRef.attr("data-sap-month") == sYyyymm) {
-						if (iSelected > 0) {
-							$DomRef.removeClass("sapUiCalItemSel");
-							$DomRef.attr("aria-selected", "false");
-						} else {
-							$DomRef.addClass("sapUiCalItemSel");
-							$DomRef.attr("aria-selected", "true");
-						}
-					}
+					oDateRange = new DateRange({startDate: oDate.toLocalJSDate()});
+					oAggOwner.addAggregation("selectedDates", oDateRange);
 				}
 			}
 		}
 
-	}
-
-	function _updateSelection(oStartDate, oEndDate){
-
-		var aDomRefs = this._oItemNavigation.getItemDomRefs();
-		var $DomRef;
-		var i = 0;
-		var bStart = false;
-		var bEnd = false;
-
-		if (!oEndDate) {
-			// start of interval or single date
-			var sYyyymm = this._oFormatYyyymm.format(oStartDate.getJSDate(), true);
-			for ( i = 0; i < aDomRefs.length; i++) {
-				$DomRef = jQuery(aDomRefs[i]);
-				bStart = false;
-				bEnd = false;
-				if ($DomRef.attr("data-sap-month") == sYyyymm) {
-					$DomRef.addClass("sapUiCalItemSel");
-					$DomRef.attr("aria-selected", "true");
-					bStart = true;
-				} else if ($DomRef.hasClass("sapUiCalItemSel")) {
-					$DomRef.removeClass("sapUiCalItemSel");
-					$DomRef.attr("aria-selected", "false");
-				}
-				if ($DomRef.hasClass("sapUiCalItemSelStart")) {
-					$DomRef.removeClass("sapUiCalItemSelStart");
-				} else if ($DomRef.hasClass("sapUiCalItemSelBetween")) {
-					$DomRef.removeClass("sapUiCalItemSelBetween");
-				} else if ($DomRef.hasClass("sapUiCalItemSelEnd")) {
-					$DomRef.removeClass("sapUiCalItemSelEnd");
-				}
-				_updateARIADesrcibedby.call(this, $DomRef, bStart, bEnd);
-			}
-		} else {
-			var oDay;
-			for ( i = 0; i < aDomRefs.length; i++) {
-				$DomRef = jQuery(aDomRefs[i]);
-				bStart = false;
-				bEnd = false;
-				oDay = new UniversalDate(this._oFormatYyyymm.parse($DomRef.attr("data-sap-month"), true).getTime());
-				oDay.setUTCDate(1);
-				if (oDay.getTime() == oStartDate.getTime()) {
-					$DomRef.addClass("sapUiCalItemSelStart");
-					bStart = true;
-					$DomRef.addClass("sapUiCalItemSel");
-					$DomRef.attr("aria-selected", "true");
-					if (oEndDate && oDay.getTime() == oEndDate.getTime()) {
-						// start day and end day are the same
-						$DomRef.addClass("sapUiCalItemSelEnd");
-						bEnd = true;
-					}
-					$DomRef.removeClass("sapUiCalItemSelBetween");
-				} else if (oEndDate && oDay.getTime() > oStartDate.getTime() && oDay.getTime() < oEndDate.getTime()) {
-					$DomRef.addClass("sapUiCalItemSel");
-					$DomRef.attr("aria-selected", "true");
-					$DomRef.addClass("sapUiCalItemSelBetween");
-					$DomRef.removeClass("sapUiCalItemSelStart");
-					$DomRef.removeClass("sapUiCalItemSelEnd");
-				} else if (oEndDate && oDay.getTime() == oEndDate.getTime()) {
-					$DomRef.addClass("sapUiCalItemSelEnd");
-					bEnd = true;
-					$DomRef.addClass("sapUiCalItemSel");
-					$DomRef.attr("aria-selected", "true");
-					$DomRef.removeClass("sapUiCalItemSelStart");
-					$DomRef.removeClass("sapUiCalItemSelBetween");
-				} else {
-					if ($DomRef.hasClass("sapUiCalItemSel")) {
-						$DomRef.removeClass("sapUiCalItemSel");
-						$DomRef.attr("aria-selected", "false");
-					}
-					if ($DomRef.hasClass("sapUiCalItemSelStart")) {
-						$DomRef.removeClass("sapUiCalItemSelStart");
-					} else if ($DomRef.hasClass("sapUiCalItemSelBetween")) {
-						$DomRef.removeClass("sapUiCalItemSelBetween");
-					} else if ($DomRef.hasClass("sapUiCalItemSelEnd")) {
-						$DomRef.removeClass("sapUiCalItemSelEnd");
-					}
-				}
-				_updateARIADesrcibedby.call(this, $DomRef, bStart, bEnd);
-			}
-		}
-
-	}
-
-	function _updateARIADesrcibedby($DomRef, bStart, bEnd){
-
-		if (!this.getIntervalSelection()) {
-			return;
-		}
-
-		var sDescribedBy = "";
-		var aDescribedBy = [];
-		var sId = this.getId();
-		var bChanged = false;
-
-		sDescribedBy = $DomRef.attr("aria-describedby");
-		if (sDescribedBy) {
-			aDescribedBy = sDescribedBy.split(" ");
-		}
-
-		var iStartIndex = -1;
-		var iEndIndex = -1;
-		for (var i = 0; i < aDescribedBy.length; i++) {
-			var sDescrId = aDescribedBy[i];
-			if (sDescrId == (sId + "-Start")) {
-				iStartIndex = i;
-			}
-			if (sDescrId == (sId + "-End")) {
-				iEndIndex = i;
-			}
-		}
-
-		if (iStartIndex >= 0 && !bStart) {
-			aDescribedBy.splice(iStartIndex, 1);
-			bChanged = true;
-			if (iEndIndex > iStartIndex) {
-				iEndIndex--;
-			}
-		}
-		if (iEndIndex >= 0 && !bEnd) {
-			aDescribedBy.splice(iEndIndex, 1);
-			bChanged = true;
-		}
-
-		if (iStartIndex < 0 && bStart) {
-			aDescribedBy.push(sId + "-Start");
-			bChanged = true;
-		}
-		if (iEndIndex < 0 && bEnd) {
-			aDescribedBy.push(sId + "-End");
-			bChanged = true;
-		}
-
-		if (bChanged) {
-			sDescribedBy = aDescribedBy.join(" ");
-			$DomRef.attr("aria-describedby", sDescribedBy);
-		}
+		return true;
 
 	}
 
@@ -1280,7 +1318,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 			var iBlocks = Math.ceil(12 / iMonths);
 			var iMonth = 0;
 			var oLocaleData = this._getLocaleData();
-			var aMonthNamesWide = oLocaleData.getMonthsStandAlone("wide");
+			var aMonthNamesWide = oLocaleData.getMonthsStandAlone("wide", this.getProperty("primaryCalendarType"));
 			var $Month;
 
 			for (var b = 0; b < iBlocks; b++) {
@@ -1310,7 +1348,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 
 			if (iMonths < 12) {
 				// restore rendered block
-				iMonth = this._getStartDate().getUTCMonth();
+				iMonth = this._getStartDate().getMonth();
 				for (i = 0; i < aMonths.length; i++) {
 					$Month = jQuery(jQuery(aMonths[i]).children(".sapUiCalItemText"));
 					$Month.text(aMonthNamesWide[(i + iMonth) % 12]);
@@ -1320,8 +1358,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 			if (bTooLong) {
 				this._bLongMonth = false;
 				// change month name on button but not change month picker, because it is hided again
-				var aMonthNames = oLocaleData.getMonthsStandAlone("abbreviated");
-				iMonth = this._getStartDate().getUTCMonth();
+				var aMonthNames = oLocaleData.getMonthsStandAlone("abbreviated", this.getProperty("primaryCalendarType"));
+				iMonth = this._getStartDate().getMonth();
 				for (i = 0; i < aMonths.length; i++) {
 					$Month = jQuery(jQuery(aMonths[i]).children(".sapUiCalItemText"));
 					$Month.text(aMonthNames[(i + iMonth) % 12]);
@@ -1334,30 +1372,20 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', 'sap/ui/core/LocaleDa
 		}
 	}
 
-	function _invalidateMonths(){
-
-		this._sInvalidateMonths = undefined;
-
-		_renderRow.call(this, this._bNoFocus);
-		this._bDateRangeChanged = undefined;
-		this._bNoFocus = undefined; // set in Calendar to prevent focus flickering for multiple months
-
-	}
-
 	function _bindMousemove(){
 
-		jQuery(window.document).bind('mousemove', this._mouseMoveProxy);
+		jQuery(window.document).on('mousemove', this._mouseMoveProxy);
 		this._bMouseMove = true;
 
 	}
 
 	function _unbindMousemove(){
 
-		jQuery(window.document).unbind('mousemove', this._mouseMoveProxy);
+		jQuery(window.document).off('mousemove', this._mouseMoveProxy);
 		this._bMouseMove = undefined;
 
 	}
 
 	return MonthsRow;
 
-}, /* bExport= */ true);
+});

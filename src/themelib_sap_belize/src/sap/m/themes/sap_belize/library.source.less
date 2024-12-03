@@ -2,76 +2,61 @@
  * ${copyright}
  */
 
-@import "../base/library.source.less";
+/* ============================================================================ */
+/* Due to deprecation of the Belize theme family with SAPUI5 version 1.120 the  */
+/* inheritance of the base theme is now updated to an inheritance of a static   */
+/* copy of the base theme named sap_belize_base. The respective                 */
+/* control css files of base are copied to the sap_belize_base theme folder.    */
+/* This decoupling of the base theme is introduced with SAPUI5 version 1.125.   */
+/* ============================================================================ */
+
+
+@import "../sap_belize_base/library.source.less";
 @import "../../../../sap/ui/core/themes/sap_belize/base.less";
 @import "../../../../sap/ui/core/themes/sap_belize/global.less";
 @import "shared.less";
 
 @import "ActionListItem.less";
-@import "ActionSheet.less";
-@import "App.less";
+@import "ActionSelect.less";
+@import "ActionTile.less";
+@import "Avatar.less";
 @import "Bar.less";
-@import "BarBase.less";
-@import "BusyDialog.less";
+@import "BusyIndicator.less";
 @import "Button.less";
-@import "Breadcrumbs.less";
 @import "Carousel.less";
 @import "CheckBox.less";
-@import "ColumnListItem.less";
-@import "CustomListItem.less";
+@import "ColorPalette.less";
 @import "CustomTile.less";
-@import "DatePicker.less";
-@import "DateRangeSelection.less";
-@import "DateTimeInput.less";
 @import "Dialog.less";
-@import "DisplayListItem.less";
+@import "MessageBox.less";
 @import "MessagePage.less";
-@import "FacetFilter.less";
-@import "FacetFilterItem.less";
-@import "FacetFilterList.less";
-@import "FeedContent.less";
-@import "FeedInput.less";
-@import "FeedListItem.less";
-@import "FlexBox.less";
+@import "GenericTag.less";
 @import "GenericTile.less";
-@import "GroupHeaderListItem.less";
-@import "GrowingList.less";
+@import "FeedInput.less";
+@import "HeaderContainer.less";
 @import "IconTabBar.less";
-@import "Image.less";
-@import "Input.less";
 @import "InputBase.less";
 
 /* note: the following three files are not in alphabetical order and should be imported after InputBase.less */
 @import "ComboBoxTextField.less";
 @import "ComboBoxBase.less";
-@import "ComboBox.less";
-
-@import "InputListItem.less";
 @import "Label.less";
 @import "Link.less";
-@import "List.less";
-@import "List_noFlex.less";
 @import "ListBase.less";
 @import "ListItemBase.less";
-@import "MaskInput.less";
-@import "MessageBox.less";
+@import "MenuListItem.less";
 @import "MessageStrip.less";
 @import "MessagePopover.less";
-@import "MessageToast.less";
-@import "MultiComboBox.less";
+@import "MessageView.less";
 @import "MultiInput.less";
 @import "NotificationListGroup.less";
 @import "NotificationListItem.less";
 @import "NewsContent.less";
-@import "NumericContent.less";
 @import "ObjectAttribute.less";
 @import "ObjectHeader.less";
-@import "ObjectIdentifier.less";
-@import "ObjectListItem.less";
-@import "ObjectNumber.less";
+@import "ObjectMarker.less";
 @import "ObjectStatus.less";
 @import "OverflowToolbarAssociativePopover.less";
-@import "P13nColumnsPanel.less";
 @import "Page.less";
 @import "Panel.less";
 @import "PlanningCalendar.less";
@@ -80,39 +65,39 @@
 @import "PullToRefresh.less";
 @import "QuickView.less";
 @import "RadioButton.less";
-@import "RadioButtonGroup.less";
+@import "RangeSlider.less";
 @import "RatingIndicator.less";
 @import "ResponsivePopover.less";
+@import "ScrollContainer.less";
 @import "SearchField.less";
 @import "SegmentedButton.less";
 @import "Select.less";
-@import "SelectDialog.less";
 @import "SelectList.less";
 @import "Shell.less";
+@import "SinglePlanningCalendarGrid.less";
+@import "SinglePlanningCalendarMonthGrid.less";
 @import "Slider.less";
+@import "SliderTooltip.less";
 @import "SlideTile.less";
-@import "SplitContainer.less";
+@import "SplitButton.less";
 @import "StandardListItem.less";
 @import "StandardTile.less";
 @import "Switch.less";
 @import "Table.less";
-@import "TablePersoDialog.less";
 @import "TabStrip.less";
-@import "TabStripSelect.less";
-@import "TabStripSelectList.less";
 @import "Text.less";
 @import "TextArea.less";
-@import "Tile.less";
 @import "TileContent.less";
 @import "TileContainer.less";
 @import "TimePicker.less";
-@import "Title.less";
-@import "ToggleButton.less";
+@import "TimePickerClocks.less";
+@import "TimePickerSliders.less";
 @import "Token.less";
+@import "Tokenizer.less";
 @import "Toolbar.less";
-@import "ToolbarSeparator.less";
 @import "UploadCollection.less";
+@import "ValueStateMessage.less";
 @import "ViewSettingsDialog.less";
+@import "WheelSlider.less";
 @import "Wizard.less";
 @import "WizardProgressNavigator.less";
-@import "WizardStep.less";

@@ -3,9 +3,20 @@
  */
 
 // Provides control sap.ui.commons.RatingIndicator.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/core/theming/Parameters'],
-	function(jQuery, library, Control, Parameters) {
+sap.ui.define([
+	'sap/ui/thirdparty/jquery',
+	'./library',
+	'sap/ui/core/Control',
+	'./RatingIndicatorRenderer',
+	'sap/ui/events/checkMouseEnterOrLeave'
+],
+	function(jQuery, library, Control, RatingIndicatorRenderer, checkMouseEnterOrLeave) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.commons.RatingIndicatorVisualMode
+	var RatingIndicatorVisualMode = library.RatingIndicatorVisualMode;
 
 
 
@@ -27,12 +38,12 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * @constructor
 	 * @public
 	 * @alias sap.ui.commons.RatingIndicator
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy)
-	 * designtime metamodel
+	 * @deprecated Since version 1.38. Instead, use the <code>sap.m.RatingIndicator</code> control.
 	 */
 	var RatingIndicator = Control.extend("sap.ui.commons.RatingIndicator", /** @lends sap.ui.commons.RatingIndicator.prototype */ { metadata : {
 
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 			/**
 			 * Determines if the rating symbols can be edited.
@@ -80,7 +91,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			 * Defines how float values are visualized: Full, Half, Continuous
 			 * (see enumeration RatingIndicatorVisualMode)
 			 */
-			visualMode : {type : "sap.ui.commons.RatingIndicatorVisualMode", group : "Behavior", defaultValue : sap.ui.commons.RatingIndicatorVisualMode.Half}
+			visualMode : {type : "sap.ui.commons.RatingIndicatorVisualMode", group : "Behavior", defaultValue : RatingIndicatorVisualMode.Half}
 		},
 		associations : {
 
@@ -262,24 +273,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * @private
 	 */
 	RatingIndicator.prototype.onfocusout = function(oEvent){
-		//Do not react on focusouts of child DOM refs in IE
-		if (!!sap.ui.Device.browser.internet_explorer && oEvent.target != this.getDomRef()) {
-			return;
-		}
 		this.saveValue(oEvent, false, this.iHoveredRating);
-	};
-
-	/**
-	 * Behavior implementation which is executed when the control gets the focus.
-	 *
-	 * @param {jQuery.Event} oEvent
-	 * @private
-	 */
-	RatingIndicator.prototype.onfocusin = function(oEvent){
-		//Avoid focusing child DOM refs in IE
-		if (!!sap.ui.Device.browser.internet_explorer && oEvent.target != this.getDomRef()) {
-			this.getDomRef().focus();
-		}
 	};
 
 	/**
@@ -313,10 +307,10 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		}
 
 		for (var i = 1; i <= symbolValue; i++) {
-			sap.ui.commons.RatingIndicatorRenderer.hoverRatingSymbol(i, this);
+			RatingIndicatorRenderer.hoverRatingSymbol(i, this);
 		}
 		for (var i = symbolValue + 1; i <= this.getMaxValue(); i++) {
-			sap.ui.commons.RatingIndicatorRenderer.hoverRatingSymbol(i, this, true);
+			RatingIndicatorRenderer.hoverRatingSymbol(i, this, true);
 		}
 	};
 
@@ -334,10 +328,10 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			return;
 		}
 
-		if (jQuery.sap.checkMouseEnterOrLeave(oEvent, this.getDomRef())) {
+		if (checkMouseEnterOrLeave(oEvent, this.getDomRef())) {
 			this.iHoveredRating = -1;
 			for (var i = 1; i <= this.getMaxValue(); i++) {
-				sap.ui.commons.RatingIndicatorRenderer.unhoverRatingSymbol(i, this);
+				RatingIndicatorRenderer.unhoverRatingSymbol(i, this);
 			}
 		}
 	};
@@ -358,7 +352,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		}
 		var itemvalue = oSymbol.attr("itemvalue");
 		if (itemvalue) {
-			return parseInt(itemvalue, 10);
+			return parseInt(itemvalue);
 		}
 		return -1;
 	};
@@ -370,11 +364,11 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 */
 	RatingIndicator.prototype.updateKeyboardHoverState = function(bSkipHoverAfter){
 		for (var i = 1; i <= this.getMaxValue(); i++) {
-			sap.ui.commons.RatingIndicatorRenderer.unhoverRatingSymbol(i, this);
+			RatingIndicatorRenderer.unhoverRatingSymbol(i, this);
 			if (i <= this.iHoveredRating) {
-				sap.ui.commons.RatingIndicatorRenderer.hoverRatingSymbol(i, this);
+				RatingIndicatorRenderer.hoverRatingSymbol(i, this);
 			} else if (!bSkipHoverAfter) {
-				sap.ui.commons.RatingIndicatorRenderer.hoverRatingSymbol(i, this, true);
+				RatingIndicatorRenderer.hoverRatingSymbol(i, this, true);
 			}
 		}
 		this.setAriaState();
@@ -439,7 +433,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		} else {
 			//Update hover state only if value is not changed (otherwise rerendering is done anyway)
 			for (var i = 1; i <= this.getMaxValue(); i++) {
-				sap.ui.commons.RatingIndicatorRenderer.unhoverRatingSymbol(i, this);
+				RatingIndicatorRenderer.unhoverRatingSymbol(i, this);
 			}
 			this.setAriaState();
 			return false;
@@ -470,7 +464,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * Minimum value is <code>1</code>
 	 *
 	 * @param {int} iMaxValue new value for property <code>maxValue</code>
-	 * @return {sap.ui.commons.RatingIndicator} <code>this</code> to allow method chaining
+	 * @return {this} <code>this</code> to allow method chaining
 	 * @public
 	 */
 	RatingIndicator.prototype.setMaxValue = function(iMaxValue) {
@@ -481,7 +475,23 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 		return this;
 	};
 
+	/**
+	 * @see sap.ui.core.Control#getAccessibilityInfo
+	 * @returns {object} The accessibility info
+	 * @protected
+	 */
+	RatingIndicator.prototype.getAccessibilityInfo = function() {
+		var oBundle = sap.ui.getCore().getLibraryResourceBundle("sap.ui.commons");
+		return {
+			role: "slider",
+			type: oBundle.getText("ACC_CTR_TYPE_RATING"),
+			description: oBundle.getText("ACC_CTR_STATE_RATING", [this._getDisplayValue(), this.getMaxValue()]),
+			focusable: true,
+			editable: this.getEditable()
+		};
+	};
+
 
 	return RatingIndicator;
 
-}, /* bExport= */ true);
+});

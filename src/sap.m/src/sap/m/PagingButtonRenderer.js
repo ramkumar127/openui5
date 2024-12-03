@@ -2,29 +2,29 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global'],
-	function (jQuery) {
+sap.ui.define([],
+	function() {
 		"use strict";
 
 		/**
 		 * PagingButton renderer
 		 * @namespace
 		 */
-		var PagingButtonRenderer = {};
+		var PagingButtonRenderer = {
+			apiVersion: 2
+		};
 
 
 		PagingButtonRenderer.render = function (oRm, oControl) {
 			var nextButton = oControl._getNextButton(),
 				prevButton = oControl._getPreviousButton();
 
-			oRm.write("<div");
-			oRm.writeControlData(oControl);
-			oRm.addClass("sapMPagingButton");
-			oRm.writeClasses();
-			oRm.write(">");
+			oRm.openStart("div", oControl);
+			oRm.class("sapMPagingButton");
+			oRm.openEnd();
 			oRm.renderControl(prevButton);
 			oRm.renderControl(nextButton);
-			oRm.write("</div>");
+			oRm.close("div");
 		};
 
 		return PagingButtonRenderer;

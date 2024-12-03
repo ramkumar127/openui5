@@ -19,10 +19,8 @@
 .sapUiTabSel,
 .sapUiTabDsbl {
 	line-height: 18px;
-	-moz-background-origin: padding, padding, content;
 	-webkit-background-origin: padding, padding, content;
 	background-origin: padding-box, padding-box, content-box;
-	-moz-background-size: auto auto, auto auto, 100% 28px;
 	-webkit-background-size: auto auto, auto auto, 100% 28px;
 	background-size: auto auto, auto auto, 100% 28px;
 	background-repeat: no-repeat, no-repeat, no-repeat;
@@ -112,6 +110,26 @@
   }
 }
 
+.sapUiTabBar .sapUiTabStripScrollIcon {
+	padding-top: 3px;
+	margin-top: 0;
+	height: 19px;
+}
+
 .sapUiTabDsbl:focus::before {
   border-color: @sapUiContentDisabledTextColor;
+}
+
+.sapUiTabStripScrollIcon {
+	color: @sapHCStandardFG;
+	background: @sapHCStandardBG;
+	border: 1px solid @sapHCStandardFG;
+}
+
+.sapUiTabStripScrollIcon:hover {
+	background: @sapHCHighlightBG;
+}
+
+.sapUiTabStripScrollIcon:active {
+	background: @sapHCHighlightAltBG;
 }

@@ -1,48 +1,14 @@
-/* ===================================================== */
-/* CSS for control sap.ui.unified/CalendarLegend.control */
-/* Bluecrystal                                           */
-/* ===================================================== */
-.sapUiUnifiedLegend {
-	background-color: @sapUiListBackground;
-	font-size: @sapMFontSmallSize;
-}
+/* ============================================== */
+/* CSS for control sap.ui.unified/CalendarLegend  */
+/* BlueCrystal theme                              */
+/* ============================================== */
 
-/*** compact mode (desktop size) ***/
-
-.sapUiSizeCompact .sapUiUnifiedLegend,
-.sapUiSizeCompact.sapUiUnifiedLegend {
-	padding: 8px;
-	column-gap: 6px;
-	-moz-column-gap: 6px; /* Firefox */
-	-webkit-column-gap: 6px; /* Safari and Chrome */
-}
-
-.sapUiSizeCompact .sapUiUnifiedLegendItem {
-	display: inline-block;
-	width: 100%;
-	margin: 2px;
+.sapUiUnifiedLegendSquareColor {
+	border-radius: 0;
 }
 
 /*** items and colors ***/
 
-.sapUiUnifiedLegendToday > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
-	height: 10px;
-	width: 10px;
-	background-color: transparent;
-	border: 2px solid @sapUiAccent4;
-}
-
-.sapUiUnifiedLegendSelected > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
-	background: @sapUiSelected;
-}
-
-.sapUiUnifiedLegendNormalDay > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
-	background: lighten(@sapUiContentForegroundColor, 5);
-}
-
-.sapUiUnifiedLegendNonWorkingDay > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
-	background: @sapUiContentForegroundColor;
-}
 
 .sapUiCalLegDayType01 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor{
 	background: @sapUiAccent1;
@@ -82,4 +48,44 @@
 
 .sapUiCalLegDayType10 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
 	background: darken(@sapUiAccent4, 10);
+}
+
+.sapUiCalLegDayType11 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor{
+  background: darken(desaturate(@sapUiAccent1,30),5);
+}
+
+.sapUiCalLegDayType12 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
+  background: darken(saturate(@sapUiAccent2,50),10);
+}
+
+.sapUiCalLegDayType13 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
+  background: darken(saturate(@sapUiAccent3,30),5);
+}
+
+.sapUiCalLegDayType14 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
+  background: darken(desaturate(@sapUiAccent2,60),2);
+}
+
+.sapUiCalLegDayType15 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
+  background: desaturate(@sapUiAccent4,55);
+}
+
+.sapUiCalLegDayType16 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
+  background: darken(desaturate(@sapUiAccent5,20),10);
+}
+
+.sapUiCalLegDayType17 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
+  background: desaturate(@sapUiAccent7,50);
+}
+
+.sapUiCalLegDayType18 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
+  background: desaturate(@sapUiAccent8, 45);
+}
+
+.sapUiCalLegDayType19 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
+  background: desaturate(@sapUiAccent6,50);
+}
+
+.sapUiCalLegDayType20 > .sapUiUnifiedLegendSquare > .sapUiUnifiedLegendSquareColor {
+  background: darken(saturate(@sapUiAccent5, 30),20);
 }

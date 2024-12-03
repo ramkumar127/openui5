@@ -3,11 +3,12 @@
  */
 
 // Provides xml parsing and error checking functionality.
-sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
-	function(jQuery, Device) {
+sap.ui.define([
+	'jquery.sap.global',
+	'sap/ui/util/XMLHelper'
+], function(jQuery, XMLHelper) {
 	"use strict";
 
-	/*global ActiveXObject */
 	/**
 	 * Parses the specified XML formatted string text using native parsing
 	 * function of the browser and returns a valid XML document. If an error
@@ -20,33 +21,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 	 * @return {object} the parsed XML document with a parseError property as described in
 	 *         getParseError. An error occurred if the errorCode property of the parseError is != 0.
 	 * @public
+	 * @function
+	 * @deprecated since 1.58 use {@link module:sap/ui/util/XMLHelper.parse} instead
 	 */
-	jQuery.sap.parseXML = function parseXML(sXMLText) {
-		var oXMLDocument;
-		if (window.DOMParser) {
-			var oParser = new DOMParser();
-			try {
-				oXMLDocument = oParser.parseFromString(sXMLText, "text/xml");
-			} catch (e) {
-				var oParseError = jQuery.sap.getParseError(oXMLDocument);
-				oXMLDocument = {};
-				oParseError.reason = e.message;
-				oXMLDocument.parseError = oParseError;
-				return oXMLDocument;
-			}
-		} else {
-			oXMLDocument = new ActiveXObject("Microsoft.XMLDOM");
-			oXMLDocument.async = false;
-			oXMLDocument.loadXML(sXMLText);
-		}
-		var oParseError = jQuery.sap.getParseError(oXMLDocument);
-		if (oParseError) {
-			if (!oXMLDocument.parseError) {
-				oXMLDocument.parseError = oParseError;
-			}
-		}
-		return oXMLDocument;
-	};
+	jQuery.sap.parseXML = XMLHelper.parse;
 
 	/**
 	 * Serializes the specified XML document into a string representation.
@@ -55,8 +33,9 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 	 *            oXMLDocument the XML document object to be serialized as string
 	 * @return {object} the serialized XML string
 	 * @public
+	 * @deprecated since 1.58 use {@link module:sap/ui/util/XMLHelper.serialize} instead
 	 */
-	jQuery.sap.serializeXML = function serializeXML(oXMLDocument) {
+	jQuery.sap.serializeXML = function(oXMLDocument) {
 		var sXMLString = "";
 		if (window.ActiveXObject) {
 			sXMLString = oXMLDocument.xml;
@@ -65,12 +44,14 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 			}
 		}
 		if (window.XMLSerializer) {
-			var serializer = new XMLSerializer();
-			sXMLString = serializer.serializeToString(oXMLDocument);
+			return XMLHelper.serialize(oXMLDocument);
 		}
 		return sXMLString;
 	};
 
+	/**
+	 * @deprecated since 1.58 use native <code>Node#isEqualNode</code> instead
+	 */
 	jQuery.sap.isEqualNode = function(oNode1, oNode2) {
 		if (oNode1 === oNode2) {
 			return true;
@@ -121,7 +102,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 		return true;
 	};
 
-
 	/**
 	 * Extracts parse error information from the specified document (if any). If
 	 * an error was found the returned object has the following error
@@ -130,67 +110,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/Device'],
 	 *
 	 * @return oParseError if errors were found, or an object with an errorCode of 0 only
 	 * @private
+	 * @function
+	 * @deprecated since 1.58 use {@link module:sap/ui/util/XMLHelper.getParseError} instead
 	 */
-	jQuery.sap.getParseError = function getParseError(oDocument) {
-		var oParseError = {
-			errorCode : -1,
-			url : "",
-			reason : "unknown error",
-			srcText : "",
-			line : -1,
-			linepos : -1,
-			filepos : -1
-		};
-
-		// IE
-		if (!!Device.browser.internet_explorer && oDocument && oDocument.parseError
-				&& oDocument.parseError.errorCode != 0) {
-			return oDocument.parseError;
-		}
-
-		// Firefox or Edge
-		if ((!!Device.browser.firefox  || !!Device.browser.edge) && oDocument && oDocument.documentElement
-				&& oDocument.documentElement.tagName == "parsererror") {
-
-			var sErrorText = oDocument.documentElement.firstChild.nodeValue, rParserError = /XML Parsing Error: (.*)\nLocation: (.*)\nLine Number (\d+), Column (\d+):(.*)/;
-
-			if (rParserError.test(sErrorText)) {
-				oParseError.reason = RegExp.$1;
-				oParseError.url = RegExp.$2;
-				oParseError.line = parseInt(RegExp.$3, 10);
-				oParseError.linepos = parseInt(RegExp.$4, 10);
-				oParseError.srcText = RegExp.$5;
-
-			}
-			return oParseError;
-		}
-
-		// Safari
-		if (!!Device.browser.webkit && oDocument && oDocument.documentElement
-				&& oDocument.documentElement.tagName == "html"
-				&& oDocument.getElementsByTagName("parsererror").length > 0) {
-
-			var sErrorText = jQuery.sap.serializeXML(oDocument), rParserError = /error on line (\d+) at column (\d+): ([^<]*)/;
-
-			if (rParserError.test(sErrorText)) {
-				oParseError.reason = RegExp.$3;
-				oParseError.url = "";
-				oParseError.line = parseInt(RegExp.$1, 10);
-				oParseError.linepos = parseInt(RegExp.$2, 10);
-				oParseError.srcText = "";
-
-			}
-			return oParseError;
-		}
-
-		if (!oDocument || !oDocument.documentElement) {
-			return oParseError;
-		}
-
-		return	{
-				errorCode : 0
-			};
-	};
+	jQuery.sap.getParseError = XMLHelper.getParseError;
 
 	return jQuery;
 

@@ -1,30 +1,35 @@
 {
-	"_version": "1.2.0",
+	"_version": "1.38.0",
 
 	"sap.app": {
-		"_version": "1.2.0",
 		"id": "sap.ui.demo.worklist",
 		"type": "application",
-		"i18n": "i18n/i18n.properties",
+		"i18n": {
+			"bundleUrl": "i18n/i18n.properties",
+			"supportedLocales": [
+				""
+			],
+			"fallbackLocale": ""
+		},
 		"title": "{{appTitle}}",
 		"description": "{{appDescription}}",
 		"applicationVersion": {
 			"version": "1.0.0"
 		},
+		"resources": "resources.json",
 		"dataSources": {
 			"mainService": {
 				"uri": "/here/goes/your/serviceUrl/",
 				"type": "OData",
 				"settings": {
 					"odataVersion": "2.0",
-					"localUri" : "localService/metadata.xml"
+					"localUri": "localService/metadata.xml"
 				}
 			}
 		}
 	},
 
 	"sap.ui": {
-		"_version": "1.2.0",
 		"technology": "UI5",
 		"icons": {
 			"icon": "sap-icon://task",
@@ -38,33 +43,23 @@
 			"desktop": true,
 			"tablet": true,
 			"phone": true
-		},
-		"supportedThemes": [
-			"sap_hcb",
-			"sap_bluecrystal"
-		]
+		}
 	},
 
 	"sap.ui5": {
-		"_version": "1.2.0",
 		"rootView": {
 			"viewName": "sap.ui.demo.worklist.view.App",
 			"type": "XML",
+			"async": true,
 			"id": "app"
 		},
 
 		"dependencies": {
-			"minUI5Version": "1.36.0",
+			"minUI5Version": "1.98.0",
 			"libs": {
-				"sap.ui.core": {
-					"minVersion": "1.36.0"
-				},
-				"sap.m": {
-					"minVersion": "1.36.0"
-				},
-				"sap.ui.layout" : {
-					"minVersion": "1.36.0"
-				}
+				"sap.f": {},
+				"sap.m": {},
+				"sap.ui.core": {}
 			}
 		},
 
@@ -77,28 +72,29 @@
 			"i18n": {
 				"type": "sap.ui.model.resource.ResourceModel",
 				"settings": {
-					"bundleName": "sap.ui.demo.worklist.i18n.i18n"
+					"bundleName": "sap.ui.demo.worklist.i18n.i18n",
+					"supportedLocales": [
+						""
+					],
+					"fallbackLocale": ""
 				}
 			},
-			"" : {
+			"": {
 				"dataSource": "mainService",
-				"settings": {
-					"metadataUrlParams": {
-						"sap-documentation": "heading"
-					}
-				}
+				"preload": true
 			}
 		},
 
 		"routing": {
 			"config": {
 				"routerClass": "sap.m.routing.Router",
+				"type": "View",
 				"viewType": "XML",
-				"viewPath": "sap.ui.demo.worklist.view",
+				"path": "sap.ui.demo.worklist.view",
 				"controlId": "app",
 				"controlAggregation": "pages",
 				"bypassed": {
-					"target": "notFound"
+					"target": ["notFound"]
 				},
 				"async": true
 			},
@@ -107,33 +103,35 @@
 				{
 					"pattern": "",
 					"name": "worklist",
-					"target": "worklist"
+					"target": ["worklist"]
 				},
 				{
 					"pattern": "Objects/{objectId}",
 					"name": "object",
-					"target": "object"
+					"target": ["object"]
 				}
 			],
 
 			"targets": {
 				"worklist": {
-					"viewName": "Worklist",
-					"viewId": "worklist",
-					"viewLevel": 1
+					"name": "Worklist",
+					"id": "worklist",
+					"level": 1,
+					"title": "{i18n>worklistViewTitle}"
 				},
 				"object": {
-					"viewName": "Object",
-					"viewId": "object",
-					"viewLevel": 2
+					"name": "Object",
+					"id": "object",
+					"level": 2,
+					"title": "{i18n>objectViewTitle}"
 				},
 				"objectNotFound": {
-					"viewName": "ObjectNotFound",
-					"viewId": "objectNotFound"
+					"name": "ObjectNotFound",
+					"id": "objectNotFound"
 				},
 				"notFound": {
-					"viewName": "NotFound",
-					"viewId": "notFound"
+					"name": "NotFound",
+					"id": "notFound"
 				}
 			}
 		}

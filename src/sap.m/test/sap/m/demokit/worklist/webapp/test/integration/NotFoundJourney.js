@@ -1,72 +1,71 @@
+/*global QUnit*/
+
 sap.ui.define([
-		"sap/ui/test/opaQunit"
-	], function (opaTest) {
-		"use strict";
+	"sap/ui/test/opaQunit",
+	"./pages/Worklist",
+	"./pages/Browser",
+	"./pages/NotFound",
+	"./pages/App"
+], function (opaTest) {
+	"use strict";
 
-		QUnit.module("NotFound");
+	QUnit.module("NotFound");
 
-		opaTest("Should see the resource not found page when changing to an invalid hash", function (Given, When, Then) {
-			//Arrangement
-			Given.iStartMyApp();
+	opaTest("Should see the resource not found page when changing to an invalid hash", function (Given, When, Then) {
+		//Arrangement
+		Given.iStartMyApp();
 
-			//Actions
-			When.onTheWorklistPage.iWaitUntilTheTableIsLoaded();
-			When.onTheBrowser.iChangeTheHashToSomethingInvalid();
+		//Actions
+		When.onTheBrowser.iChangeTheHashToSomethingInvalid();
 
-			// Assertions
-			Then.onTheNotFoundPage.iShouldSeeResourceNotFound();
-		});
+		// Assertions
+		Then.onTheNotFoundPage.iShouldSeeResourceNotFound();
+	});
 
-		opaTest("Clicking the 'Show my worklist' link on the 'Resource not found' page should bring me back to the worklist", function (Given, When, Then) {
-			//Actions
-			When.onTheAppPage.iWaitUntilTheAppBusyIndicatorIsGone();
-			When.onTheNotFoundPage.iPressTheNotFoundShowWorklistLink();
+	opaTest("Clicking the 'Show my worklist' link on the 'Resource not found' page should bring me back to the worklist", function (Given, When, Then) {
+		//Actions
+		When.onTheNotFoundPage.iPressTheNotFoundShowWorklistLink();
 
-			// Assertions
-			Then.onTheWorklistPage.iShouldSeeTheTable();
-		});
+		// Assertions
+		Then.onTheWorklistPage.iShouldSeeTheTable();
+	});
 
-		opaTest("Should see the not found text for no search results", function (Given, When, Then) {
-			// Arrangements
-			Given.iStartMyApp();
+	opaTest("Should see the not found text for no search results", function (Given, When, Then) {
+		//Actions
+		When.onTheWorklistPage.iSearchForSomethingWithNoResults();
 
-			//Actions
-			When.onTheWorklistPage.iSearchForSomethingWithNoResults();
+		// Assertions
+		Then.onTheWorklistPage.iShouldSeeTheNoDataTextForNoSearchResults();
+	});
 
-			// Assertions
-			Then.onTheWorklistPage.iShouldSeeTheNoDataTextForNoSearchResults();
-		});
+	opaTest("Clicking the back button should take me back to the not found page", function (Given, When, Then) {
+		//Actions
+		When.onTheBrowser.iPressOnTheBackwardsButton();
 
-		opaTest("Clicking the back button should take me back to the not found page", function (Given, When, Then) {
-			//Actions
-			When.onTheBrowser.iPressOnTheBackwardsButton();
+		// Assertions
+		Then.onTheNotFoundPage.iShouldSeeResourceNotFound();
 
-			// Assertions
-			Then.onTheNotFoundPage.iShouldSeeResourceNotFound().
-				and.iTeardownMyAppFrame();
-		});
+		// Cleanup
+		Then.iTeardownMyApp();
+	});
 
-		opaTest("Should see the 'Object not found' page if an invalid object id has been called", function (Given, When, Then) {
-			Given.iStartMyApp({
-				hash: "/Objects/SomeInvalidObjectId"
-			});
+	opaTest("Should see the 'Object not found' page if an invalid object id has been called", function (Given, When, Then) {
+		//Arrangement
+		Given.iStartMyApp({hash : "Objects/SomeInvalidObjectId"});
 
-			//Actions
-			When.onTheNotFoundPage.iLookAtTheScreen();
+		// Assertions
+		Then.onTheNotFoundPage.iShouldSeeObjectNotFound();
+	});
 
-			// Assertions
-			Then.onTheNotFoundPage.iShouldSeeObjectNotFound();
-		});
+	opaTest("Clicking the 'Show my worklist' link on the 'Object not found' page should bring me back to the worklist", function (Given, When, Then) {
+		//Actions
+		When.onTheNotFoundPage.iPressTheObjectNotFoundShowWorklistLink();
 
-		opaTest("Clicking the 'Show my worklist' link on the 'Object not found' page should bring me back to the worklist", function (Given, When, Then) {
-			//Actions
-			When.onTheAppPage.iWaitUntilTheAppBusyIndicatorIsGone();
-			When.onTheNotFoundPage.iPressTheObjectNotFoundShowWorklistLink();
+		// Assertions
+		Then.onTheWorklistPage.iShouldSeeTheTable();
 
-			// Assertions
-			Then.onTheWorklistPage.iShouldSeeTheTable().
-				and.iTeardownMyAppFrame();
-		});
+		// Cleanup
+		Then.iTeardownMyApp();
+	});
 
-	}
-);
+});

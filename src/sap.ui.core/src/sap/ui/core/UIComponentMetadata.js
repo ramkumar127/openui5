@@ -3,23 +3,23 @@
  */
 
 // Provides class sap.ui.core.ComponentMetadata
-sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
-	function(jQuery, ComponentMetadata) {
+sap.ui.define(['./ComponentMetadata', 'sap/ui/core/mvc/ViewType'],
+	function(ComponentMetadata, ViewType) {
 	"use strict";
-
 
 	/**
 	 * Creates a new metadata object for a UIComponent subclass.
 	 *
 	 * @param {string} sClassName Fully qualified name of the class that is described by this metadata object
-	 * @param {object} oStaticInfo Static info to construct the metadata from
+	 * @param {object} oClassInfo Static info to construct the metadata from
 	 *
-	 * @experimental Since 1.15.1. The Component concept is still under construction, so some implementation details can be changed in future.
 	 * @class
 	 * @author SAP SE
 	 * @version ${version}
 	 * @since 1.15.1
 	 * @alias sap.ui.core.UIComponentMetadata
+	 * @extends sap.ui.core.ComponentMetadata
+	 * @private
 	 */
 	var UIComponentMetadata = function(sClassName, oClassInfo) {
 
@@ -29,8 +29,13 @@ sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
 	};
 
 	//chain the prototypes
-	UIComponentMetadata.prototype = jQuery.sap.newObject(ComponentMetadata.prototype);
+	UIComponentMetadata.prototype = Object.create(ComponentMetadata.prototype);
+	UIComponentMetadata.prototype.constructor = UIComponentMetadata;
 
+	/**
+	 * Synchronous loading Component metadata from "component.json" is deprecated.
+	 * @deprecated
+	 */
 	UIComponentMetadata.preprocessClassInfo = function(oClassInfo) {
 		// if the component is a string we convert this into a "_src" metadata entry
 		// the specific metadata object can decide to support this or gracefully ignore it
@@ -45,7 +50,7 @@ sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
 
 	/**
 	 * Returns the root view of the component.
-	 * <p>
+	 *
 	 * <b>Important:</b></br>
 	 * If a Component is loaded using the manifest URL (or according the
 	 * "manifest first" strategy), this function ignores the entries of the
@@ -53,10 +58,9 @@ sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
 	 * the Component metadata or in the proper Component manifest.
 	 *
 	 * @param {boolean} [bDoNotMerge] Returns the local root view configuration if set to <code>true</code>.
-	 * @return {object} root view as configuration object or null ({@link sap.ui.view})
+	 * @return {object|null} root view as configuration object or null ({@link sap.ui.view})
 	 * @protected
 	 * @since 1.15.1
-	 * @experimental Since 1.15.1. Implementation might change.
 	 * @deprecated Since 1.27.1. Please use {@link sap.ui.core.Component#getManifestEntry}("/sap.ui5/rootView")
 	 */
 	UIComponentMetadata.prototype.getRootView = function(bDoNotMerge) {
@@ -65,7 +69,7 @@ sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
 
 	/**
 	 * Returns the routing configuration.
-	 * <p>
+	 *
 	 * <b>Important:</b></br>
 	 * If a Component is loaded using the manifest URL (or according the
 	 * "manifest first" strategy), this function ignores the entries of the
@@ -73,6 +77,7 @@ sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
 	 * the Component metadata or in the proper Component manifest.
 	 *
 	 * @return {object} routing configuration
+	 * @param {boolean} [bDoNotMerge] Returns the local routing config if set to <code>true</code>
 	 * @private
 	 * @since 1.16.1
 	 * @experimental Since 1.16.1. Implementation might change.
@@ -84,7 +89,7 @@ sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
 
 	/**
 	 * Returns the array of routes. If not defined the array is undefined.
-	 * <p>
+	 *
 	 * <b>Important:</b></br>
 	 * If a Component is loaded using the manifest URL (or according the
 	 * "manifest first" strategy), this function ignores the entries of the
@@ -92,6 +97,7 @@ sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
 	 * the Component metadata or in the proper Component manifest.
 	 *
 	 * @return {array} routes
+	 * @param {boolean} [bDoNotMerge] Returns the local routes if set to <code>true</code>
 	 * @private
 	 * @since 1.16.1
 	 * @experimental Since 1.16.1. Implementation might change.
@@ -104,6 +110,9 @@ sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
 
 	/**
 	 * Converts the legacy metadata into the new manifest format
+	 *
+	 * @param {object} oStaticInfo Static info containing the legacy metadata
+	 * @param {object} oManifest The new manifest
 	 * @private
 	 */
 	UIComponentMetadata.prototype._convertLegacyMetadata = function(oStaticInfo, oManifest) {
@@ -123,12 +132,12 @@ sap.ui.define(['jquery.sap.global', './ComponentMetadata'],
 		}
 
 		// if the root view is a string we convert it into a view
-		// configuration object and assume that it is a XML view
+		// configuration object and assume that it is an XML view
 		// !This should be kept in sync with the UIComponent#createContent functionality!
 		if (oUI5Manifest["rootView"] && typeof oUI5Manifest["rootView"] === "string") {
 			oUI5Manifest["rootView"] = {
 				viewName: oUI5Manifest["rootView"],
-				type: sap.ui.core.mvc.ViewType.XML
+				type: ViewType.XML
 			};
 		}
 

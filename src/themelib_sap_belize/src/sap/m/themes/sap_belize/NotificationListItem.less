@@ -3,62 +3,19 @@
 /* Belize theme                                */
 /* =========================================== */
 
-.sapMNLI {
-  background-color: @sapUiListBackground;
-  box-shadow: 0 0.125rem 0.5rem fade(@sapUiContentShadowColor, 50);
-  border-bottom: 0;
-}
+@_sap_m_NotificationListBase_ItemBackground: @sapUiListBackground;
+@_sap_m_NotificationListBase_ItemGroupedBackground: darken(@sapUiListBackground,5);
 
-.sapMNLI-UnreadStatus {
-  background: @sapUiAccent5;
-}
+//Special case for visual specification of sap.m.NotificationListGroup
+.sapContrastPlus .sapContrast,
+.sapContrast .sapContrastPlus,
+.sapContrastPlus.sapContrast {
 
-.sapMNLI-Header > .sapMTitle {
-  font-size: @sapMFontLargeSize;
-}
+	.sapMNLI {
+		background: fade(@sapUiListBackground, 60);
+	}
 
-.sapMNLI-None {
-  background-color: @sapUiNeutralBorder;
-}
-
-.sapMNLI-Low {
-  background-color: @sapUiSuccessBorder;
-}
-
-.sapMNLI-Medium {
-  background-color: @sapUiWarningBorder;
-}
-
-.sapMNLI-High {
-  background-color: @sapUiErrorBorder;
-}
-
-.sapMNLI-Body .sapMNLI-Details {
-  font-size: @sapMFontMediumSize;
-}
-
-.sapMNLI-CloseButton {
-  border: none;
-}
-
-.sapUiSizeCompact .sapMNLG-CloseButton .sapMBtnInner {
-  border: none;
-}
-
-// Focus Styles ========================================================================================================
-
-.sap-desktop .sapMLIB.sapMNLI:focus {
-  outline: none;
-}
-
-.sapMNLI:focus::before {
-  border: 1px dotted @sapUiContentFocusColor;
-  position: absolute;
-  content: " ";
-  top: 1px;
-  right: 1px;
-  bottom: 1px;
-  left: 1px;
-  z-index: 2;
-  pointer-events: none;
+	.sapMNLGroup .sapMNLI {
+		background: fade(darken(@sapUiListBackground, 5), 60);
+	}
 }

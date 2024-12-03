@@ -2,28 +2,11 @@ sap.ui.define(['sap/ui/core/UIComponent'],
 	function(UIComponent) {
 	"use strict";
 
-	var Component = UIComponent.extend("sap.m.sample.ObjectHeaderResponsiveV.Component", {
+	return UIComponent.extend("sap.m.sample.ObjectHeaderResponsiveV.Component", {
 
 		metadata : {
-			rootView : "sap.m.sample.ObjectHeaderResponsiveV.Page",
-			dependencies : {
-				libs : [
-					"sap.m",
-					"sap.ui.layout"
-				]
-			},
-			config : {
-				sample : {
-					stretch : true,
-					files : [
-						"Page.view.xml",
-						"Page.controller.js"
-					]
-				}
-			}
+			manifest: "json"
 		}
 	});
-
-	return Component;
 
 });

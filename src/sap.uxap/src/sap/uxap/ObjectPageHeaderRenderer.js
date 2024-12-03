@@ -2,101 +2,96 @@
  * ${copyright}
  */
 
-sap.ui.define(["./ObjectPageLayout", "sap/ui/core/Icon"], function (ObjectPageLayout, Icon) {
+sap.ui.define(["./ObjectImageHelper", "sap/ui/Device"], function (ObjectImageHelper, Device) {
 	"use strict";
 
 	/**
-	 * @class HeaderBase renderer.
-	 * @static
+	 * Header renderer.
+	 * @namespace
 	 */
-	var ObjectPageHeaderRenderer = {};
+	var ObjectPageHeaderRenderer = {
+		apiVersion: 2
+	};
 
+	/**
+	 * Renders the ObjectPageHeader.
+	 *
+	 * @param {sap.ui.core.RenderManager} oRm The RenderManager that can be used for writing to the render output buffer
+	 * @param {sap.uxap.ObjectPageHeader} oControl The ObjectPageHeader
+	 */
 	ObjectPageHeaderRenderer.render = function (oRm, oControl) {
 
 		var oNavigationBar = oControl.getNavigationBar(),
 			bTitleVisible = (oControl.getIsObjectIconAlwaysVisible() || oControl.getIsObjectTitleAlwaysVisible() || oControl.getIsObjectSubtitleAlwaysVisible() || oControl.getIsActionAreaAlwaysVisible()),
 			oParent = oControl.getParent(),
 			oExpandButton = oControl.getAggregation("_expandButton"),
-			oObjectImage = oControl._getInternalAggregation("_objectImage"),
-			bIsDesktop = sap.ui.Device.system.desktop,
-			bIsHeaderContentVisible = oParent && oParent instanceof ObjectPageLayout && ((oParent.getHeaderContent()
+			oObjectImage = oControl._lazyLoadInternalAggregation("_objectImage", true),
+			oPlaceholder,
+			bIsDesktop = Device.system.desktop,
+			bIsHeaderContentVisible = oParent && oParent.isA("sap.uxap.ObjectPageLayout") && ((oParent.getHeaderContent()
 				&& oParent.getHeaderContent().length > 0 && oParent.getShowHeaderContent()) ||
 			(oParent.getShowHeaderContent() && oParent.getShowTitleInHeaderContent()));
 
-		oRm.write("<div");
-		oRm.writeControlData(oControl);
-		oRm.addClass('sapUxAPObjectPageHeader');
-		oRm.addClass('sapUxAPObjectPageHeaderDesign-' + oControl.getHeaderDesign());
-		oRm.writeClasses();
-		oRm.write(">");
-		// if an navigationBar has been provided display it
+		oRm.openStart("div", oControl).class('sapUxAPObjectPageHeader');
+		/**
+		 * @deprecated As of version 1.40.1
+		 */
+		oRm.class('sapUxAPObjectPageHeaderDesign-' + oControl.getHeaderDesign());
+		oRm.openEnd();
 
+		// if a navigationBar has been provided display it
 		if (oNavigationBar) {
-			oRm.write("<div");
-			oRm.addClass('sapUxAPObjectPageHeaderNavigation');
-			oRm.writeClasses();
-			oRm.write(">");
+			oRm.openStart("div")
+				.class("sapUxAPObjectPageHeaderNavigation")
+				.openEnd();
 			oRm.renderControl(oNavigationBar);
-			oRm.write("</div>");
+			oRm.close("div");
 		}
 
 		// first line
-		oRm.write("<div");
-		oRm.writeAttributeEscaped("id", oControl.getId() + "-identifierLine");
-		oRm.addClass('sapUxAPObjectPageHeaderIdentifier');
-		if (bTitleVisible) {
-			oRm.addClass('sapUxAPObjectPageHeaderIdentifierForce');
-		}
-		oRm.writeClasses();
-		oRm.write(">");
+		oRm.openStart("div", oControl.getId() + "-identifierLine")
+			.class('sapUxAPObjectPageHeaderIdentifier');
 
-		if (oParent && oParent instanceof ObjectPageLayout && oParent.getIsChildPage()) {
-			oRm.write("<div");
-			oRm.addClass('sapUxAPObjectChildPage');
-			oRm.writeClasses();
-			oRm.write("></div>");
+		if (bTitleVisible) {
+			oRm.class('sapUxAPObjectPageHeaderIdentifierForce');
+		}
+		oRm.openEnd();
+
+		if (oParent && oParent.isA("sap.uxap.ObjectPageLayout") && oParent.getIsChildPage()) {
+			oRm.openStart("div")
+				.class("sapUxAPObjectChildPage")
+				.openEnd()
+				.close("div");
+		}
+
+		if (oControl.getShowPlaceholder()) {
+			oPlaceholder = oControl._lazyLoadInternalAggregation("_placeholder", true);
 		}
 
 		// If picturePath is provided show image
-		if (oControl.getObjectImageURI() || oControl.getShowPlaceholder()) {
-			oRm.write("<span ");
-			oRm.addClass('sapUxAPObjectPageHeaderObjectImageContainer');
-			oRm.addClass('sapUxAPObjectPageHeaderObjectImage-' + oControl.getObjectImageShape());
-			if (oControl.getIsObjectIconAlwaysVisible()) {
-				oRm.addClass('sapUxAPObjectPageHeaderObjectImageForce');
-			}
-			oRm.writeClasses();
-			oRm.write(">");
-			oRm.write("<span class='sapUxAPObjectPageHeaderObjectImageContainerSub'>");
+		ObjectImageHelper._renderImageAndPlaceholder(oRm, {
+			oHeader: oControl,
+			oObjectImage: oObjectImage,
+			oPlaceholder: oPlaceholder,
+			bIsObjectIconAlwaysVisible: oControl.getIsObjectIconAlwaysVisible(),
+			bAddSubContainer: true,
+			sBaseClass: 'sapUxAPObjectPageHeaderObjectImageContainer'
+		});
 
-			ObjectPageHeaderRenderer._renderInProperContainer(function () {
-				oRm.renderControl(oObjectImage);
-				ObjectPageHeaderRenderer._renderPlaceholder(oRm, oControl, !(oControl.getObjectImageShape() || oControl.getShowPlaceholder()));
-			}, oObjectImage, oRm);
-
-			oRm.write("</span>");
-			oRm.write("</span>");
-		}
-		oRm.write("<span ");
-		oRm.writeAttributeEscaped("id", oControl.getId() + "-identifierLineContainer");
-		oRm.addClass('sapUxAPObjectPageHeaderIdentifierContainer');
-		oRm.writeClasses();
-		oRm.write(">");
+		oRm.openStart("span", oControl.getId() + "-identifierLineContainer")
+			.class('sapUxAPObjectPageHeaderIdentifierContainer')
+			.openEnd();
 
 		this._renderObjectPageTitle(oRm, oControl);
-		oRm.write("</span>");
+		oRm.close("span");
 
-		oRm.write("<span");
-		oRm.writeAttributeEscaped("id", oControl.getId() + "-actions");
-		oRm.addClass('sapUxAPObjectPageHeaderIdentifierActions');
+		oRm.openStart("span", oControl.getId() + "-actions")
+			.class('sapUxAPObjectPageHeaderIdentifierActions');
+
 		if (oControl.getIsActionAreaAlwaysVisible()) {
-			oRm.addClass('sapUxAPObjectPageHeaderIdentifierActionsForce');
+			oRm.class('sapUxAPObjectPageHeaderIdentifierActionsForce');
 		}
-		if (oControl._getActionsPaddingStatus()) {
-			oRm.addClass("sapUxAPObjectPageHeaderIdentifierActionsNoPadding");
-		}
-		oRm.writeClasses();
-		oRm.write(">");
+		oRm.openEnd();
 
 		// Render the expand button only if there is a content to expand and we are on desktop
 		if (bIsDesktop && bIsHeaderContentVisible) {
@@ -115,93 +110,56 @@ sap.ui.define(["./ObjectPageLayout", "sap/ui/core/Icon"], function (ObjectPageLa
 
 		this._renderSideContentBtn(oRm, oControl);
 
-		oRm.write("</span>");
+		oRm.close("span");
 
-		oRm.write("</div>");
+		oRm.close("div");
 
-		oRm.write("</div>");
-	};
-
-	ObjectPageHeaderRenderer._renderInProperContainer = function (fnRender, oObjectImage, oRm) {
-		if (oObjectImage instanceof Icon) {
-			oRm.write("<div");
-			oRm.addClass("sapUxAPObjectPageHeaderObjectImage");
-			oRm.addClass("sapUxAPObjectPageHeaderPlaceholder");
-			oRm.writeClasses();
-			oRm.write(">");
-			fnRender();
-			oRm.write("</div>");
-		} else {
-			fnRender();
-		}
+		oRm.close("div");
 	};
 
 
 	/**
-	 * Renders the SelectTitleArrow icon.
+	 * Renders the title.
 	 *
-	 * @param {sap.ui.core.RenderManager}
-	 *            oRm the RenderManager that can be used for writing to the render output buffer
-	 *
-	 * @param {sap.uxap.ObjecPageHeader}
-	 *            oControl the ObjectPageHeader
-	 *
-	 * @param {bVisible}  if the placeholder will be visible
-	 *
-	 * @private
-	 */
-	ObjectPageHeaderRenderer._renderPlaceholder = function (oRm, oControl, bVisible, bTitleInContent) {
-		oRm.write("<div");
-		oRm.addClass('sapUxAPObjectPageHeaderPlaceholder');
-		oRm.addClass('sapUxAPObjectPageHeaderObjectImage');
-		if (!bVisible) {
-			oRm.addClass('sapUxAPHidePlaceholder');
-		}
-		oRm.writeClasses();
-		oRm.write(">");
-		oRm.renderControl(oControl._oPlaceholder);
-		oRm.write("</div>");
-	};
-
-	/**
-	 * Renders the SelectTitleArrow icon.
-	 *
-	 * @param {sap.ui.core.RenderManager}
-	 *            oRm the RenderManager that can be used for writing to the render output buffer
-	 *
-	 * @param {sap.uxap.ObjecPageHeader}
-	 *            oControl the ObjectPageHeader
+	 * @param {sap.ui.core.RenderManager} oRm The RenderManager that can be used for writing to the render output buffer
+	 * @param {sap.uxap.ObjectPageHeader} oControl The ObjectPageHeader
 	 *
 	 * @private
 	 */
 	ObjectPageHeaderRenderer._renderObjectPageTitle = function (oRm, oControl, bTitleInContent) {
 		var sOHTitle = oControl.getObjectTitle(),
 			bMarkers = (oControl.getShowMarkers() && (oControl.getMarkFavorite() || oControl.getMarkFlagged())),
-			oBreadCrumbs = oControl._getInternalAggregation('_breadCrumbs');
+			oBreadCrumbsAggregation = oControl._getBreadcrumbsAggregation(),
+			sTooltip = oControl.getTooltip_Text(),
+			sIdSuffix = bTitleInContent ? "-content" : "";
 
-		if (!bTitleInContent && oBreadCrumbs && oBreadCrumbs.getLinks().length) {
-			oRm.renderControl(oBreadCrumbs);
+		if (!bTitleInContent && oBreadCrumbsAggregation) {
+			oRm.renderControl(oBreadCrumbsAggregation);
 		}
-		oRm.write("<h1");
-		oRm.addClass('sapUxAPObjectPageHeaderIdentifierTitle');
+
+		oRm.openStart("h2", oControl.getId() + "-title" + sIdSuffix)
+			.class('sapUxAPObjectPageHeaderIdentifierTitle');
+
 		if (oControl.getIsObjectTitleAlwaysVisible()) {
-			oRm.addClass('sapUxAPObjectPageHeaderIdentifierTitleForce');
+			oRm.class('sapUxAPObjectPageHeaderIdentifierTitleForce');
 		}
 		if (bTitleInContent) {
-			oRm.addClass('sapUxAPObjectPageHeaderIdentifierTitleInContent');
+			oRm.class('sapUxAPObjectPageHeaderIdentifierTitleInContent');
 		}
 		if (oControl.getShowTitleSelector()) { // if we have arrow to render, the subtitle should have smaller top margin
-			oRm.addClass('sapUxAPObjectPageHeaderTitleFollowArrow');
+			oRm.class('sapUxAPObjectPageHeaderTitleFollowArrow');
+		}
+		oRm.openEnd();
+
+		oRm.openStart("span", oControl.getId() + "-innerTitle" + sIdSuffix)
+			.class("sapUxAPObjectPageHeaderTitleText")
+			.class("sapUxAPObjectPageHeaderTitleTextWrappable");
+
+		if (sTooltip) {
+			oRm.attr("title", sTooltip);
 		}
 
-		oRm.writeClasses();
-		oRm.writeAttributeEscaped("id", oControl.getId() + "-title");
-		oRm.write(">");
-		oRm.write("<span");
-		oRm.addClass("sapUxAPObjectPageHeaderTitleTextWrappable");
-		oRm.writeClasses();
-		oRm.writeAttributeEscaped("id", oControl.getId() + "-innerTitle");
-		oRm.write(">");
+		oRm.openEnd();
 
 		// if we have markers or arrow we have to cut the last word and bind it to the markers and arrow so that the icons never occur in one line but are accompanied by the last word of the title.
 
@@ -213,17 +171,24 @@ sap.ui.define(["./ObjectPageLayout", "sap/ui/core/Icon"], function (ObjectPageLa
 				sOHTitleEnd = sOHTitle;
 				sOHTitleStart = '';
 			}
+			oRm.text(sOHTitleStart);
+			oRm.close("span");
 
-			oRm.writeEscaped(sOHTitleStart);
-			oRm.write("</span>");
-			oRm.write("<span");
-			oRm.addClass('sapUxAPObjectPageHeaderNowrapMarkers');
+			oRm.openStart("span")
+				.class('sapUxAPObjectPageHeaderNowrapMarkers');
+
 			if (oControl.getMarkLocked() || oControl.getMarkChanges()) {
-				oRm.addClass('sapUxAPObjectPageHeaderMarks');
+				oRm.class('sapUxAPObjectPageHeaderMarks');
 			}
-			oRm.writeClasses();
-			oRm.write(">");
-			oRm.writeEscaped(sOHTitleEnd);
+			oRm.openEnd();
+
+			oRm.openStart("span")
+				.class("sapUxAPObjectPageHeaderTitleText")
+				.openEnd()
+				.text(sOHTitleEnd)
+				.close("span");
+
+			this._renderMarkers(oRm, oControl);
 
 			// if someone has set both Locked and Unsaved Changes icons, then show only Locked icon
 			if (oControl.getMarkLocked()) {
@@ -232,28 +197,29 @@ sap.ui.define(["./ObjectPageLayout", "sap/ui/core/Icon"], function (ObjectPageLa
 				this._renderMarkChanges(oRm, oControl, bTitleInContent);
 			}
 
-			this._renderMarkers(oRm, oControl);
 			this._renderSelectTitleArrow(oRm, oControl, bTitleInContent);
-			oRm.write("</span>");
+			oRm.close("span");
 		} else {
-			oRm.writeEscaped(sOHTitle);
-			oRm.write("</span>");
+			oRm.text(sOHTitle);
+			oRm.close("span");
 		}
-		oRm.write("</h1>");
 
-		oRm.write("<span");
-		oRm.addClass('sapUxAPObjectPageHeaderIdentifierDescription');
-		if (oControl.getIsObjectSubtitleAlwaysVisible() && oControl.getObjectSubtitle()) {
-			oRm.addClass('sapUxAPObjectPageHeaderIdentifierDescriptionForce');
+		oRm.close("h2");
+
+		if (oControl.getObjectSubtitle()) {
+			oRm.openStart("div", oControl.getId() + "-subtitle" + sIdSuffix)
+				.class('sapUxAPObjectPageHeaderIdentifierDescription');
+
+			if (oControl.getIsObjectSubtitleAlwaysVisible()) {
+				oRm.class('sapUxAPObjectPageHeaderIdentifierDescriptionForce');
+			}
+			if (bTitleInContent) {
+				oRm.class('sapUxAPObjectPageHeaderIdentifierSubTitleInContent');
+			}
+			oRm.openEnd();
+			oRm.text(oControl.getObjectSubtitle());
+			oRm.close("div");
 		}
-		if (bTitleInContent) {
-			oRm.addClass('sapUxAPObjectPageHeaderIdentifierSubTitleInContent');
-		}
-		oRm.writeClasses();
-		oRm.writeAttributeEscaped("id", oControl.getId() + "-subtitle");
-		oRm.write(">");
-		oRm.writeEscaped(oControl.getObjectSubtitle());
-		oRm.write("</span>");
 	};
 	/**
 	 * Renders the SelectTitleArrow icon.
@@ -269,21 +235,21 @@ sap.ui.define(["./ObjectPageLayout", "sap/ui/core/Icon"], function (ObjectPageLa
 	 */
 	ObjectPageHeaderRenderer._renderSelectTitleArrow = function (oRm, oControl, bTitleInContent) {
 		if (oControl.getShowTitleSelector()) { // render select title arrow
-			oRm.write("<span"); // Start title arrow container
-			oRm.addClass("sapUxAPObjectPageHeaderTitleArrow");
-			oRm.writeClasses();
-			oRm.write(">");
+			oRm.openStart("span")
+				.class("sapUxAPObjectPageHeaderTitleArrow")
+				.openEnd();
+
 			if (bTitleInContent) {
 				oRm.renderControl(oControl._oTitleArrowIconCont);
 			} else {
 				oRm.renderControl(oControl._oTitleArrowIcon);
 			}
-			oRm.write("</span>"); // end title arrow container
+			oRm.close("span");
 		}
 	};
 
 	/**
-	 * Renders the showSideContentButton button.
+	 * Renders the sideContentButton button.
 	 *
 	 * @param {sap.ui.core.RenderManager}
 	 *            oRm the RenderManager that can be used for writing to the render output buffer
@@ -293,17 +259,20 @@ sap.ui.define(["./ObjectPageLayout", "sap/ui/core/Icon"], function (ObjectPageLa
 	 * @private
 	 */
 	ObjectPageHeaderRenderer._renderSideContentBtn = function (oRm, oControl) {
-		if (oControl.getShowSideContentButton()) { // render sideContent button
-			oRm.write("<span"); // Start title arrow container
-			oRm.addClass("sapUxAPObjectPageHeaderSideContentBtn");
-			oRm.writeClasses();
-			oRm.write(">");
-			oRm.write("<span");
-			oRm.addClass("sapUxAPObjectPageHeaderSeparator");
-			oRm.writeClasses();
-			oRm.write("></span>");
-			oRm.renderControl(oControl._oSideContentBtn);
-			oRm.write("</span>"); // end title arrow container
+		var oSideBtn = oControl.getSideContentButton();
+
+		if (oSideBtn) { // render sideContent button and separator
+			oRm.openStart("span"); // Start button and separator container
+			oRm.class("sapUxAPObjectPageHeaderSideContentBtn");
+			oRm.openEnd();
+
+			oRm.openStart("span")
+				.class("sapUxAPObjectPageHeaderSeparator")
+				.openEnd()
+				.close("span");
+
+			oRm.renderControl(oSideBtn);
+			oRm.close("span");
 		}
 	};
 
@@ -321,43 +290,41 @@ sap.ui.define(["./ObjectPageLayout", "sap/ui/core/Icon"], function (ObjectPageLa
 	 * @private
 	 */
 	ObjectPageHeaderRenderer._renderMarkChanges = function (oRm, oControl, bTitleInContent) {
-		oRm.write("<span");
-		oRm.addClass("sapUxAPObjectPageHeaderChangesBtn");
-		oRm.addClass("sapUiSizeCompact");
-		oRm.writeClasses();
-		oRm.write(">");
+		oRm.openStart("span")
+			.class("sapUxAPObjectPageHeaderChangesBtn")
+			.class("sapUiSizeCompact")
+			.openEnd();
+
 		if (bTitleInContent) {
 			oRm.renderControl(oControl._oChangesIconCont);
 		} else {
 			oRm.renderControl(oControl._oChangesIcon);
 		}
-		oRm.write("</span>");
+
+		oRm.close("span");
 	};
 
 	/**
 	 * Renders the Lock icon.
 	 *
-	 * @param {sap.ui.core.RenderManager}
-	 *            oRm the RenderManager that can be used for writing to the render output buffer
-	 *
-	 * @param {sap.uxap.ObjectPageHeader}
-	 *            oControl the ObjectPageHeader
-	 * @param {boolean}
-	 *      bTitleInContent - if the lock will be rendered in content or in title
+	 * @param {sap.ui.core.RenderManager} oRm the RenderManager that can be used for writing to the render output buffer
+	 * @param {sap.uxap.ObjectPageHeader} oControl the ObjectPageHeader
+	 * @param {boolean} bTitleInContent the lock will be rendered in content or in title
 	 * @private
 	 */
 	ObjectPageHeaderRenderer._renderLock = function (oRm, oControl, bTitleInContent) {
-		oRm.write("<span");
-		oRm.addClass("sapUxAPObjectPageHeaderLockBtn");
-		oRm.addClass("sapUiSizeCompact");
-		oRm.writeClasses();
-		oRm.write(">");
+		oRm.openStart("span")
+			.class("sapUxAPObjectPageHeaderLockBtn")
+			.class("sapUiSizeCompact")
+			.openEnd();
+
 		if (bTitleInContent) {
 			oRm.renderControl(oControl._oLockIconCont);
 		} else {
 			oRm.renderControl(oControl._oLockIcon);
 		}
-		oRm.write("</span>");
+
+		oRm.close("span");
 	};
 
 	/**
@@ -382,18 +349,16 @@ sap.ui.define(["./ObjectPageLayout", "sap/ui/core/Icon"], function (ObjectPageLa
 			this._renderMarkersAria(oRm, oControl); // render hidden aria description of flag and favorite icons
 
 			// render icons
-			oRm.write("<span");
-			oRm.addClass("sapMObjStatusMarker");
+			oRm.openStart("span", oControl.getId() + "-markers")
+				.class("sapMObjStatusMarker")
+				.attr("aria-describedby", oControl.getId() + "-markers-aria")
+				.openEnd();
 
-			oRm.writeClasses();
-			oRm.writeAttributeEscaped("id", oControl.getId() + "-markers");
-			oRm.writeAttributeEscaped("aria-describedby", oControl.getId() + "-markers-aria");
-
-			oRm.write(">");
 			for (var i = 0; i < aIcons.length; i++) {
 				oRm.renderControl(aIcons[i]);
 			}
-			oRm.write("</span>");
+
+			oRm.close("span");
 		}
 	};
 
@@ -424,16 +389,13 @@ sap.ui.define(["./ObjectPageLayout", "sap/ui/core/Icon"], function (ObjectPageLa
 		// if there is a description render ARIA node
 		if (sAriaDescription !== "") {
 			// BEGIN ARIA hidden node
-			oRm.write("<div");
 
-			oRm.writeAttributeEscaped("id", oControl.getId() + "-markers-aria");
-			oRm.writeAttribute("aria-hidden", "false");
-			oRm.addClass("sapUiHidden");
-			oRm.writeClasses();
-			oRm.write(">");
-			oRm.writeEscaped(sAriaDescription);
-
-			oRm.write("</div>");
+			oRm.openStart("div", oControl.getId() + "-markers-aria")
+				.attr("aria-hidden", "false")
+				.class("sapUiHidden")
+				.openEnd()
+				.text(sAriaDescription)
+				.close("div");
 			// END ARIA hidden node
 		}
 	};

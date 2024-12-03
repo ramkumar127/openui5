@@ -1,11 +1,11 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
 
 		<title>sap.m.ObjectHeader - Responsive</title>
-		<script src="../../../resources/sap-ui-core.js" type="text/javascript" id="sap-ui-bootstrap" data-sap-ui-libs="sap.m" data-sap-ui-theme="sap_bluecrystal">
+		<script src="shared-config.js"></script>
+		<script src="../../../resources/sap-ui-core.js" id="sap-ui-bootstrap" data-sap-ui-libs="sap.m">
 		</script>
 
 		<style>
@@ -15,14 +15,13 @@
 			width: auto;
 			white-space: normal;
 		}
+		.missingControl {
+			border: 1px solid;
+			margin: 1em 2em;
+			padding: 1em 2em;
+		}
 		</style>
 		<script>
-			try{
-				sap.ui.getCore().loadLibrary("sap.suite.ui.commons");
-			}catch(e){
-				console.log("This test page requires the library 'sap.suite.ui.commons' to display the HeaderContainer control inside the ObjectHeader which is not available.");
-			}
-
 			jQuery.sap.require("sap.ui.core.format.NumberFormat");
 			var oFloat = sap.ui.core.format.NumberFormat.getFloatInstance({minFractionDigits: 2, maxFractionDigits: 2});
 
@@ -39,11 +38,18 @@
 					{id: 4572, name:"Magna Aliqua", amount: 5, price: 23.45, status: "Open"}
 				]
 			});
-			sap.ui.getCore().setModel(model);
 
 			// create and add app
-			var app = new sap.m.App("myApp");
+			var app = new sap.m.SplitApp("myApp");
+			app.setModel(model);
 			app.placeAt("body");
+
+			var toDetailBtn = new sap.m.Button({
+				text: "Go to Detail page",
+				press: function(oEv) {
+					app.toDetail("detail");
+				}
+			});
 
 			var label1 = new sap.m.Label({
 				text: "ObjectHeader in fullScreenOptimized mode with states (2), no markers"
@@ -121,9 +127,6 @@
 				numberUnit: "Euro",
 				numberTextDirection: sap.ui.core.TextDirection.LTR,
 				fullScreenOptimized: true,
-				showMarkers: false,
-				markFlagged: true,
-				markFavorite: true,
 				numberState: sap.ui.core.ValueState.Success,
 				attributes: [
 					new sap.m.ObjectAttribute({
@@ -182,6 +185,7 @@
 
 			// connect IconTabBar and ObjectHeader
 			oh1.setHeaderContainer(itb1);
+			oh1.addStyleClass("sapUiResponsivePadding--header");
 
 			var oh1Small = new sap.m.ObjectHeader("oh1Small", {
 				responsive: true,
@@ -191,9 +195,6 @@
 				number: "624,00",
 				numberUnit: "Euro",
 				fullScreenOptimized: false,
-				showMarkers: false,
-				markFlagged: true,
-				markFavorite: true,
 				numberState: sap.ui.core.ValueState.Success,
 				attributes: [
 					new sap.m.ObjectAttribute({
@@ -265,9 +266,10 @@
 				number: "33233333.624,00",
 				numberUnit: "שֶׁקֶל חָדָשׁ",
 				numberTextDirection : sap.ui.core.TextDirection.RTL,
-				showMarkers: true,
-				markFlagged: true,
-				markFavorite: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Favorite}),
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				numberState: sap.ui.core.ValueState.Success
 			});
 
@@ -441,18 +443,18 @@
 
 			// connect IconTabBar and ObjectHeader
 			oh2.setHeaderContainer(itb2);
-
+			oh2.addStyleClass("sapUiResponsivePadding--header");
 			//test popover title
-			var domRef = null;
 			var titleSelectorEventHandler = function(oEvent) {
-				domRef = oEvent.getParameters().domRef;
+				const header = oEvent.getSource();
+				const domRef = oEvent.getParameters().domRef;
 				var popover = new sap.m.Popover({
 						placement: sap.m.PlacementType.Bottom,
 						showHeader: true,
 						content: new sap.m.List({
 							 mode: "SingleSelectMaster",
 							 includeItemInSelection : true,
-							 select : function (evt) {
+							 selectionChange : function (evt) {
 									header.setTitle(evt.getParameter("listItem").getTitle());
 									popover.close();
 							 },
@@ -480,8 +482,7 @@
 					}) // end of content
 				}); //end of popover
 				popover.openBy(domRef);
-			}
-
+			};
 
 			var oh3 = new sap.m.ObjectHeader("oh3", {
 				responsive: true,
@@ -492,11 +493,13 @@
 				numberUnit: "here we have a long currency Euro",
 				showTitleSelector : true,
 				titleSelectorPress : titleSelectorEventHandler,
-				showMarkers: true,
-				markFlagged: true,
-				markFavorite: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Favorite}),
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				numberState: sap.ui.core.ValueState.Success
 			});
+			oh3.addStyleClass("sapUiResponsivePadding--header");
 
 			var itb3 = new sap.m.IconTabBar("itb3", {
 				selectedKey: "key13",
@@ -589,8 +592,9 @@
 				introHref: "http://www.google.com",
 				introTarget: "_blank",
 				fullScreenOptimized: true,
-				showMarkers: true,
-				markFlagged: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				numberState: sap.ui.core.ValueState.Success,
 				statuses : [ new sap.m.ObjectStatus({
 					text : "Order Shipping slow"
@@ -634,6 +638,7 @@
 					text: "Progress Indicator"
 				})]
 			});
+			oh4.addStyleClass("sapUiResponsivePadding--header");
 
 			var itb4 = new sap.m.IconTabBar("itb4", {
 				selectedKey: "key13",
@@ -668,8 +673,9 @@
 				titleActive: true,
 				titlePress: function(){ alert('you click the title');},
 				fullScreenOptimized: false,
-				showMarkers: true,
-				markFlagged: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				numberState: sap.ui.core.ValueState.Success,
 				statuses : [ new sap.m.ObjectStatus({
 					text : "Order Shipping slow"
@@ -740,9 +746,10 @@
 				title: "Short title",
 				number: "331,00",
 				numberUnit: "Dollar",
-				showMarkers: true,
-				markFlagged: true,
-				markFavorite: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Favorite}),
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				numberState: sap.ui.core.ValueState.Success,
 				attributes: [
 					new sap.m.ObjectAttribute({
@@ -756,6 +763,7 @@
 					})
 				]
 			});
+			oh7.addStyleClass("sapUiResponsivePadding--header");
 
 			var itb7 = new sap.m.IconTabBar("itb7", {
 				selectedKey: "key3",
@@ -808,9 +816,10 @@
 				number: "1.684,00",
 				numberUnit: "Euro",
 				backgroundDesign: "Translucent",
-				showMarkers: true,
-				markFlagged: true,
-				markFavorite: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Favorite}),
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				numberState: sap.ui.core.ValueState.Success,
 				attributes: [
 					new sap.m.ObjectAttribute({
@@ -827,50 +836,7 @@
 				 	})
 				]
 			});
-
-			if (sap.suite) {
-				var hc9 = new sap.suite.ui.commons.HeaderContainer({
-					scrollStep: 200,
-					scrollTime: 500,
-					items: [
-						new sap.suite.ui.commons.HeaderCell({
-							north: new sap.suite.ui.commons.HeaderCellItem({
-								height: "90%",
-								content: new sap.suite.ui.commons.ComparisonChart({
-									size: "S",
-									scale: "M",
-									data: [
-										new sap.suite.ui.commons.ComparisonData({
-											title: "Americas",
-											value: 234,
-											color: "Good"
-										}),
-										new sap.suite.ui.commons.ComparisonData({
-											title: "EMEA",
-											value: 97,
-											color: "Error"
-										}),
-										new sap.suite.ui.commons.ComparisonData({
-											title: "APAC",
-											value: 197,
-											color: "Critical"
-										})
-									]
-								})
-							}),
-							south: new sap.suite.ui.commons.HeaderCellItem({
-								height: "10%",
-								content: new sap.m.Label({
-									text: "EUR, Compare across regions"
-								})
-							})
-						})
-					]
-				});
-
-				// connect HeaderContainer and ObjectHeader
-				oh9.setHeaderContainer(hc9);
-			}
+			oh9.addStyleClass("sapUiResponsivePadding--header");
 
 			/*use case 10 object header + header container as XML fragment */
 			var oh10 = new sap.m.ObjectHeader("oh10", {
@@ -880,9 +846,10 @@
 				icon: "sap-icon://nutrition-activity",
 				number: "1.684,00",
 				numberUnit: "Euro",
-				showMarkers: true,
-				markFlagged: true,
-				markFavorite: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Favorite}),
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				numberState: sap.ui.core.ValueState.Success,
 				attributes: [
 					new sap.m.ObjectAttribute({
@@ -899,135 +866,215 @@
 				 	})
 				]
 			});
+			oh10.addStyleClass("sapUiResponsivePadding--header");
 
-			if (sap.suite) {
-				var xml = '' +
-				'<HeaderContainer xmlns="sap.suite.ui.commons" xmlns:m="sap.m" scrollStep="200" scrollTime="500">' +
-				'	<items>' +
-				'		<HeaderCell>' +
-				'			<north>' +
-				'				<HeaderCellItem height="90%">' +
-				'					<content>' +
-				'						<ComparisonChart size="S" scale="M">' +
-				'					        <data>' +
-				'					        	<ComparisonData	title="Americas" value="234" color="Good"/>' +
-				'					        	<ComparisonData	title="EMEA" value="97" color="Error"/>' +
-				'					        	<ComparisonData	title="APAC" value="197" color="Critical"/>' +
-				'					        </data>' +
-				'				        </ComparisonChart>' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</north>' +
-				'			<south>' +
-				'				<HeaderCellItem height="10%">' +
-				'					<content>' +
-				'						<m:Label text="EUR, Compare across regions" />' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</south>' +
-				'		</HeaderCell>' +
-				'		<HeaderCell>' +
-				'			<north>' +
-				'				<HeaderCellItem height="90%">' +
-				'					<content>' +
-				'						<NumericContent size="S" scale="M" value="1.96" valueColor="Error" indicator="Up"/>' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</north>' +
-				'			<south>' +
-				'				<HeaderCellItem height="10%">' +
-				'					<content>' +
-				'						<m:Label text="EUR, Current Quarter" />' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</south>' +
-				'		</HeaderCell>' +
-				'		<HeaderCell>' +
-				'			<north>' +
-				'				<HeaderCellItem height="90%">' +
-				'					<content>' +
-				'						<BulletChart size="S" scale="M" targetValue="75" targetValueLabel="75c" minValue="0" maxValue="150">' +
-				'							<actual>' +
-				'								<BulletChartData value="125" color="Error"/>' +
-				'							</actual>' +
-				'							<thresholds>' +
-				'								<BulletChartData value="35" color="Critical"/>' +
-				'								<BulletChartData value="115" color="Error"/>' +
-				'							</thresholds>' +
-				'						</BulletChart> ' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</north>' +
-				'			<south>' +
-				'				<HeaderCellItem height="10%">' +
-				'					<content>' +
-				'						<m:Label text="EUR, Current and Target" />' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</south>' +
-				'		</HeaderCell>' +
-				'		<HeaderCell>' +
-				'			<north>' +
-				'				<HeaderCellItem height="90%">' +
-				'					<content>' +
-				'						<NumericContent size="S" value="3" icon="sap-icon://travel-expense" />' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</north>' +
-				'			<south>' +
-				'				<HeaderCellItem height="10%">' +
-				'					<content>' +
-				'						<m:Label text="Leave Requests" />' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</south>' +
-				'		</HeaderCell>' +
-				'		<HeaderCell>' +
-				'			<north>' +
-				'				<HeaderCellItem height="90%">' +
-				'					<content>' +
-				'						<NumericContent size="S" value="9" icon="sap-icon://locked" /> ' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</north>' +
-				'			<south>' +
-				'				<HeaderCellItem height="10%">' +
-				'					<content>' +
-				'						<m:Label text="Hours since last Activity" />' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</south>' +
-				'		</HeaderCell>' +
-				'		<HeaderCell>' +
-				'			<north>' +
-				'				<HeaderCellItem height="90%">' +
-				'					<content>' +
-				'						<NumericContent size="S" scale="M" value="1.25" valueColor="Good" indicator="Up"/>' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</north>' +
-				'			<south>' +
-				'				<HeaderCellItem height="10%">' +
-				'					<content>' +
-				'						<m:Label text="EUR, Current Quarter" />' +
-				'					</content>' +
-				'				</HeaderCellItem>' +
-				'			</south>' +
-				'		</HeaderCell>' +
-				'	</items>'+
-				'</HeaderContainer>';
-				oFragmentHeaderContainer = sap.ui.xmlfragment({fragmentContent:xml});
-				// connect HeaderContainer and ObjectHeader
-				oh10.setHeaderContainer(oFragmentHeaderContainer);
-			}
+			sap.ui.getCore().loadLibrary("sap.suite.ui.commons", { async: true }).then(() => {
+				sap.ui.require([
+					"sap/ui/core/Fragment",
+					"sap/suite/ui/commons/HeaderContainer",
+					"sap/suite/ui/commons/HeaderCell",
+					"sap/suite/ui/commons/HeaderCellItem",
+					"sap/suite/ui/commons/ComparisonChart",
+					"sap/suite/ui/commons/ComparisonData"
+				], function(Fragment, HeaderContainer, HeaderCell, HeaderCellItem, ComparisonChart, ComparisonData) {
+
+					var hc9 = new HeaderContainer({
+						scrollStep: 200,
+						scrollTime: 500,
+						items: [
+							new HeaderCell({
+								north: new HeaderCellItem({
+									height: "90%",
+									content: new ComparisonChart({
+										size: "S",
+										scale: "M",
+										data: [
+											new ComparisonData({
+												title: "Americas",
+												value: 234,
+												color: "Good"
+											}),
+											new ComparisonData({
+												title: "EMEA",
+												value: 97,
+												color: "Error"
+											}),
+											new ComparisonData({
+												title: "APAC",
+												value: 197,
+												color: "Critical"
+											})
+										]
+									})
+								}),
+								south: new HeaderCellItem({
+									height: "10%",
+									content: new sap.m.Label({
+										text: "EUR, Compare across regions"
+									})
+								})
+							})
+						]
+					});
+
+					// connect HeaderContainer and ObjectHeader
+					oh9.setHeaderContainer(hc9);
+
+					var xml = '' +
+					'<HeaderContainer xmlns="sap.suite.ui.commons" xmlns:m="sap.m" scrollStep="200" scrollTime="500">' +
+					'	<items>' +
+					'		<HeaderCell>' +
+					'			<north>' +
+					'				<HeaderCellItem height="90%">' +
+					'					<content>' +
+					'						<ComparisonChart size="S" scale="M">' +
+					'					        <data>' +
+					'					        	<ComparisonData	title="Americas" value="234" color="Good"/>' +
+					'					        	<ComparisonData	title="EMEA" value="97" color="Error"/>' +
+					'					        	<ComparisonData	title="APAC" value="197" color="Critical"/>' +
+					'					        </data>' +
+					'				        </ComparisonChart>' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</north>' +
+					'			<south>' +
+					'				<HeaderCellItem height="10%">' +
+					'					<content>' +
+					'						<m:Label text="EUR, Compare across regions" />' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</south>' +
+					'		</HeaderCell>' +
+					'		<HeaderCell>' +
+					'			<north>' +
+					'				<HeaderCellItem height="90%">' +
+					'					<content>' +
+					'						<NumericContent size="S" scale="M" value="1.96" valueColor="Error" indicator="Up"/>' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</north>' +
+					'			<south>' +
+					'				<HeaderCellItem height="10%">' +
+					'					<content>' +
+					'						<m:Label text="EUR, Current Quarter" />' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</south>' +
+					'		</HeaderCell>' +
+					'		<HeaderCell>' +
+					'			<north>' +
+					'				<HeaderCellItem height="90%">' +
+					'					<content>' +
+					'						<BulletChart size="S" scale="M" targetValue="75" targetValueLabel="75c" minValue="0" maxValue="150">' +
+					'							<actual>' +
+					'								<BulletChartData value="125" color="Error"/>' +
+					'							</actual>' +
+					'							<thresholds>' +
+					'								<BulletChartData value="35" color="Critical"/>' +
+					'								<BulletChartData value="115" color="Error"/>' +
+					'							</thresholds>' +
+					'						</BulletChart> ' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</north>' +
+					'			<south>' +
+					'				<HeaderCellItem height="10%">' +
+					'					<content>' +
+					'						<m:Label text="EUR, Current and Target" />' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</south>' +
+					'		</HeaderCell>' +
+					'		<HeaderCell>' +
+					'			<north>' +
+					'				<HeaderCellItem height="90%">' +
+					'					<content>' +
+					'						<NumericContent size="S" value="3" icon="sap-icon://travel-expense" />' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</north>' +
+					'			<south>' +
+					'				<HeaderCellItem height="10%">' +
+					'					<content>' +
+					'						<m:Label text="Leave Requests" />' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</south>' +
+					'		</HeaderCell>' +
+					'		<HeaderCell>' +
+					'			<north>' +
+					'				<HeaderCellItem height="90%">' +
+					'					<content>' +
+					'						<NumericContent size="S" value="9" icon="sap-icon://locked" /> ' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</north>' +
+					'			<south>' +
+					'				<HeaderCellItem height="10%">' +
+					'					<content>' +
+					'						<m:Label text="Hours since last Activity" />' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</south>' +
+					'		</HeaderCell>' +
+					'		<HeaderCell>' +
+					'			<north>' +
+					'				<HeaderCellItem height="90%">' +
+					'					<content>' +
+					'						<NumericContent size="S" scale="M" value="1.25" valueColor="Good" indicator="Up"/>' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</north>' +
+					'			<south>' +
+					'				<HeaderCellItem height="10%">' +
+					'					<content>' +
+					'						<m:Label text="EUR, Current Quarter" />' +
+					'					</content>' +
+					'				</HeaderCellItem>' +
+					'			</south>' +
+					'		</HeaderCell>' +
+					'	</items>' +
+					'</HeaderContainer>';
+
+					Fragment.load({
+						definition: xml
+					}).then(function(oHeaderContainer){
+						// connect HeaderContainer and ObjectHeader
+						oh10.setHeaderContainer(oHeaderContainer);
+					});
+				});
+			}, function(err) {
+				console.info("This test page requires the library 'sap.suite.ui.commons' to display the HeaderContainer control inside the ObjectHeader which is not available.");
+				oh9.setHeaderContainer(
+					new sap.m.HeaderContainer({
+						content: [
+							new sap.m.Text({
+								textAlign: sap.ui.core.TextAlign.Center,
+								text: "sap.suite.ui.commons library is missing"
+							}).addStyleClass("missingControl sapThemeBrand-asBorderColor")
+						]
+					})
+				);
+				oh10.setHeaderContainer(
+					new sap.m.HeaderContainer({
+						content: [
+							new sap.m.Text({
+								textAlign: sap.ui.core.TextAlign.Center,
+								text: "sap.suite.ui.commons library is missing"
+							}).addStyleClass("missingControl sapThemeBrand-asBorderColor")
+						]
+					})
+				);
+			});
 
 			var oh11 = new sap.m.ObjectHeader("oh11", {
 				responsive: true,
 				intro: "On behalf of John Smith Ñagçyfox",
 				title: "11 This is a title",
-				showMarkers: true,
-				markFlagged: true,
-				markFavorite: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Favorite}),
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				attributes: [
 					new sap.m.ObjectAttribute({
 						title: "Manufacturer",
@@ -1043,6 +1090,7 @@
 				 	})
 				]
 			});
+			oh11.addStyleClass("sapUiResponsivePadding--header");
 
 			var itb11 = new sap.m.IconTabBar("itb11", {
 				selectedKey: "key1",
@@ -1154,9 +1202,10 @@
 				responsive: true,
 				number: "1.684,00",
 				numberUnit: "Euro",
-				showMarkers: true,
-				markFlagged: true,
-				markFavorite: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Favorite}),
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				numberState: sap.ui.core.ValueState.Success,
 				attributes: [
 					new sap.m.ObjectAttribute({
@@ -1173,6 +1222,7 @@
 				 	})
 				]
 			});
+			oh12.addStyleClass("sapUiResponsivePadding--header");
 
 			var itb12 = new sap.m.IconTabBar("itb12", {
 				selectedKey: "key1",
@@ -1336,11 +1386,13 @@
 				number: "1.684,00",
 				numberUnit: "Euro",
 				showTitleSelector : true,
-				showMarkers: true,
-				markFlagged: true,
-				markFavorite: true,
+				markers: [
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Favorite}),
+					new sap.m.ObjectMarker({type: sap.m.ObjectMarkerType.Flagged})
+				],
 				numberState: sap.ui.core.ValueState.Success
 			});
+			oh14.addStyleClass("sapUiResponsivePadding--header");
 
 			/* special case: responsive with no markers, but not states, attributes, and tabs */
 			var oh15 = new sap.m.ObjectHeader("oh15", {
@@ -1351,11 +1403,64 @@
 				numberUnit: "Euro",
 				numberState: sap.ui.core.ValueState.Success
 			});
+			oh15.addStyleClass("sapUiResponsivePadding--header");
 
-			// create and add a page with icon tab bar
-			var page = new sap.m.Page("page", {
+			var oLongTitleOH = new sap.m.ObjectHeader({
+				title : "TitleThatDoesNotHaveAnySpaceAsItIsOneVeryLongWordWithoutNarrowClassSet",
+				showTitleSelector: true,
+				titleActive: true,
+				responsive:true
+			});
+
+			var oLongTitleOH1 = new sap.m.ObjectHeader({
+				title : "TitleThatDoesNotHaveAnySpaceAsItIsOneVeryLongWordWithNarrowClassSet",
+				showTitleSelector: true,
+				responsive:true
+			}).addStyleClass("sapUiContainer-Narrow");
+
+			var oLongTitleOH2 = new sap.m.ObjectHeader({
+				title : "TitleThatDoesNotHaveAnySpaceAsItIsOneVeryLongWordWithNarrowClassSet",
+				showTitleSelector: true,
+				titleActive: true,
+				responsive:true
+			}).addStyleClass("sapUiContainer-Narrow");
+
+			var ohEmptyAttribute = new sap.m.ObjectHeader("ohEA", {
+				responsive: true,
+				title: "ObjectHeader with empty attribute",
+				intro: "The only Status should be shift to the left",
+				attributes: [
+					new sap.m.ObjectAttribute({
+						title: "",
+						text: ""
+					 })
+				],
+				statuses: [
+					new sap.m.ObjectStatus({
+						title: "Approval",
+						text: "Pending",
+						icon: "sap-icon://inbox",
+						state: sap.ui.core.ValueState.Warning
+				 	})
+				]
+			});
+			var page1 = new sap.m.Page("page1", {
 				title:"ObjectHeader (Responsive)",
 				content : [
+					oLongTitleOH2,
+					toDetailBtn
+				]
+			});
+			// create and add a page with icon tab bar
+			var detail = new sap.m.Page("detail", {
+				title:"ObjectHeader (Responsive)",
+				showNavButton: jQuery.device.is.phone,
+				navButtonPress: function() {
+					app.backMaster();
+				},
+				content : [
+					oLongTitleOH,
+					oLongTitleOH1,
 					label1,
 					oh1,
 					label1Small,
@@ -1386,13 +1491,16 @@
 					oh9,
 					label10,
 					oh10,
+					ohEmptyAttribute,
 					new sap.m.Label({text: "THE END!"}) // placeholder to see content below
 				]
 			});
-			app.addPage(page);
+			app.addMasterPage(page1);
+			app.addDetailPage(detail);
 
 		</script>
+
 	</head>
-	<body id="body" class="sapUiBody" role="application">
+	<body id="body" class="sapUiBody">
 	</body>
 </html>

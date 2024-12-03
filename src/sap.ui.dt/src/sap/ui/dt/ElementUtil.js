@@ -4,119 +4,82 @@
 
 // Provides object sap.ui.dt.ElementUtil.
 sap.ui.define([
-	'jquery.sap.global'
-],
-function(jQuery) {
+	"sap/base/util/isPlainObject",
+	"sap/ui/base/Object",
+	"sap/ui/core/Component",
+	"sap/ui/core/Element",
+	"sap/ui/core/UIArea",
+	"sap/ui/dt/DOMUtil",
+	"sap/ui/dt/Util"
+], function(
+	isPlainObject,
+	BaseObject,
+	Component,
+	Element,
+	UIArea,
+	DOMUtil,
+	Util
+) {
 	"use strict";
 
 	/**
-	 * Class for ElementUtil.
+	 * Utility functionality to work with UI5 elements, e.g. iterate through aggregations, find parents, ...
 	 *
-	 * @class
-	 * Utility functionality to work with élements, e.g. iterate through aggregations, find parents, ...
-	 *
+	 * @namespace
 	 * @author SAP SE
 	 * @version ${version}
 	 *
 	 * @private
-	 * @static
 	 * @since 1.30
 	 * @alias sap.ui.dt.ElementUtil
-	 * @experimental Since 1.30. This class is experimental and provides only limited functionality. Also the API might be changed in future.
 	 */
 
 	var ElementUtil = {};
 
-	ElementUtil.sACTION_MOVE = 'move';
-	/**
-	 *
-	 */
-	ElementUtil.iterateOverElements = function(vElement, fnCallback) {
-		if (vElement && vElement.length) {
-			for (var i = 0; i < vElement.length; i++) {
-				var oElement = vElement[i];
-				if (oElement instanceof sap.ui.core.Element) {
-					fnCallback(oElement);
-				}
-			}
-		} else if (vElement instanceof sap.ui.core.Element) {
-			fnCallback(vElement);
-		}
-	};
-
-	/**
-	 *
-	 */
 	ElementUtil.iterateOverAllPublicAggregations = function(oElement, fnCallback) {
-		var that = this;
-
 		var mAggregations = oElement.getMetadata().getAllAggregations();
 		var aAggregationNames = Object.keys(mAggregations);
 
 		aAggregationNames.forEach(function(sAggregationName) {
 			var oAggregation = mAggregations[sAggregationName];
-			var vAggregationValue = that.getAggregation(oElement, sAggregationName);
+			var vAggregationValue = this.getAggregation(oElement, sAggregationName);
 
 			fnCallback(oAggregation, vAggregationValue);
-		});
+		}, this);
 	};
 
-	/**
-	 *
-	 */
 	ElementUtil.getElementInstance = function(vElement) {
 		if (typeof vElement === "string") {
-			return sap.ui.getCore().byId(vElement);
-		} else {
-			return vElement;
+			var oElement = Element.getElementById(vElement);
+			return oElement || Component.getComponentById(vElement);
 		}
+		return vElement;
 	};
 
-	/**
-	 *
-	 */
 	ElementUtil.hasAncestor = function(oElement, oAncestor) {
 		oAncestor = this.fixComponentContainerElement(oAncestor);
+		var oFixedParent;
 
-		var oParent = this.fixComponentParent(oElement);
-		while (oParent && oParent !== oAncestor) {
-			oParent = oParent.getParent();
-			oParent = this.fixComponentParent(oParent);
+		while (oElement && oElement !== oAncestor) {
+			oFixedParent = this.fixComponentParent(oElement);
+			// fixComponentParent already returns the parent
+			if (oElement === oFixedParent) {
+				oElement = oElement.getParent();
+			} else {
+				oElement = oFixedParent;
+			}
 		}
 
-		return !!oParent;
+		return !!oElement;
 	};
 
-	/**
-	 *
-	 */
 	ElementUtil.getClosestElementForNode = function(oNode) {
-		var $ClosestElement = jQuery(oNode).closest("[data-sap-ui]");
-		return $ClosestElement.length ? sap.ui.getCore().byId($ClosestElement.data("sap-ui")) : undefined;
+		var oClosestElement = oNode.closest("[data-sap-ui]");
+		return oClosestElement ? Element.getElementById(oClosestElement.getAttribute("data-sap-ui")) : undefined;
 	};
 
-	/**
-	 * ! Please, use this method only if OverlayUtil.getClosestOverlayForType is not available in your case !
-	 * find the closest element of the given type
-	 * @param  {sap.ui.core.Element} oSourceElement to start search for
-	 * @param  {string} sType to check instance of
-	 * @return {sap.ui.core.Element} element of the given type, if found
-	 */
-	ElementUtil.getClosestElementOfType = function(oSourceElement, sType) {
-		var oElement = oSourceElement;
-
-		while (oElement && !this.isInstanceOf(oElement, sType)) {
-			oElement = oElement.getParent();
-		}
-
-		return oElement;
-	};
-
-	/**
-	 *
-	 */
 	ElementUtil.fixComponentParent = function(oElement) {
-		if (this.isInstanceOf(oElement, "sap.ui.core.UIComponent")) {
+		if (BaseObject.isObjectA(oElement, "sap.ui.core.UIComponent")) {
 			var oComponentContainer = oElement.oContainer;
 			if (oComponentContainer) {
 				return oComponentContainer.getParent();
@@ -126,45 +89,17 @@ function(jQuery) {
 		}
 	};
 
-	/**
-	 *
-	 */
 	ElementUtil.fixComponentContainerElement = function(oElement) {
-		if (this.isInstanceOf(oElement, "sap.ui.core.ComponentContainer")) {
-			//This happens when the compontentContainer has not been rendered yet
+		if (BaseObject.isObjectA(oElement, "sap.ui.core.ComponentContainer")) {
+			// This happens when the compontentContainer has not been rendered yet
 			if (!oElement.getComponentInstance()) {
-				return;
+				return undefined;
 			}
-			return oElement.getComponentInstance().getAggregation("rootControl");
-		} else {
-			return oElement;
+			return oElement.getComponentInstance().getRootControl();
 		}
+		return oElement;
 	};
 
-	/**
-	 *
-	 */
-	ElementUtil.findAllPublicElements = function(oElement) {
-		var that = this;
-		var aFoundElements = [];
-
-		function internalFind(oElement) {
-			oElement = that.fixComponentContainerElement(oElement);
-			if (oElement) {
-				aFoundElements.push(oElement);
-				that.iterateOverAllPublicAggregations(oElement, function(oAggregation, vElements) {
-					that.iterateOverElements(vElements, internalFind);
-				});
-			}
-		}
-		internalFind(oElement);
-
-		return aFoundElements;
-	};
-
-	/**
-	 *
-	 */
 	ElementUtil.getDomRef = function(oElement) {
 		if (oElement) {
 			var oDomRef;
@@ -178,58 +113,24 @@ function(jQuery) {
 		}
 	};
 
-	/**
-	 *
-	 */
-	ElementUtil.findAllPublicChildren = function(oElement) {
-		var aFoundElements = this.findAllPublicElements(oElement);
-		var iIndex = aFoundElements.indexOf(oElement);
-		if (iIndex > -1) {
-			aFoundElements.splice(iIndex, 1);
+	ElementUtil.findAllSiblingsInContainer = function(oElement, oContainer) {
+		var oParent = oElement && oElement.getParent();
+		if (!oParent) {
+			return [];
 		}
-		return aFoundElements;
 
-	};
-
-	/**
-	 *
-	 */
-	ElementUtil.isElementFiltered = function(oControl, aType) {
-		// TODO: Is this method still needed?
-		var that = this;
-
-		aType = aType || this.getControlFilter();
-		var bFiltered = false;
-
-		aType.forEach(function(sType) {
-			bFiltered = that.isInstanceOf(oControl, sType);
-			if (bFiltered) {
-				return false;
-			}
-		});
-
-		return bFiltered;
-	};
-
-	/**
-	 *
-	 */
-	ElementUtil.findClosestControlInDom = function(oNode) {
-		// TODO: Is this method still needed?
-		if (oNode && oNode.getAttribute("data-sap-ui")) {
-			return sap.ui.getCore().byId(oNode.getAttribute("data-sap-ui"));
-		} else {
-			if (oNode.parentNode) {
-				this.findClosestControlInDom(oNode.parentNode);
-			} else {
-				return null;
-			}
+		if (oParent !== oContainer) {
+			var aParents = ElementUtil.findAllSiblingsInContainer(oParent, oContainer);
+			return aParents.map(function(oParent) {
+				return ElementUtil.getAggregation(oParent, oElement.sParentAggregationName);
+			}).reduce(function(a, b) {
+				return a.concat(b);
+			}, []);
 		}
+
+		return ElementUtil.getAggregation(oParent, oElement.sParentAggregationName);
 	};
 
-	/**
-	 *
-	 */
 	ElementUtil.getAggregationAccessors = function(oElement, sAggregationName) {
 		var oMetadata = oElement.getMetadata();
 		oMetadata.getJSONKeys();
@@ -238,24 +139,22 @@ function(jQuery) {
 			var sGetter = oAggregationMetadata._sGetter;
 
 			// altType getter returns not element (TODO: clarify if getAggregationNameControl getter is a convention)
-			if (oAggregationMetadata.altTypes && oAggregationMetadata.altTypes.length && oElement[oAggregationMetadata._sGetter + "Control"]) {
-				sGetter = oAggregationMetadata._sGetter + "Control";
+			if (oAggregationMetadata.altTypes && oAggregationMetadata.altTypes.length
+					&& oElement[`${oAggregationMetadata._sGetter}Control`]) {
+				sGetter = `${oAggregationMetadata._sGetter}Control`;
 			}
 
 			return {
-				get : sGetter,
-				add : oAggregationMetadata._sMutator,
-				remove : oAggregationMetadata._sRemoveMutator,
-				insert : oAggregationMetadata._sInsertMutator
+				get: sGetter,
+				add: oAggregationMetadata._sMutator,
+				remove: oAggregationMetadata._sRemoveMutator,
+				insert: oAggregationMetadata._sInsertMutator,
+				removeAll: oAggregationMetadata._sRemoveAllMutator
 			};
-		} else {
-			return {};
 		}
+		return {};
 	};
 
-	/**
-	 *
-	 */
 	ElementUtil.getAggregation = function(oElement, sAggregationName) {
 		var oValue;
 
@@ -265,20 +164,23 @@ function(jQuery) {
 		} else {
 			oValue = oElement.getAggregation(sAggregationName);
 		}
-		//ATTENTION:
-		//under some unknown circumstances the return oValue looks like an Array but jQuery.isArray() returned undefined => false
-		//that is why we use array ducktyping with a null check!
-		//reproducible with Windows and Chrome (currently 35), when creating a project and opening WYSIWYG editor afterwards on any file
-		//sap.m.Panel.prototype.getHeaderToolbar() returns a single object but an array
-		/*eslint-disable no-nested-ternary */
+		// ATTENTION:
+		// under some unknown circumstances the return oValue looks like an Array but Array.isArray() returned
+		// undefined => false
+		// that is why we use array ducktyping with a null check!
+		// reproducible with Windows and Chrome (currently 35), when creating a project and opening WYSIWYG editor
+		// afterwards on any file
+		// sap.m.Panel.prototype.getHeaderToolbar() returns a single object but an array
+		/* eslint-disable no-nested-ternary */
 		oValue = oValue && oValue.splice ? oValue : (oValue ? [oValue] : []);
-		/*eslint-enable no-nested-ternary */
+		/* eslint-enable no-nested-ternary */
 		return oValue;
 	};
 
-	/**
-	 *
-	 */
+	ElementUtil.getIndexInAggregation = function(oElement, oParent, sAggregationName) {
+		return this.getAggregation(oParent, sAggregationName).indexOf(oElement);
+	};
+
 	ElementUtil.addAggregation = function(oParent, sAggregationName, oElement) {
 		if (this.hasAncestor(oParent, oElement)) {
 			throw new Error("Trying to add an element to itself or its successors");
@@ -287,37 +189,31 @@ function(jQuery) {
 		if (sAggregationAddMutator) {
 			oParent[sAggregationAddMutator](oElement);
 		} else {
-			oParent.addAggregation("sAggregationName", oElement);
+			oParent.addAggregation(sAggregationName, oElement);
 		}
-
 	};
 
-	/**
-	 *
-	 */
-	ElementUtil.removeAggregation = function(oParent, sAggregationName, oElement) {
+	ElementUtil.removeAggregation = function(oParent, sAggregationName, oElement, bSuppressInvalidate) {
 		var sAggregationRemoveMutator = this.getAggregationAccessors(oParent, sAggregationName).remove;
 		if (sAggregationRemoveMutator) {
-			oParent[sAggregationRemoveMutator](oElement);
+			oParent[sAggregationRemoveMutator](oElement, bSuppressInvalidate);
 		} else {
-			oParent.removeAggregation(sAggregationName, oElement);
+			oParent.removeAggregation(sAggregationName, oElement, bSuppressInvalidate);
 		}
 	};
 
-	/**
-	 *
-	 */
 	ElementUtil.insertAggregation = function(oParent, sAggregationName, oElement, iIndex) {
 		if (this.hasAncestor(oParent, oElement)) {
 			throw new Error("Trying to add an element to itself or its successors");
 		}
-		if (this.getAggregation(oParent, sAggregationName).indexOf(oElement) !== -1) {
+		if (this.getIndexInAggregation(oElement, oParent, sAggregationName) !== -1) {
 			// ManagedObject.insertAggregation won't reposition element, if it's already inside of same aggregation
-			// therefore we need to remove the element and then insert it again. To prevent ManagedObjectObserver from firing
+			// therefore we need to remove the element and then insert it again. To prevent ManagedObjectObserver from
+			// firing
 			// setParent event with parent null, private flag is set.
 			oElement.__bSapUiDtSupressParentChangeEvent = true;
 			try {
-				oParent.removeAggregation(sAggregationName, oElement, true);
+				this.removeAggregation(oParent, sAggregationName, oElement, true);
 			} finally {
 				delete oElement.__bSapUiDtSupressParentChangeEvent;
 			}
@@ -330,9 +226,6 @@ function(jQuery) {
 		}
 	};
 
-	/**
-	 *
-	 */
 	ElementUtil.isValidForAggregation = function(oParent, sAggregationName, oElement) {
 		var oAggregationMetadata = oParent.getMetadata().getAggregation(sAggregationName);
 
@@ -346,69 +239,357 @@ function(jQuery) {
 		// only for public aggregations
 		if (oAggregationMetadata) {
 			// TODO : test altTypes
-			return this.isInstanceOf(oElement, oAggregationMetadata.type);
-		}
+			var sTypeOrInterface = oAggregationMetadata.type;
 
-	};
-
-	/**
-	 *
-	 */
-	ElementUtil.isInstanceOf = function(oElement, sType) {
-		var oInstance = jQuery.sap.getObject(sType);
-		if (typeof oInstance === "function") {
-			return oElement instanceof oInstance;
-		} else {
-			return false;
+			// if aggregation is not multiple and already has element inside, then it is not valid for element
+			if (oAggregationMetadata.multiple === false && this.getAggregation(oParent, sAggregationName) &&
+					this.getAggregation(oParent, sAggregationName).length > 0) {
+				return false;
+			}
+			return BaseObject.isObjectA(oElement, sTypeOrInterface) || this.hasInterface(oElement, sTypeOrInterface);
 		}
 	};
 
-	/**
-	 *
-	 */
-	ElementUtil.getDesignTimeMetadata = function(oElement) {
-		var oDTMetadata = oElement ? oElement.getMetadata().getDesignTime() : {};
-		return oDTMetadata || {};
+	ElementUtil.getAssociationAccessors = function(oElement, sAggregationName) {
+		var oMetadata = oElement.getMetadata();
+		oMetadata.getJSONKeys();
+		var oAssociationMetadata = oMetadata.getAssociation(sAggregationName);
+		if (oAssociationMetadata) {
+			return {
+				get: oAssociationMetadata._sGetter,
+				add: oAssociationMetadata._sMutator,
+				remove: oAssociationMetadata._sRemoveMutator,
+				insert: oAssociationMetadata._sInsertMutator,
+				removeAll: oAssociationMetadata._sRemoveAllMutator
+			};
+		}
+		return {};
+	};
+
+	ElementUtil.getAssociation = function(oElement, sAssociationName) {
+		var oValue;
+		var sGetter = this.getAssociationAccessors(oElement, sAssociationName).get;
+		if (sGetter) {
+			oValue = oElement[sGetter]();
+		}
+		return oValue;
+	};
+
+	ElementUtil.getIndexInAssociation = function(oElement, oParent, sAssociationName) {
+		return this.getAssociationInstances(oParent, sAssociationName).indexOf(oElement);
+	};
+
+	ElementUtil.getAssociationInstances = function(oElement, sAssociationName) {
+		var vValue = Util.castArray(this.getAssociation(oElement, sAssociationName));
+		return vValue
+		.map(function(sId) {
+			return this.getElementInstance(sId);
+		}, this);
+	};
+
+	ElementUtil.hasInterface = function(oElement, sInterface) {
+		var aInterfaces = oElement.getMetadata().getInterfaces();
+		return aInterfaces.indexOf(sInterface) !== -1;
 	};
 
 	/**
+	 * Checks whether specified Element is in a binding template, if so it checks if template has a valid control representation.
 	 *
+	 * @param {sap.ui.base.Object} oObject - Object for validation
+	 * @returns {boolean} <code>true</code> if object is not in bound aggregation or has a valid template representation
 	 */
-	ElementUtil.loadDesignTimeMetadata = function(oElement) {
-		return oElement ? oElement.getMetadata().loadDesignTime() : Promise.resolve({});
-	};
+	ElementUtil.isElementInTemplate = function(oObject) {
+		var mLocationInTemplate = ElementUtil.getAggregationInformation(oObject);
 
-	/**
-	.* Executes an array of actions. An action is a JSON object having the following structure:
-	.*
-	.*	<action> =	{
-	.*			'element' : <ui5 id of element to be moved>,
-	.*					'source' : {
-	.*						'index': <source index>,
-	.*						'parent' : <ui5 id of element actual parent>,
-	.*						'aggregation' : <name of aggregation>
-	.*					},
-	.*					'target' : {
-	.*						'index': <target index>,
-	.*						'parent' : <ui5 id of element future parent>,
-	.*						'aggregation' : <name of aggregation>
-	.*					},
-	.*					'changeType' : <name of change type e.g "Move"
-	.*				})
-	 */
-	ElementUtil.executeActions = function(aActions) {
-		for (var i = 0; i < aActions.length; i++) {
-			var oAction = aActions[i];
-			switch (oAction.changeType) {
-				case ElementUtil.sACTION_MOVE:
-					var oTargetParent = sap.ui.getCore().byId(oAction.target.parent);
-					var oMovedElement = sap.ui.getCore().byId(oAction.element);
-					ElementUtil.insertAggregation(oTargetParent, oAction.target.aggregation, oMovedElement, oAction.target.index);
-					break;
-				default:
+		if (mLocationInTemplate.templateId) {
+			var sTemplateId = ElementUtil.extractTemplateId(mLocationInTemplate);
+
+			if (!sTemplateId) {
+				return false;
 			}
 		}
+
+		return true;
+	};
+
+	/**
+	 * Checks whether specified Element is a direct template clone (e.g. the list items of a sap.m.ListItem)
+	 *
+	 * @param {sap.ui.base.Object} oObject - Object for validation
+	 * @returns {boolean} <code>true</code> if object is a direct clone of the template
+	 */
+	 ElementUtil.isElementDirectTemplateChild = function(oObject) {
+		var mLocationInTemplate = ElementUtil.getAggregationInformation(oObject);
+
+		if (mLocationInTemplate.templateId) {
+			var sTemplateId = ElementUtil.extractTemplateId(mLocationInTemplate);
+
+			// If the stack only has one element, this element is a direct child of the template aggregation
+			if (sTemplateId && mLocationInTemplate.stack.length === 1) {
+				return true;
+			}
+		}
+
+		return false;
+	};
+
+	/**
+	 * Checks whether specified Element is a valid ManagedObject. The allowed objects must be
+	 * descendants of sap.ui.core.Element or sap.ui.core.Component classes.
+	 *
+	 * @param {sap.ui.base.Object} oObject - Object for validation
+	 * @returns {boolean} <code>true</code> if object is supported
+	 */
+	ElementUtil.isElementValid = function(oObject) {
+		var bValid = (
+			(
+				oObject instanceof Element
+				|| oObject instanceof Component
+			)
+			&& !oObject.bIsDestroyed
+			&& ElementUtil.isElementInTemplate(oObject)
+		);
+
+		return bValid;
+	};
+
+	ElementUtil.getParent = function(oElement) {
+		return BaseObject.isObjectA(oElement, "sap.ui.core.Component")
+			? oElement.oContainer
+			: oElement.getParent();
+	};
+
+	/**
+	 * Extract potential label part from the passed managed object instance
+	 *
+	 * @param {sap.ui.base.ManagedObject} oElement - managed object class instance for which label has to be extracted
+	 * @param {function} [fnFunction] - custom function for retrieving label
+	 * @return {string|undefined} label string or undefined when no label can be extracted
+	 */
+	ElementUtil.getLabelForElement = function(oElement, fnFunction) {
+		if (!ElementUtil.isElementValid(oElement)) {
+			throw Util.createError("ElementUtil#getLabelForElement", "A valid managed object instance should be passed as parameter", "sap.ui.dt");
+		}
+		// if there is a function, only the function is executed
+		if (typeof fnFunction === "function") {
+			return fnFunction(oElement);
+		}
+
+		function calculateLabel(oElement) {
+			var vFieldLabel = (
+				typeof oElement.getText === "function" && oElement.getText()
+				|| typeof oElement.getLabelText === "function" && oElement.getLabelText()
+				|| typeof oElement.getLabel === "function" && oElement.getLabel()
+				|| typeof oElement.getTitle === "function" && oElement.getTitle()
+				|| typeof oElement.getHeading === "function" && oElement.getHeading()
+				|| typeof oElement.getDataSourceLabel === "function" && oElement.getDataSourceLabel()
+			);
+
+			if (ElementUtil.isElementValid(vFieldLabel)) {
+				return calculateLabel(vFieldLabel);
+			}
+			return vFieldLabel;
+		}
+
+		var vCalculatedLabel = calculateLabel(oElement);
+		return typeof vCalculatedLabel !== "string" ? oElement.getId() : vCalculatedLabel;
+	};
+
+	/**
+	 * Returns for a given element the corresponding element id of the element inside of a binding template
+	 * This function uses the information gathered in the output of ElementUtil.getAggregationInformation
+	 * The check is done recursively
+	 * @param  {sap.ui.dt.OverlayUtil.AggregationBindingStack}  mBoundControl {@link sap.ui.dt.ElementUtil.AggregationBindingStack}
+	 * @return {string}                                         Returns the element id of the corresponding element inside of a template
+	 */
+	ElementUtil.extractTemplateId = function(mBoundControl) {
+		if (isPlainObject(mBoundControl) && mBoundControl.templateId) {
+			if (mBoundControl.stack.length > 1) {
+				var oResultControl;
+				var oAggregatedControl = Element.getElementById(mBoundControl.templateId);
+				var sAggregation;
+				var iIndex;
+				for (var i = mBoundControl.stack.length - 2; i >= 0; i--) {
+					sAggregation = mBoundControl.stack[i].aggregation;
+					iIndex = mBoundControl.stack[i].index;
+					oResultControl = ElementUtil.getAggregation(oAggregatedControl, sAggregation)[iIndex];
+					if (!oResultControl) {
+						return undefined;
+					}
+					oAggregatedControl = oResultControl;
+				}
+				return oAggregatedControl.getId();
+			} else if (mBoundControl.stack.length === 1) {
+				return mBoundControl.templateId;
+			}
+		} else {
+			return undefined;
+		}
+	};
+
+	/**
+	 * The AggregationBindingStack contains element id and aggregation name of the bound control together with a stack containing
+	 * information about the traversed elements for an Overlay which is part of an aggregation binding.
+	 * @typedef {object} sap.ui.dt.ElementUtil.AggregationBindingStack
+	 * @property {string} elementId - id of the bound control.
+	 * @property {string} aggregation - name of the bound aggregation.
+	 * @property {string} templateId - id of the binding template.
+	 * @property {Object[]} stack - array of objects containing element, element type, aggregation name and index of the element in
+	 *                              the aggregation for each traversed aggregation.
+	 * @property {string} stack.element - element id
+	 * @property {string} stack.type - element type
+	 * @property {string} stack.aggregation - aggregation name
+	 * @property {number} stack.index - index of the element in parent aggregation
+	 */
+
+	/**
+	 * Returns the element ID and the aggregation name of the bound control for an element which is part of an aggregation binding.
+	 * The check is done recursively.
+	 * @param  {sap.ui.core.Element} oElement - Element being checked
+	 * @return {AggregationBindingStack} {@link sap.ui.dt.ElementUtil.AggregationBindingStack} object
+	 */
+	ElementUtil.getAggregationInformation = function(oElement) {
+		var aStack = [];
+		return this._evaluateBinding(oElement, aStack);
+	};
+
+	ElementUtil._evaluateBinding = function(oElement, aStack) {
+		var sAggregationName;
+		var iIndex;
+		var oParent;
+		var bBindingFound;
+
+		// If the binding is found on an API parent (with a forwarded aggregation),
+		// the templateId is directly retrieved from it (the stack only has the element itself)
+		var {aAPIParentInfos} = oElement;
+		if (aAPIParentInfos && aAPIParentInfos.length > 0) {
+			bBindingFound = aAPIParentInfos.some(function(mParentInfo) {
+				oParent = mParentInfo.parent;
+				sAggregationName = mParentInfo.aggregationName;
+				iIndex = ElementUtil.getAggregation(oParent, sAggregationName).indexOf(oElement);
+				return oParent.getBinding(sAggregationName);
+			});
+		}
+		if (!bBindingFound) {
+			oParent = oElement.getParent();
+			if (oParent) {
+				sAggregationName = oElement.sParentAggregationName;
+				iIndex = ElementUtil.getAggregation(oParent, sAggregationName).indexOf(oElement);
+			} else {
+				iIndex = -1;
+			}
+		}
+
+		aStack.push({
+			element: oElement.getId(),
+			type: oElement.getMetadata().getName(),
+			aggregation: sAggregationName,
+			index: iIndex
+		});
+
+		// the parent might not be available yet
+		if (sAggregationName && oParent?.getBinding(sAggregationName)) {
+			var oBinding = oParent.getBindingInfo(sAggregationName);
+			var oTemplate = oBinding && oBinding.template;
+
+			return {
+				elementId: oParent.getId(),
+				aggregation: sAggregationName,
+				templateId: oTemplate ? oTemplate.getId() : undefined,
+				stack: aStack
+			};
+		}
+
+		return !oParent || oParent instanceof UIArea
+			? {
+				elementId: undefined,
+				aggregation: undefined,
+				templateId: undefined,
+				stack: aStack
+			}
+			: (
+				this._evaluateBinding(
+					oParent,
+					aStack
+				)
+			);
+	};
+
+	/**
+	 * Getter for binding template if available.
+	 * @param {sap.ui.base.ManagedObject} oElement - Element to be checked for binding info with template attached
+	 * @param {string} sAggregationName - Aggregation name required to check binding info for this one aggregation
+	 * @returns {sap.ui.base.ManagedObject} Aggregation binding template for the given element and aggregation name
+	 */
+	ElementUtil.getAggregationBindingTemplate = function(oElement, sAggregationName) {
+		var oBinding = oElement && oElement.getBindingInfo(sAggregationName);
+		return oBinding && oBinding.template;
+	};
+
+	/**
+	 * Decrements passed index value by 1, if the source and target overlays for move belong to the same container and source index is less than the target index.
+	 * To compensate the fact that the lower source index is also removed during move.
+	 * @param {object} oSourceContainer - Source container
+	 * @param {object} oTargetContainer - Target container
+	 * @param {int} iSourceIndex - Source index
+	 * @param {int} iTargetIndex - Target index
+	 * @returns {int} - Index for move
+	 */
+	ElementUtil.adjustIndexForMove = function(oSourceContainer, oTargetContainer, iSourceIndex, iTargetIndex) {
+		if (oSourceContainer === oTargetContainer && iSourceIndex < iTargetIndex && iSourceIndex > -1) {
+			return iTargetIndex - 1;
+		}
+		return iTargetIndex;
+	};
+
+	/**
+	 * Checks if an aggregation is valid for an element being moved
+	 *
+	 * @param {sap.ui.dt.AggregationOverlay} oAggregationOverlay - Aggregation overlay to be checked for target zone
+	 * @param {sap.ui.dt.ElementOverlay} oMovedOverlay - Overlay being moved
+	 * @param {boolean} bOverlayNotInDom - Flag defining if overlay is not in DOM
+	 * @returns {Promise.<boolean>} Resolved promise with <code>true</code> if the aggregation overlay is a valid target zone for the overlay
+	 */
+	 ElementUtil.checkTargetZone = function(oAggregationOverlay, oMovedOverlay, bOverlayNotInDom) {
+		var oGeometry = oAggregationOverlay.getGeometry();
+		var bGeometryVisible = oGeometry && oGeometry.size.height > 0 && oGeometry.size.width > 0;
+		var oParentElement = oAggregationOverlay.getElement();
+
+		var oMovedElement = oMovedOverlay.getElement();
+		var sAggregationName = oAggregationOverlay.getAggregationName();
+		if (!oMovedElement || !ElementUtil.isValidForAggregation(oParentElement, sAggregationName, oMovedElement)) {
+			return Promise.resolve(false);
+		}
+
+		// checks related to visibility
+		function fnCheckAggregationOverlayVisibility(oAggregationOverlay, oParentElement) {
+			// this function can get called on overlay registration, when there are no overlays in dom yet. In this case, DOMUtil.isVisible is always false.
+			var oAggregationOverlayDomRef = oAggregationOverlay.getDomRef();
+			var bAggregationOverlayVisibility = DOMUtil.isVisible(oAggregationOverlayDomRef);
+
+			// if there is no aggregation overlay domRef available the further check for domRef of the corresponding element is not required
+			if (!oAggregationOverlayDomRef) {
+				return bAggregationOverlayVisibility;
+			}
+			// additional check for corresponding element DomRef visibiltiy required for target zone checks during navigation mode.
+			// during navigation mode the domRef of valid overlays is given and the offsetWidth is 0. Therefor we need to check the visibility of the corresponding element additionally
+			var oParentElementDomRef = oParentElement && oParentElement.getDomRef && oParentElement.getDomRef();
+			var bAggregationElementVisibility = oParentElementDomRef ? DOMUtil.isVisible(oParentElementDomRef) : true;
+			return bAggregationOverlayVisibility || bAggregationElementVisibility;
+		}
+
+		if (
+			(bOverlayNotInDom && !bGeometryVisible)
+			|| !bOverlayNotInDom && !fnCheckAggregationOverlayVisibility(oAggregationOverlay, oParentElement)
+			|| !(oParentElement && oParentElement.getVisible && oParentElement.getVisible())
+			// an aggregation can still have visible = true even if it has been removed from its parent
+			|| !oParentElement.getParent()
+		) {
+			return Promise.resolve(false);
+		}
+
+		return Promise.resolve(true);
 	};
 
 	return ElementUtil;
-}, /* bExport= */ true);
+}, /* bExport= */true);

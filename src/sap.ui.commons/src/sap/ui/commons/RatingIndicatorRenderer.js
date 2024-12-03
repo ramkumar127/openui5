@@ -3,8 +3,8 @@
  */
 
 // Provides default renderer for control sap.ui.commons.RatingIndicator
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define(['sap/ui/core/theming/Parameters'],
+	function(Parameters) {
 	"use strict";
 
 
@@ -19,12 +19,11 @@ sap.ui.define(['jquery.sap.global'],
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
 	 * @param {sap.ui.core.RenderManager}
-	 *          oRenderManager the RenderManager that can be used for writing to the Render-Output-Buffer
+	 *          rm the RenderManager that can be used for writing to the Render-Output-Buffer
 	 * @param {sap.ui.core.Control}
 	 *          oRating an object representation of the control that should be rendered
 	 */
-	RatingIndicatorRenderer.render = function(oRenderManager, oRating) {
-		var rm = oRenderManager;
+	RatingIndicatorRenderer.render = function(rm, oRating) {
 		var iNumberOfSymbols = oRating.getMaxValue();
 
 		rm.write("<div");
@@ -81,7 +80,7 @@ sap.ui.define(['jquery.sap.global'],
 		rm.writeAttribute("class", "sapUiRatingItmImg");
 		var sIcon = RatingIndicatorRenderer.getThemeSymbol("selected", oRating);
 		rm.writeAttributeEscaped("src", sIcon);
-		rm.write("/>");
+		rm.write(">");
 
 		rm.write("<div");
 		rm.writeAttribute("class", "sapUiRatingItmOvrflw");
@@ -117,7 +116,7 @@ sap.ui.define(['jquery.sap.global'],
 		rm.writeAttribute("class", "sapUiRatingItmOvrflwImg");
 		sIcon = RatingIndicatorRenderer.getThemeSymbol("unselected", oRating);
 		rm.writeAttributeEscaped("src", sIcon);
-		rm.write("/>");
+		rm.write(">");
 
 		rm.write("</div>");
 		rm.write("</div>");
@@ -166,23 +165,17 @@ sap.ui.define(['jquery.sap.global'],
 
 		if (sType == "selected") {
 			sIcon = oRating.getIconSelected();
-			sParam = "sap.ui.commons.RatingIndicator:sapUiRatingSymbolSelected";
+			sParam = "_sap_ui_commons_RatingIndicator_SymbolSelected";
 		} else if (sType == "unselected") {
 			sIcon = oRating.getIconUnselected();
-			sParam = "sap.ui.commons.RatingIndicator:sapUiRatingSymbolUnselected";
+			sParam = "_sap_ui_commons_RatingIndicator_SymbolUnselected";
 		} else {
 			sIcon = oRating.getIconHovered();
-			sParam = "sap.ui.commons.RatingIndicator:sapUiRatingSymbolHovered";
+			sParam = "_sap_ui_commons_RatingIndicator_SymbolHovered";
 		}
 
 		if (!sIcon) {
-			var sThemePath =
-				"themes/" +
-				sap.ui.getCore().getConfiguration().getTheme() + "/" +
-				sap.ui.core.theming.Parameters.get(sParam);
-
-			// The documentation states that sap.ui.resource() should be used for theme-URLs
-			sIcon = sap.ui.resource("sap.ui.commons", sThemePath);
+			sIcon = Parameters._getThemeImage(sParam);
 		}
 
 		return sIcon;

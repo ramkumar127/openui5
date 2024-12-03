@@ -3,21 +3,22 @@
  */
 
 // Provides default renderer for control sap.ui.unified.ShellLayout
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define(["sap/ui/core/ControlBehavior"],
+	function(ControlBehavior) {
 	"use strict";
 
 
 	/**
 	 * Shell Layout renderer.
 	 * @namespace
+	 * @deprecated As of version 1.44.0, the concept has been discarded.
 	 */
 	var ShellLayoutRenderer = {};
 
 	/**
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 * @param {sap.ui.core.RenderManager} rm the RenderManager that can be used for writing to the Render-Output-Buffer
-	 * @param {sap.ui.core.Control} oShell an object representation of the control that should be rendered
+	 * @param {sap.ui.unified.ShellLayout} oShell an object representation of the control that should be rendered
 	 */
 	ShellLayoutRenderer.render = function(rm, oShell){
 		var id = oShell.getId();
@@ -42,10 +43,10 @@ sap.ui.define(['jquery.sap.global'],
 		rm.writeClasses();
 		rm.write(">");
 
-		rm.write("<hr id='", id, "-brand' class='sapUiUfdShellBrand'/>");
+		rm.write("<hr id='", id, "-brand' class='sapUiUfdShellBrand'>");
 
 		rm.write("<header id='", id, "-hdr'  class='sapUiUfdShellHead'");
-		if (sap.ui.getCore().getConfiguration().getAccessibility()) {
+		if (ControlBehavior.isAccessibilityEnabled()) {
 			rm.writeAttribute("role", "banner");
 		}
 		rm.write("><div><div id='", id, "-hdrcntnt' class='sapUiUfdShellCntnt'>");

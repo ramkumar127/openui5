@@ -3,8 +3,14 @@
  */
 
 // Provides control sap.ui.ux3.FacetFilterList.
-sap.ui.define(['jquery.sap.global', 'sap/ui/commons/ListBox', 'sap/ui/core/Control', './library'],
-	function(jQuery, ListBox, Control, library) {
+sap.ui.define([
+    'sap/ui/commons/ListBox',
+    'sap/ui/core/Control',
+    './library',
+    './FacetFilterListRenderer',
+    'sap/ui/core/ListItem'
+],
+	function(ListBox, Control, library, FacetFilterListRenderer, ListItem) {
 	"use strict";
 
 
@@ -24,11 +30,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/ListBox', 'sap/ui/core/Contr
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated as of version 1.38, replaced by {@link sap.m.FacetFilter}
 	 * @alias sap.ui.ux3.FacetFilterList
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var FacetFilterList = Control.extend("sap.ui.ux3.FacetFilterList", /** @lends sap.ui.ux3.FacetFilterList.prototype */ { metadata : {
 
+		deprecated: true,
 		library : "sap.ui.ux3",
 		properties : {
 
@@ -103,7 +110,6 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/ListBox', 'sap/ui/core/Contr
 	}});
 
 
-	(function() {
 
 	/**
 	 * Does the setup when the control is created.
@@ -135,39 +141,44 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/ListBox', 'sap/ui/core/Contr
 			that.onSelect(that, oEvent);
 		});
 		this.addAggregation("controls", this._oListBox);
-		this._oItemAll = new sap.ui.core.ListItem({text: this._oResBundle.getText("FACETFILTER_ALL", [0]), key:"sapUiFacetFilter_ALL"});
+		this._oItemAll = new ListItem({text: this._oResBundle.getText("FACETFILTER_ALL", [0]), key:"sapUiFacetFilter_ALL"});
 		this._oListBox.addItem(this._oItemAll);
 	};
 
 	FacetFilterList.prototype.setMultiSelect = function(bMultiSelect) {
 		this._oListBox.setAllowMultiSelect(bMultiSelect);
 		this.setProperty("multiSelect", bMultiSelect, true);
+		return this;
 	};
 
 	FacetFilterList.prototype.setDisplaySecondaryValues = function(bDisplaySecondaryValues) {
 		this._oListBox.setDisplaySecondaryValues(bDisplaySecondaryValues);
 		this.setProperty("displaySecondaryValues", bDisplaySecondaryValues, true);
+		return this;
 	};
 
 	FacetFilterList.prototype.addItem = function(oItem) {
 		this._oListBox.addItem(oItem);
-		if (!oItem.getKey() || jQuery.trim(oItem.getKey()) == "" ) {
+		if (!oItem.getKey() || oItem.getKey().trim() == "" ) {
 			oItem.setKey("generatedkey" + this.indexOfItem(oItem));
 		}
 		this.updateText4All();
+		return this;
 	};
 
 	FacetFilterList.prototype.insertItem = function(oItem, iIndex) {
 		this._oListBox.insertItem(oItem, iIndex + 1); // +1 because of entry "all" on the fist position.
-		if (!oItem.getKey() || jQuery.trim(oItem.getKey()) == "" ) {
+		if (!oItem.getKey() || oItem.getKey().trim() == "" ) {
 			oItem.setKey("generatedkey" + this.indexOfItem(oItem));
 		}
 		this.updateText4All();
+		return this;
 	};
 
 	FacetFilterList.prototype.removeItem = function(oItem) {
-		this._oListBox.removeItem(oItem);
+		var vResult = this._oListBox.removeItem(oItem);
 		this.updateText4All();
+		return vResult;
 	};
 
 	FacetFilterList.prototype.removeAllItems = function() {
@@ -181,6 +192,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/ListBox', 'sap/ui/core/Contr
 		this._oListBox.destroyItems();
 		this._oListBox.addItem(this._oItemAll);
 		this.updateText4All();
+		return this;
 	};
 
 	FacetFilterList.prototype.indexOfItem = function(oItem) {
@@ -203,11 +215,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/ListBox', 'sap/ui/core/Contr
 	FacetFilterList.prototype.setSelectedKeys = function(aSelectedKeys) {
 		this.setProperty("selectedKeys", aSelectedKeys);
 		this.invalidate();
+		return this;
 	};
 
 	FacetFilterList.prototype.setShowCounter = function(bShowCounter) {
 		this.setProperty("showCounter", bShowCounter);
 		this.updateText4All();
+		return this;
 	};
 
 	/**
@@ -265,7 +279,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/ListBox', 'sap/ui/core/Contr
 				this._bAllOnly = true;
 				this._oListBox.setSelectedKeys(aSelectedKeys);
 	    }
-	    var iIndexAll = jQuery.inArray("sapUiFacetFilter_ALL", aSelectedKeys);
+	    var iIndexAll = aSelectedKeys.indexOf("sapUiFacetFilter_ALL");
 	    if (iIndexAll > -1) {
 				if (aSelectedKeys.length == 1) {
 					this._bAllOnly = true;
@@ -305,9 +319,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/commons/ListBox', 'sap/ui/core/Contr
 		});
 	};
 
-	}());
-
 
 	return FacetFilterList;
 
-}, /* bExport= */ true);
+});

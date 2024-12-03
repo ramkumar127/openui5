@@ -1,19 +1,18 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
 		<title>DropdownBox - sap.ui.commons</title>
 		<link rel="shortcut icon" type="image/x-icon" href="images/controls/sap.ui.commons.DropdownBox.gif">
 
+		<script src="shared-config.js"></script>
 		<script id="sap-ui-bootstrap"
-			data-sap-ui-theme="sap_goldreflection"
+			data-sap-ui-theme="sap_bluecrystal"
 			data-sap-ui-trace="false"
-			type="text/javascript"
 			data-sap-ui-libs="sap.ui.commons"
 			src="../../../../resources/sap-ui-core.js"></script>
 
-		<script type="text/javascript">
+		<script>
 			jQuery.sap.log.setLevel(jQuery.sap.log.LogLevel.WARNING);
 
 			function populateWithEntries(oTarget, iFinalLength, aValues) {
@@ -347,6 +346,23 @@
 			oTextView = new sap.ui.commons.TextView("TV11",{ text: "initial: item: N3, key: C, value: Bob" });
 
 			oLyt.createRow(oLabel, oDdB, oTextView);
+
+			oLabel = new sap.ui.commons.Label({text: "Dropdown with histroy of 5 elements", labelFor: "ddb-history"});
+			var ddbHistory = new sap.ui.commons.DropdownBox("ddb-history"),
+				oTextView = new sap.ui.commons.TextView("TV12"),
+				allScen = ['A','B','C','D','E','F0','F1','F3','G','H','I','J','K','L','M','N'],
+				aLBItems = [];
+
+			for (var i = 0; i < allScen.length; i++) {
+				var item = new sap.ui.core.ListItem();
+				item.setText(allScen[i]);
+				item.setKey(allScen[i]);
+				ddbHistory.addItem(item);
+			}
+			ddbHistory.setMaxHistoryItems(5);
+			ddbHistory.attachChange(function() {oTextView.setText("Event: Change, selected item [" + ddbHistory.getSelectedKey() + "]");});
+
+			oLyt.createRow(oLabel, ddbHistory, oTextView);
 
 		</script>
 	</head>

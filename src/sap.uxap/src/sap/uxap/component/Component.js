@@ -3,15 +3,24 @@
  */
 
 sap.ui.define([
-	"sap/uxap/ObjectPageConfigurationMode",
+	"sap/uxap/library",
 	"sap/ui/core/UIComponent",
-	"sap/ui/model/json/JSONModel",
+	"sap/ui/core/library",
+	"sap/base/Log",
+	"sap/ui/core/mvc/View",
 	"sap/ui/core/Component"
-], function (ObjectPageConfigurationMode, UIComponent, JSONModel /*, Component*/) {
+], function (library, UIComponent, coreLibrary, Log, View) {
 	"use strict";
+
+	// shortcut for sap.ui.core.mvc.ViewType
+	var ViewType = coreLibrary.mvc.ViewType;
+
+	// shortcut for sap.uxap.ObjectPageConfigurationMode
+	var ObjectPageConfigurationMode = library.ObjectPageConfigurationMode;
 
 	var Component = UIComponent.extend("sap.uxap.component.Component", {
 		metadata: {
+			"interfaces": ["sap.ui.core.IAsyncContentCreation"]
 			/* nothing new compared to a standard UIComponent */
 		},
 
@@ -35,15 +44,15 @@ sap.ui.define([
 					// case 1: load from an XML view + json for the object page layout configuration
 					this._oModel = new UIComponent(this.oComponentData.jsonConfigurationURL);
 					this._oViewConfig.viewName = "sap.uxap.component.ObjectPageLayoutUXDrivenFactory";
-					this._oViewConfig.type = sap.ui.core.mvc.ViewType.XML;
+					this._oViewConfig.type = ViewType.XML;
 					break;
 				case ObjectPageConfigurationMode.JsonModel:
 					// JsonModel bootstraps the ObjectPageLayout from the external model objectPageLayoutMedatadata
 					this._oViewConfig.viewName = "sap.uxap.component.ObjectPageLayoutUXDrivenFactory";
-					this._oViewConfig.type = sap.ui.core.mvc.ViewType.XML;
+					this._oViewConfig.type = ViewType.XML;
 					break;
 				default:
-					jQuery.sap.log.error("UxAPComponent :: missing bootstrap information. Expecting one of the following: JsonURL, JsonModel and FacetsAnnotation");
+					Log.error("UxAPComponent :: missing bootstrap information. Expecting one of the following: JsonURL, JsonModel and FacetsAnnotation");
 			}
 			//create the UIComponent
 			UIComponent.prototype.init.call(this);
@@ -57,22 +66,24 @@ sap.ui.define([
 			var oController;
 
 			//step3: create view
-			this._oView = sap.ui.view(this._oViewConfig);
+			var oPromise = View.create(this._oViewConfig);
+			oPromise.then(function (oView) {
+				this._oView = oView;
+				//step4: bind the view with the model
+				if (this._oModel) {
+					oController = this._oView.getController();
 
-			//step4: bind the view with the model
-			if (this._oModel) {
-				oController = this._oView.getController();
+					//some factory requires pre-processing once the view and model are created
+					if (oController && oController.connectToComponent) {
+						oController.connectToComponent(this._oModel);
+					}
 
-				//some factory requires pre-processing once the view and model are created
-				if (oController && oController.connectToComponent) {
-					oController.connectToComponent(this._oModel);
+					//can now apply the model and rely on the underlying factory logic
+					this._oView.setModel(this._oModel, "objectPageLayoutMetadata");
 				}
+			}.bind(this));
 
-				//can now apply the model and rely on the underlying factory logic
-				this._oView.setModel(this._oModel, "objectPageLayoutMetadata");
-			}
-
-			return this._oView;
+			return oPromise;
 		},
 
 		/**

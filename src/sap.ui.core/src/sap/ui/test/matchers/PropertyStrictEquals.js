@@ -2,13 +2,26 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', './Matcher'], function (jQuery, fnMatcher) {
+sap.ui.define([
+	"sap/ui/base/ManagedObject",
+	'sap/ui/test/matchers/Matcher',
+	"sap/base/strings/capitalize"
+], function (ManagedObject, Matcher, capitalize) {
 	"use strict";
 
 	/**
-	 * PropertyStrictEquals - checks if a property has the exact same value.
+	 * @class
+	 * Checks if a property has the exact same value.
 	 *
-	 * @class PropertyStrictEquals - checks if a property has the exact same value
+	 * As of version 1.72, it is available as a declarative matcher with the following syntax:
+	 * <code><pre>{
+	 *     propertyStrictEquals: {
+	 *         name: "string",
+	 *         value: "any"
+	 *     }
+	 * }
+	 * </code></pre>
+	 *
 	 * @extends sap.ui.test.matchers.Matcher
 	 * @param {object} [mSettings] optional map/JSON-object with initial settings for the new PropertyStrictEquals
 	 * @public
@@ -16,24 +29,31 @@ sap.ui.define(['jquery.sap.global', './Matcher'], function (jQuery, fnMatcher) {
 	 * @author SAP SE
 	 * @since 1.23
 	 */
-	return fnMatcher.extend("sap.ui.test.matchers.PropertyStrictEquals", /** @lends sap.ui.test.matchers.PropertyStrictEquals.prototype */ {
+	return Matcher.extend("sap.ui.test.matchers.PropertyStrictEquals", /** @lends sap.ui.test.matchers.PropertyStrictEquals.prototype */ {
 
-		metadata : {
-			publicMethods : [ "isMatching" ],
-			properties : {
+		metadata: {
+			publicMethods: ["isMatching"],
+			properties: {
 				/**
 				 * The Name of the property that is used for matching.
 				 */
-				name : {
-					type : "string"
+				name: {
+					type: "string"
 				},
 				/**
 				 * The value of the property that is used for matching.
 				 */
-				value : {
-					type : "any"
+				value: {
+					type: "any"
 				}
 			}
+		},
+
+		constructor: function (mSettings) {
+			if (mSettings && mSettings.value) {
+				mSettings.value = ManagedObject.escapeSettingsValue(mSettings.value);
+			}
+			Matcher.prototype.constructor.call(this, mSettings);
 		},
 
 		/**
@@ -43,18 +63,23 @@ sap.ui.define(['jquery.sap.global', './Matcher'], function (jQuery, fnMatcher) {
 		 * @return {boolean} true if the property has a strictly matching value.
 		 * @public
 		 */
-		isMatching : function (oControl) {
+		isMatching: function (oControl) {
 			var sPropertyName = this.getName(),
-				fnProperty = oControl["get" + jQuery.sap.charToUpperCase(sPropertyName, 0)];
+				fnProperty = oControl["get" + capitalize(sPropertyName, 0)];
 
 			if (!fnProperty) {
-				jQuery.sap.log.error("Control " + oControl.sId + " does not have a property called: " + sPropertyName, this._sLogPrefix);
+				this._oLogger.error("Control '" + oControl + "' does not have a property '" + sPropertyName + "'");
 				return false;
 			}
 
-			return fnProperty.call(oControl) === this.getValue();
+			var vPropertyValue = fnProperty.call(oControl);
+			var bMatches = vPropertyValue === this.getValue();
+			if (!bMatches) {
+				this._oLogger.debug("Control '" + oControl + "' property '" + sPropertyName +
+					"' has value '" + vPropertyValue + "' but should have value '" + this.getValue() + "'");
+			}
+			return bMatches;
 
 		}
 	});
-
-}, /* bExport= */ true);
+});

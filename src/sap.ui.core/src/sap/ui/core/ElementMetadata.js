@@ -2,25 +2,44 @@
  * ${copyright}
  */
 
-/*global Promise */
-
 // Provides class sap.ui.core.ElementMetadata
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObjectMetadata'],
-	function(jQuery, ManagedObjectMetadata) {
+sap.ui.define([
+	'sap/base/Log',
+	'sap/base/util/ObjectPath',
+	'sap/ui/base/ManagedObjectMetadata',
+	'sap/ui/core/Lib',
+	'sap/ui/core/Renderer'
+],
+	function(Log, ObjectPath, ManagedObjectMetadata, Library, Renderer) {
 	"use strict";
 
+	/**
+	 * Control Renderer
+	 *
+	 * @typedef {object} sap.ui.core.ControlRenderer
+	 * @public
+	 *
+	 * @property {function(sap.ui.core.RenderManager, sap.ui.core.Element):void} render
+	 *  The function that renders the control
+	 * @property {1|2|4} [apiVersion] The API version of the RenderManager that are used in this renderer. See {@link
+	 *  sap.ui.core.RenderManager RenderManager} API documentation for detailed information
+	 */
 
 	/**
 	 * Creates a new metadata object for a UIElement subclass.
 	 *
 	 * @param {string} sClassName fully qualified name of the class that is described by this metadata object
-	 * @param {object} oStaticInfo static info to construct the metadata from
+	 * @param {object} oClassInfo static info to construct the metadata from
+	 * @param {sap.ui.core.Element.MetadataOptions} [oClassInfo.metadata]
+	 *  The metadata object describing the class
 	 *
 	 * @class
 	 * @author SAP SE
 	 * @version ${version}
 	 * @since 0.8.6
 	 * @alias sap.ui.core.ElementMetadata
+	 * @extends sap.ui.base.ManagedObjectMetadata
+	 * @public
 	 */
 	var ElementMetadata = function(sClassName, oClassInfo) {
 
@@ -29,7 +48,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObjectMetadata'],
 	};
 
 	//chain the prototypes
-	ElementMetadata.prototype = jQuery.sap.newObject(ManagedObjectMetadata.prototype);
+	ElementMetadata.prototype = Object.create(ManagedObjectMetadata.prototype);
+	ElementMetadata.prototype.constructor = ElementMetadata;
 
 	/**
 	 * Calculates a new id based on a prefix.
@@ -51,6 +71,8 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObjectMetadata'],
 
 	/**
 	 * Determines the class name of the renderer for the described control class.
+	 *
+	 * @returns {string} The renderer name
 	 */
 	ElementMetadata.prototype.getRendererName = function() {
 		return this._sRendererName;
@@ -58,40 +80,75 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObjectMetadata'],
 
 	/**
 	 * Retrieves the renderer for the described control class
+	 *
+	 * If no renderer exists <code>undefined</code> is returned
+	 * @returns {sap.ui.core.ControlRenderer|undefined} The renderer
 	 */
 	ElementMetadata.prototype.getRenderer = function() {
+
+		if ( this._oRenderer ) {
+			return this._oRenderer;
+		}
 
 		// determine name via function for those legacy controls that override getRendererName()
 		var sRendererName = this.getRendererName();
 
 		if ( !sRendererName ) {
-			return;
+			return undefined;
 		}
 
-		// check if renderer class exists already
-		var fnRendererClass = jQuery.sap.getObject(sRendererName);
-		if (fnRendererClass) {
-			return fnRendererClass;
-		}
+		// check if renderer class exists already, in case it was passed inplace,
+		// and written to the global namespace during applySettings().
+		this._oRenderer = sap.ui.require(sRendererName.replace(/\./g, "/"));
 
-		// if not, try to load a module with the same name
-		jQuery.sap.require(sRendererName);
-		return jQuery.sap.getObject(sRendererName);
+		/**
+		 * @deprecated
+		 */
+		(() => {
+			if (!this._oRenderer) {
+				this._oRenderer = ObjectPath.get(sRendererName);
+			}
+
+			if (!this._oRenderer) {
+				// if not, try to load a module with the same name
+				Log.warning("Synchronous loading of Renderer for control class '" + this.getName() + "', due to missing Renderer dependency.", "SyncXHR", null, function() {
+					return {
+						type: "SyncXHR",
+						name: sRendererName
+					};
+				});
+
+				// Relevant for all controls that don't maintain the renderer module in their dependencies
+				this._oRenderer =
+					sap.ui.requireSync(sRendererName.replace(/\./g, "/")) // legacy-relevant
+					|| ObjectPath.get(sRendererName);
+			}
+		})();
+
+		return this._oRenderer;
 	};
 
 	ElementMetadata.prototype.applySettings = function(oClassInfo) {
 
 		var oStaticInfo = oClassInfo.metadata;
 
-		this._sVisibility = oStaticInfo["visibility"] || "public";
+		this._sVisibility = oStaticInfo.visibility || "public";
 
 		// remove renderer stuff before calling super.
-		var vRenderer = oClassInfo.hasOwnProperty("renderer") ? (oClassInfo.renderer || "") : undefined;
+		var vRenderer = Object.hasOwn(oClassInfo, "renderer") ? (oClassInfo.renderer || "") : undefined;
 		delete oClassInfo.renderer;
 
 		ManagedObjectMetadata.prototype.applySettings.call(this, oClassInfo);
 
+		var oParent = this.getParent();
 		this._sRendererName = this.getName() + "Renderer";
+		this.dnd = Object.assign({
+			draggable: false,
+			droppable: false
+		}, oParent.dnd, (typeof oStaticInfo.dnd == "boolean") ? {
+			draggable: oStaticInfo.dnd,
+			droppable: oStaticInfo.dnd
+		} : oStaticInfo.dnd);
 
 		if ( typeof vRenderer !== "undefined" ) {
 
@@ -99,83 +156,94 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/ManagedObjectMetadata'],
 				this._sRendererName = vRenderer || undefined;
 				return;
 			}
+
+			// try to identify fully built renderers
+			if ( (typeof vRenderer === "object" || typeof vRenderer === "function") && typeof vRenderer.render === "function" ) {
+				var oRenderer = sap.ui.require(this.getRendererName().replace(/\./g, "/"));
+				/**
+				 * @deprecated
+				 */
+				if (!oRenderer) {
+					oRenderer = ObjectPath.get(this.getRendererName());
+				}
+				if ( oRenderer === vRenderer ) {
+					// the given renderer has been exported globally already, it can be used without further action
+					this._oRenderer = vRenderer;
+					return;
+				}
+				if ( oRenderer === undefined && typeof vRenderer.extend === "function" ) {
+					// the given renderer has an 'extend' method, so it most likely has been created by one of the
+					// extend methods and it is usable already; it just has to be exported globally
+					/**
+					 * @deprecated
+					 */
+					ObjectPath.set(this.getRendererName(), vRenderer);
+					this._oRenderer = vRenderer;
+					return;
+				}
+			}
+
 			if ( typeof vRenderer === "function" ) {
 				vRenderer = { render : vRenderer };
 			}
 
-			var oParent = this.getParent();
 			var oBaseRenderer;
-			if ( oParent && oParent instanceof ElementMetadata ) {
+			if ( oParent instanceof ElementMetadata ) {
 				oBaseRenderer = oParent.getRenderer();
 			}
-			if ( !oBaseRenderer ) {
-				jQuery.sap.require("sap.ui.core.Renderer");
-				oBaseRenderer = sap.ui.require('sap/ui/core/Renderer');
-			}
-			var oRenderer = jQuery.sap.newObject(oBaseRenderer);
-			jQuery.extend(oRenderer, vRenderer);
-			jQuery.sap.setObject(this.getRendererName(), oRenderer);
+			this._oRenderer = Renderer.extend.call(oBaseRenderer || Renderer, this.getRendererName(), vRenderer);
 		}
-
-		if (typeof oStaticInfo["designTime"] === "boolean") {
-			this._bHasDesignTime = oStaticInfo["designTime"];
-		} else if (oStaticInfo["designTime"]) {
-			this._bHasDesignTime = true;
-			this._oDesignTime = oStaticInfo["designTime"];
-		}
-
 	};
 
 	ElementMetadata.prototype.afterApplySettings = function() {
 		ManagedObjectMetadata.prototype.afterApplySettings.apply(this, arguments);
-		this.register && this.register(this);
+		Library._registerElement(this);
 	};
 
 	ElementMetadata.prototype.isHidden = function() {
 		return this._sVisibility === "hidden";
 	};
 
-	/**
-	 * Returns the design time metadata. The design time metadata contains all relevant information to support the control
-	 * in the UI5 design time.
-	 *
-	 * @return {map} The design time metadata
-	 * @since 1.30.0
-	 */
-	ElementMetadata.prototype.getDesignTime = function() {
-		if (!this._oDesignTime && this._bHasDesignTime) {
-			// the synchronous loading would be only relevant during the
-			// development time - for productive usage the design time metadata should
-			// provide in a preload packaging which includes the control design time metadata
-			// - so the sync request penalty
-			// should be ignorable for now (async implementation will
-			// change the complete behavior of the constructor function)
-			jQuery.sap.require({modName: this.getElementName(), type: "designtime"});
-			this._oDesignTime = jQuery.sap.getObject(this.getElementName() + ".designtime");
-		}
-		return this._oDesignTime;
-	};
+
+	// ---- Aggregation -----------------------------------------------------------------------
+
+	var fnMetaFactoryAggregation = ElementMetadata.prototype.metaFactoryAggregation;
+
+	function Aggregation(oClass, name, info) {
+		fnMetaFactoryAggregation.apply(this, arguments);
+		this.dnd = Object.assign({
+			draggable: false,
+			droppable: false,
+			layout: "Vertical"
+		}, (typeof info.dnd == "boolean") ? {
+			draggable: info.dnd,
+			droppable: info.dnd
+		} : info.dnd);
+	}
+
+	Aggregation.prototype = Object.create(fnMetaFactoryAggregation.prototype);
+	Aggregation.prototype.constructor = Aggregation;
+	ElementMetadata.prototype.metaFactoryAggregation = Aggregation;
 
 	/**
-	 * Load and returns the design time metadata asynchronously. The design time metadata contains all relevant information to support the control
-	 * in the UI5 design time.
+	 * Returns an info object describing the drag-and-drop behavior.
 	 *
-	 * @return {Promise} A promise which will return the loaded design time metadata
-	 * @since 1.28.0
+	 * @param {string} [sAggregationName] name of the aggregation or empty.
+	 * @returns {sap.ui.core.Element.MetadataOptions.DnD} An info object about the drag-and-drop behavior.
+	 * @public
+	 * @since 1.56
 	 */
-	ElementMetadata.prototype.loadDesignTime = function() {
-		var that = this;
-		return new Promise(function(fnResolve, fnReject) {
-			if (!that._oDesignTime && that._bHasDesignTime) {
-				var sModule = jQuery.sap.getResourceName(that.getElementName(), ".designtime");
-				sap.ui.require([sModule], function(oDesignTime) {
-					that._oDesignTime = oDesignTime;
-					fnResolve(oDesignTime);
-				});
-			} else {
-				fnResolve(that._oDesignTime);
-			}
-		});
+	ElementMetadata.prototype.getDragDropInfo = function(sAggregationName) {
+		if (!sAggregationName) {
+			return this.dnd;
+		}
+
+		var oAggregation = this._mAllAggregations[sAggregationName] || this._mAllPrivateAggregations[sAggregationName];
+		if (!oAggregation) {
+			return {};
+		}
+
+		return oAggregation.dnd;
 	};
 
 	return ElementMetadata;

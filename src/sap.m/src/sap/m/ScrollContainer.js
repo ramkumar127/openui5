@@ -3,21 +3,37 @@
  */
 
 // Provides control sap.m.ScrollContainer
-sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Control", "sap/ui/core/delegate/ScrollEnablement"],
-	function (jQuery, library, Control, ScrollEnablement) {
+sap.ui.define([
+	"./library",
+	"sap/base/i18n/Localization",
+	"sap/ui/core/Control",
+	"sap/ui/core/delegate/ScrollEnablement",
+	"sap/ui/core/Element",
+	"./ScrollContainerRenderer",
+	"sap/ui/dom/denormalizeScrollBeginRTL"
+],
+	function(
+		library,
+		Localization,
+		Control,
+		ScrollEnablement,
+		Element,
+		ScrollContainerRenderer,
+		denormalizeScrollBeginRTL
+	) {
 		"use strict";
 
 
 		/**
 		 * Constructor for a new ScrollContainer.
 		 *
-		 * @param {string} [sId] id for the new control, generated automatically if no id is given
-		 * @param {object} [mSettings] initial settings for the new control
+		 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
+		 * @param {object} [mSettings] Initial settings for the new control
 		 *
 		 * @class
-		 * The ScrollContainer is a control that can display arbitrary content within a limited screen area and provides touch scrolling to make all content accessible.
-		 *
-		 * Note that it is not recommended to have nested scrolling areas that scroll into the same direction (e.g. a ScrollContainer that scrolls vertically inside a Page control with scrolling enabled). This is currently not considered a valid use-case of a good UI and the behavior will feel wrong.
+		 * The ScrollContainer is a control that can display arbitrary content within a limited screen area and provides scrolling to make all content accessible.
+		 * <h3>When not to use</h3>
+		 * Do not nest scrolling areas that scroll in the same direction (e.g. a ScrollContainer that scrolls vertically inside a Page control with scrolling enabled).
 		 * @extends sap.ui.core.Control
 		 *
 		 * @author SAP SE
@@ -26,7 +42,6 @@ sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Control", "sap/ui/
 		 * @constructor
 		 * @public
 		 * @alias sap.m.ScrollContainer
-		 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 		 */
 		var ScrollContainer = Control.extend("sap.m.ScrollContainer", /** @lends sap.m.ScrollContainer.prototype */ {
 			metadata: {
@@ -74,8 +89,12 @@ sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Control", "sap/ui/
 					 * The content of the ScrollContainer.
 					 */
 					content: {type: "sap.ui.core.Control", multiple: true, singularName: "content"}
-				}
-			}
+				},
+				dnd: { draggable: false, droppable: true },
+				designtime: "sap/m/designtime/ScrollContainer.designtime"
+			},
+
+			renderer: ScrollContainerRenderer
 		});
 
 		ScrollContainer.prototype.init = function () {
@@ -104,8 +123,8 @@ sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Control", "sap/ui/
 		};
 
 		/**
-		 * Returns the sap.ui.core.ScrollEnablement delegate which is used with this control.
-		 *
+		 * Returns the sap.ui.core.delegate.ScrollEnablement delegate which is used with this control.
+		 * @rerurns {sap.ui.core.delegate.ScrollEnablementDelegate} The scroll delegate instance
 		 * @private
 		 */
 		ScrollContainer.prototype.getScrollDelegate = function () {
@@ -127,12 +146,11 @@ sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Control", "sap/ui/
 		 *         The vertical pixel position to scroll to.
 		 *         Scrolling down happens with positive values.
 		 *         If only horizontal scrolling is enabled, give 0 as value.
-		 * @param {int} time
-		 *         The duration of animated scrolling.
-		 *         To scroll immediately without animation, give 0 as value. 0 is also the default value, when this optional parameter is omitted.
-		 * @type sap.m.ScrollContainer
+		 * @param {int} [time=0]
+		 *         The duration of animated scrolling in milliseconds.
+		 *         The value <code>0</code> results in immediate scrolling without animation.
+		 * @returns {this} <code>this</code> to facilitate method chaining
 		 * @public
-		 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 		 */
 		ScrollContainer.prototype.scrollTo = function (x, y, time) {
 			if (this._oScroller) {
@@ -140,8 +158,8 @@ sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Control", "sap/ui/
 				var oDomRef = this.getDomRef();
 				if (oDomRef) {
 					// only if rendered
-					if (sap.ui.getCore().getConfiguration().getRTL()) {
-						x = jQuery.sap.denormalizeScrollBeginRTL(x, oDomRef);
+					if (Localization.getRTL()) {
+						x = denormalizeScrollBeginRTL(x, oDomRef);
 					}
 					this._oScroller.scrollTo(x, y, time);
 				} else {
@@ -157,12 +175,12 @@ sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Control", "sap/ui/
 		 * Scrolls to an element(DOM or sap.ui.core.Element) within the page if the element is rendered.
 		 * @param {HTMLElement | sap.ui.core.Element} element The element to which should be scrolled.
 		 * @param {int} [time=0] The duration of animated scrolling. To scroll immediately without animation, give 0 as value or leave it default.
-		 * @returns {sap.m.ScrollContainer} <code>this</code> to facilitate method chaining.
+		 * @returns {this} <code>this</code> to facilitate method chaining.
 		 * @since 1.30
 		 * @public
 		 */
 		ScrollContainer.prototype.scrollToElement = function (element, time) {
-			if (element instanceof sap.ui.core.Element) {
+			if (element instanceof Element) {
 				element = element.getDomRef();
 			}
 
@@ -172,16 +190,5 @@ sap.ui.define(["jquery.sap.global", "./library", "sap/ui/core/Control", "sap/ui/
 			return this;
 		};
 
-		ScrollContainer.prototype.setHorizontal = function (horizontal) {
-			this._oScroller.setHorizontal(horizontal);
-			this.setProperty("horizontal", horizontal, true);
-		};
-
-		ScrollContainer.prototype.setVertical = function (vertical) {
-			this._oScroller.setVertical(vertical);
-			this.setProperty("vertical", vertical, true);
-		};
-
 		return ScrollContainer;
-
-	}, /* bExport= */ true);
+	});

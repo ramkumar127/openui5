@@ -3,8 +3,18 @@
  */
 
 // Provides control sap.ui.commons.Message.
-sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Control'],
-	function(jQuery, Dialog, library, Control) {
+sap.ui.define([
+  'sap/ui/thirdparty/jquery',
+  './Dialog',
+  './library',
+  'sap/ui/core/Control',
+  './MessageRenderer',
+  './Button',
+  "sap/ui/core/Configuration",
+    // jQuery Plugin "rect"
+  'sap/ui/dom/jquery/rect'
+],
+	function(jQuery, Dialog, library, Control, MessageRenderer, Button, Configuration) {
 	"use strict";
 
 
@@ -25,7 +35,6 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 	 * @deprecated Since version 1.4.0.
 	 * A new messaging concept will be created in future. Therefore this control might be removed in one of the next versions.
 	 * @alias sap.ui.commons.Message
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Message = Control.extend("sap.ui.commons.Message", /** @lends sap.ui.commons.Message.prototype */ { metadata : {
 
@@ -59,7 +68,7 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 
 	Message.prototype.init = function(){
 		// Defining some private data...
-		this.isRTL = sap.ui.getCore().getConfiguration().getRTL();
+		this.isRTL = Configuration.getRTL();
 
 		// The "Details" related Controls.
 	  this.fnCallBack    = null; // Supplied only if a longText is to be provided on demand.
@@ -132,7 +141,7 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 		// Reading the HTML details as is, styles included:
 		var	htmlDetails = this.fnCallBack(this.getId());
 		this.oDetails   = new Message({type: this.getType(), text: htmlDetails});
-		this.oBtnOK     = new sap.ui.commons.Button({text: OK, press:Message.closeDetails});
+		this.oBtnOK     = new Button({text: OK, press:Message.closeDetails});
 		this.oContainer = new Dialog();
 		this.oContainer.addContent(this.oDetails);
 		this.oContainer.setTitle(title);
@@ -162,6 +171,7 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 		var jContainer = this.oContainer.$();
 
 	  // Starting a new Stack in the default Dialog's location:
+	  // jQuery Plugin "rect"
 	  var jContainerRect = jContainer.rect(); // For Height and Width...
 		if (oOtherOpenDialogs.length == 0) {
 			// "offsets.right" & "offsets.left" should be identical as plain Dialogs are centered,
@@ -175,7 +185,7 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 			return;
 		}
 
-	  // Dialog limitation. Work-around:
+	  // Dialog restriction. Work-around:
 	  if (bWasOpen) {
 			if (iOthersMaxZIndex > jContainer.css('zIndex')) {
 				// zIndex not raised via previous re-open()...
@@ -197,6 +207,7 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 	  }
 
 	  // Figuring what should the next coordinates be:
+	  // jQuery Plugin "rect"
 	  var jContainerRect = jContainer.rect(); // For Height and Width...
 	  var scrollTop   = jQuery(window).scrollTop();
 	  var scrollLeft  = jQuery(window).scrollLeft(); // Negative in RTL
@@ -238,7 +249,6 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 
 
 	// Begin of Dialog-Offsets-Stacking facilities
-	(function() {
 		var oLastOffsets = null;
 		/**
 		 * @static
@@ -257,7 +267,6 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 		Message.prototype.getNextOffsets = function(){
 			return Message.getNextOffsets();
 		};
-	}());
 	// End of Dialog-Offsets-Stacking facilities
 
 
@@ -275,7 +284,6 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 	 * function getDetails(sId) {... return htmlString;}
 	 *
 	 * @param {function} fnCallBack the callback function
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 * @public
 	 */
 	Message.prototype.bindDetails = function(fnCallBack) {
@@ -284,4 +292,4 @@ sap.ui.define(['jquery.sap.global', './Dialog', './library', 'sap/ui/core/Contro
 
 	return Message;
 
-}, /* bExport= */ true);
+});

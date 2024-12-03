@@ -8,6 +8,9 @@ sap.ui.define(['./Element', './library'],
 	"use strict";
 
 
+	// shortcut for enum(s)
+	var TitleLevel = library.TitleLevel;
+
 
 	/**
 	 * Constructor for a new Title.
@@ -16,17 +19,15 @@ sap.ui.define(['./Element', './library'],
 	 * @param {object} [mSettings] initial settings for the new control
 	 *
 	 * @class
-	 * Represents a title element that can be used for aggregation with other controls
+	 * Represents a title element that can be used for aggregation with other controls.
 	 * @extends sap.ui.core.Element
 	 *
 	 * @author SAP SE
 	 * @version ${version}
 	 *
-	 * @constructor
 	 * @public
 	 * @since 1.16.0
 	 * @alias sap.ui.core.Title
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Title = Element.extend("sap.ui.core.Title", /** @lends sap.ui.core.Title.prototype */ { metadata : {
 
@@ -36,7 +37,7 @@ sap.ui.define(['./Element', './library'],
 			/**
 			 * Defines the title text
 			 */
-			text : {type : "string", group : "Appearance", defaultValue : null},
+			text : {type : "string", group : "Data", defaultValue : null},
 
 			/**
 			 * Defines the URL for icon display
@@ -48,7 +49,7 @@ sap.ui.define(['./Element', './library'],
 			 *
 			 * Currently not all controls using the Title.control supporting this property.
 			 */
-			level : {type : "sap.ui.core.TitleLevel", group : "Appearance", defaultValue : sap.ui.core.TitleLevel.Auto},
+			level : {type : "sap.ui.core.TitleLevel", group : "Appearance", defaultValue : TitleLevel.Auto},
 
 			/**
 			 * If set the title is displayed emphasized.

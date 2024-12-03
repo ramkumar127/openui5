@@ -2,9 +2,33 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', './SuggestionItem'],
-	function(jQuery, Bar, Button, SuggestionsList, SuggestionItem) {
+sap.ui.define([
+	"./Toolbar",
+	"./Button",
+	"./Dialog",
+	"./Popover",
+	"./SuggestionsList",
+	"./SuggestionItem",
+	"sap/ui/Device",
+	"sap/m/library",
+	"sap/ui/core/InvisibleText",
+	"sap/ui/core/Lib"
+], function (
+	Toolbar,
+	Button,
+	Dialog,
+	Popover,
+	SuggestionsList,
+	SuggestionItem,
+	Device,
+	library,
+	InvisibleText,
+	Library
+) {
 	"use strict";
+
+	// shortcut for sap.m.PlacementType
+	var PlacementType = library.PlacementType;
 
 	/**
 	 * <code>sap.m.Suggest</code> provides the functionality to display suggestion lists for the user entry
@@ -29,12 +53,8 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 			picker, 				// either or popover or a dialog with the list of suggestion items
 			list,					// SuggestionsList with suggestions
 			listUpdateTimeout,		// list is updated after a timeout to accumulate simultaneous updates
-			bUseDialog = sap.ui.Device.system.phone,
+			bUseDialog = Device.system.phone,
 			self = this;
-
-		// 1. Conditional loading depending on the device type.
-		// 2. Resolve circular dependency Dialog -> OverflowToolbar -> SearchField:
-		jQuery.sap.require(bUseDialog ? "sap.m.Dialog" : "sap.m.Popover");
 
 		/* =========================================================== */
 		/* events processing                                           */
@@ -46,9 +66,11 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 			var value;
 			if (item instanceof SuggestionItem ) {
 				value = item.getSuggestionText();
+				self._suggestionItemTapped = true;
 				picker.close();
 				window.setTimeout(function() {
-					oInput.setValue(value);
+					oInput._updateValue(value);
+					oInput._fireChangeEvent();
 					oInput.fireSearch({
 						query: value,
 						suggestionItem: item,
@@ -68,13 +90,14 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 				originalValue,
 				dialogSearchField,
 				customHeader,
+				okButton,
 				closeButton;
 
 			// use sap.ui.require to avoid circular dependency between the SearchField and Suggest
 			dialogSearchField = new (sap.ui.require('sap/m/SearchField'))({
 				liveChange : function (oEvent) {
 					var value = oEvent.getParameter("newValue");
-					oInput.setValue(value);
+					oInput._updateValue(value);
 					oInput.fireLiveChange({newValue: value});
 					oInput.fireSuggest({suggestValue: value});
 					self.update();
@@ -86,37 +109,44 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 				}
 			});
 
-			customHeader = new Bar({
-				contentLeft: dialogSearchField
+			closeButton = new Button({
+				icon : "sap-icon://decline",
+				press : function() {
+					self._cancelButtonTapped = true;
+					dialog._oCloseTrigger = true;
+					dialog.close();
+
+					oInput._updateValue(originalValue);
+				}
 			});
 
-			closeButton = new Button({
-				text : sap.ui.getCore().getLibraryResourceBundle("sap.m").getText("MSGBOX_CANCEL"),
+			customHeader = new Toolbar({
+				content: [dialogSearchField, closeButton]
+			});
+
+			okButton = new Button({
+				text : Library.getResourceBundleFor("sap.m").getText("MSGBOX_OK"),
 				press : function() {
-					dialog._oCloseTrigger = true;
 					dialog.close();
 				}
 			});
 
-			dialog = new (sap.ui.require('sap/m/Dialog'))({
+			dialog = new Dialog({
 				stretch: true,
 				customHeader: customHeader,
 				content: getList(),
-				beginButton : closeButton,
+				beginButton : okButton,
+				beforeClose: function () {
+					oInput._bSuggestionSuppressed = true;
+				},
 				beforeOpen: function() {
 					originalValue = oInput.getValue();
-					dialogSearchField.setValue(originalValue);
-				},
-				beforeClose: function(oEvent) {
-					if (oEvent.getParameter("origin")) {
-						// Cancel button: set original value
-						oInput.setValue(originalValue);
-					} else { // set current value
-						oInput.setValue(dialogSearchField.getValue());
-					}
+					dialogSearchField._updateValue(originalValue);
 				},
 				afterClose: function(oEvent) {
-					if (!oEvent.getParameter("origin")) { // fire the search event if not cancelled
+					if (!self._cancelButtonTapped  // fire the search event if not cancelled
+						&& !self._suggestionItemTapped) { // and if not closed from item tap
+						oInput._fireChangeEvent();
 						oInput.fireSearch({
 							query: oInput.getValue(),
 							refreshButtonPressed: false,
@@ -132,20 +162,22 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 		}
 
 		function createPopover() {
-			var popover = new (sap.ui.require('sap/m/Popover'))({
+			var popover = self._oPopover = new Popover({
 				showArrow: false,
 				showHeader: false,
 				horizontalScrolling: false,
-				placement: sap.m.PlacementType.Vertical,
+				placement: PlacementType.Vertical,
 				offsetX: 0,
 				offsetY: 0,
 				initialFocus: parent,
 				bounce: false,
+				ariaLabelledBy: InvisibleText.getStaticId("sap.m", "INPUT_AVALIABLE_VALUES"),
 				afterOpen: function () {
-					oInput.$("I").attr("aria-autocomplete","list").attr("aria-haspopup","true");
+					oInput._applySuggestionAcc();
 				},
 				beforeClose: function() {
-					oInput.$("I").attr("aria-haspopup","false").removeAttr("aria-activedecendant");
+					oInput.$("I").removeAttr("aria-activedescendant");
+					oInput.$("SuggDescr").text("");
 				},
 				content: getList()
 			})
@@ -156,13 +188,8 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 				return this.openBy(parent);
 			};
 
-			function setMinWidth() {
-				var w = (oInput.$().outerWidth() / parseFloat(sap.m.BaseFontSize)) + "rem";
-				popover.getDomRef().style.minWidth = w;
-			}
-
 			popover.addEventDelegate({
-					onAfterRendering: setMinWidth,
+					onAfterRendering: self.setPopoverMinWidth.bind(self),
 					ontap: ontap
 				}, oInput);
 
@@ -186,6 +213,14 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 		/* =========================================================== */
 		/* API functions                                               */
 		/* =========================================================== */
+
+		this.setPopoverMinWidth = function() {
+			var oPopoverDomRef = self._oPopover.getDomRef();
+			if (oPopoverDomRef) {
+				var w = (oInput.$().outerWidth() / parseFloat(library.BaseFontSize)) + "rem";
+				oPopoverDomRef.style.minWidth = w;
+			}
+		};
 
 		this.destroy = function() {
 			if (picker) {
@@ -221,6 +256,8 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 		this.open = function() {
 			if (!this.isOpen()) {
 				this.setSelected(-1); // clear selection before open
+				this._suggestionItemTapped = false;
+				this._cancelButtonTapped = false;
 				getPicker().open();
 			}
 		};
@@ -235,6 +272,7 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 			window.clearTimeout(listUpdateTimeout);
 			if (this.isOpen()) { // redraw the list only if it is visible
 				listUpdateTimeout = window.setTimeout(list.update.bind(list), 50);
+				oInput._applySuggestionAcc();
 			}
 		};
 
@@ -249,7 +287,7 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 		/**
 		 * Getter for the selected item index.
 		 *
-		 * @returns {integer} Index of the selected item or -1
+		 * @returns {int} Index of the selected item or -1
 		 * @private
 		 */
 		this.getSelected = function() {
@@ -259,14 +297,14 @@ sap.ui.define(['jquery.sap.global', './Bar', './Button', './SuggestionsList', '.
 		/**
 		 * Setter for the selected item index.
 		 *
-		 * @param {integer} index Index of the item to select or -1 to remove selection
+		 * @param {int} index Index of the item to select or -1 to remove selection
 		 * @private
 		 */
 		this.setSelected = function(index, bRelative) {
 			return getList().selectByIndex(index, bRelative);
 		};
 
-	} /* Suggest */
+	}/* Suggest */
 
 	return Suggest;
 

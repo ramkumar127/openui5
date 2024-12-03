@@ -2,8 +2,8 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define([],
+	function() {
 		"use strict";
 
 		/**
@@ -11,13 +11,14 @@ sap.ui.define(['jquery.sap.global'],
 		 * @namespace
 		 */
 		var TimePickerSliderRenderer = {
+			apiVersion: 2
 		};
 
 		/**
 		 * Renders the HTML for a {@link sap.m.TimePickerSlider}, using the provided {@link sap.ui.core.RenderManager}.
 		 *
 		 * @param {sap.ui.core.RenderManager} oRm The RenderManager that can be used for writing to the render output buffer
-		 * @param {sap.ui.core.Control} oControl An object representation of the control that should be rendered
+		 * @param {sap.m.TimePickerSlider} oControl An object representation of the control that should be rendered
 		 */
 		TimePickerSliderRenderer.render = function(oRm, oControl) {
 			var iIndex,
@@ -26,22 +27,23 @@ sap.ui.define(['jquery.sap.global'],
 				aItems = oControl.getItems(),
 				sControlLabel = oControl.getLabel();
 
-			oRm.write("<div");
-			oRm.writeControlData(oControl);
-			oRm.writeAttribute("tabindex", "0");
+			oRm.openStart("div", oControl);
+			oRm.attr("tabindex", "0");
 
-			oRm.addClass("sapMTPColumn");
+			oRm.class("sapMTPColumn");
 			if (oControl.getIsExpanded()) {
-				oRm.addClass("sapMTPSliderExpanded");
+				oRm.class("sapMTPSliderExpanded");
 			}
-			oRm.writeClasses();
+			if (!oControl.getIsCyclic()) {
+				oRm.class("sapMTimePickerSliderShort");
+			}
+			if (!oControl._getEnabled()) {
+				oRm.class("sapMTPDisabled");
+			}
 
 			//WAI-ARIA region
-			oRm.writeAccessibilityState(oControl, {
-				role: "listbox",
-				multiSelectable: false,
-				live: "assertive",
-				owns: oControl.getId() + "-content",
+			oRm.accessibilityState(oControl, {
+				role: "list",
 				labelledby: {
 					value: oControl.getId() + "-label",
 					append: true
@@ -52,67 +54,94 @@ sap.ui.define(['jquery.sap.global'],
 				}
 			});
 
-			oRm.write(">");
+			oRm.openEnd();
 
 			//Title label of the slider
-			oRm.write("<div");
-			oRm.writeAttribute("id", oControl.getId() + "-label");
-			oRm.addClass("sapMTimePickerLabel");
-			oRm.writeClasses();
-			oRm.write(">");
-			oRm.writeEscaped(sControlLabel);
-			oRm.write("</div>");
+			oRm.openStart("div", oControl.getId() + "-label");
+			oRm.class("sapMTimePickerLabel");
+			oRm.openEnd();
+			oRm.text(sControlLabel);
+			oRm.close("div");
 
-			oRm.write("<div");
-			oRm.writeAttribute("id", oControl.getId() + "-valDescription");
-			oRm.addClass("sapUiInvisibleText");
-			oRm.writeClasses();
-			oRm.write("></div>");
+			oRm.openStart("div", oControl.getId() + "-valDescription");
+			oRm.attr('aria-hidden', 'false');
+			oRm.attr('aria-live', 'assertive');
+			oRm.class("sapUiInvisibleText");
+			oRm.openEnd();
+			oRm.close("div");
 
-			oRm.write("<div class='sapMTimePickerItemArrows'>");
+			oRm.openStart("div");
+			oRm.class("sapMTimePickerItemArrows");
+			oRm.openEnd();
 			oRm.renderControl(oControl.getAggregation("_arrowUp"));
-			oRm.write("</div>");
+			oRm.close("div");
 
-			oRm.write("<div");
-			oRm.addClass("sapMTimePickerSlider");
-			oRm.writeAttribute("unselectable", "on");
-			oRm.writeStyles();
-			oRm.writeClasses();
-			oRm.write(">");
+			oRm.openStart("div");
+			oRm.class("sapMTimePickerSlider");
+			TimePickerSliderRenderer.addItemValuesCssClass(oRm, oControl);
+			oRm.attr("unselectable", "on");
+			oRm.attr("role", "listitem");
+			oRm.openEnd();
 
 			//render selection frame, same height - border height
-			oRm.write("<div class=\"sapMTPPickerSelectionFrame\"></div>");
+			oRm.openStart("div");
+			oRm.class("sapMTPPickerSelectionFrame");
+			oRm.openEnd();
+			oRm.close("div");
 
-			oRm.write("<ul");
-			oRm.writeAttribute("id", oControl.getId() + "-content");
-			oRm.writeAttribute("unselectable", "on");
-			oRm.write(">");
+			oRm.openStart("ul", oControl.getId() + "-content");
+			oRm.attr("unselectable", "on");
+			oRm.openEnd();
 
 			for (iRepetition = 1; iRepetition <= nContentRepetitions; iRepetition++) {
 				for (iIndex = 0; iIndex < aItems.length; iIndex++) {
 					//unselectable for IE9
-					oRm.write("<li class=\"sapMTimePickerItem\" unselectable=\"on\"");
+					oRm.openStart("li");
+
+					oRm.class("sapMTimePickerItem");
+					if (!aItems[iIndex].getVisible()) {
+						oRm.class("TPSliderItemHidden");
+					}
+
 					//WAI-ARIA region
-					oRm.writeAccessibilityState(oControl, {
-						role: "option",
-						selected: false
-					});
-					oRm.write(">");
-					oRm.writeEscaped(aItems[iIndex].getText());
-					oRm.write("</li>");
+					oRm.accessibilityState(oControl);
+					oRm.attr("unselectable", "on");
+
+					oRm.openEnd();
+					oRm.text(aItems[iIndex].getText());
+					oRm.close("li");
 				}
 			}
-			oRm.write("</ul>");
+			oRm.close("ul");
 
-			oRm.write("</div>");
+			oRm.close("div");
 
 			//arrow down
-			oRm.write("<div class='sapMTimePickerItemArrows'>");
+			oRm.openStart("div");
+			oRm.class("sapMTimePickerItemArrows");
+			oRm.openEnd();
 			oRm.renderControl(oControl.getAggregation("_arrowDown"));
-			oRm.write("</div>");
+			oRm.close("div");
 
-			oRm.write("</div>");
+			oRm.close("div");
+		};
+
+		/**
+		 * Adds a class to the current element in the RenderManager's buffer based on the number of visible items in the slider.
+		 *
+		 * @param {sap.ui.core.RenderManager} oRm The RenderManager that can be used for writing to the render output buffer
+		 * @param {sap.m.TimePickerSlider} oControl An object representation of the control that should be rendered
+		 * @protected
+		 */
+		TimePickerSliderRenderer.addItemValuesCssClass = function(oRm, oControl) {
+			var iVisibleItemsLength = oControl.getItems().filter(function(item) {
+				return item.getVisible();
+			}).length;
+
+			if (iVisibleItemsLength > 2 && iVisibleItemsLength < 13) {
+				oRm.class("SliderValues" + iVisibleItemsLength.toString());
+			}
 		};
 
 		return TimePickerSliderRenderer;
-	}, /* bExport= */ false);
+	});

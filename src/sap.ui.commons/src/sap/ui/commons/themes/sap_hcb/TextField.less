@@ -3,7 +3,7 @@
 /* HCB theme                                        */
 /* ================================================ */
 
-@sapUiTextFieldHeight: 18px;
+@_sap_ui_commons_TextField_Height: 18px;
 
 .sapUiTf {
 	outline: none; /* remove Safari glow effect */
@@ -13,11 +13,7 @@
 }
 
 .sapUiTf:not(.sapUiTfInner) {
-	height: @sapUiTextFieldHeight;
-}
-
-html[data-sap-ui-browser="ie9"] .sapUiTfMono.sapUiTf { /* in IE with monospace its not alligned */
-	padding-top: 2px;
+	height: @_sap_ui_commons_TextField_Height;
 }
 
 .sapUiTfBrd.sapUiTfDsbl,

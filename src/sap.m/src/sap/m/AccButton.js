@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.m.AccButton.
-sap.ui.define(['jquery.sap.global', './Button' ],
-	function(jQuery, Button) {
+sap.ui.define(['./Button','./AccButtonRenderer'],
+	function(Button, AccButtonRenderer) {
 		"use strict";
 
 	/**
@@ -16,7 +16,7 @@ sap.ui.define(['jquery.sap.global', './Button' ],
 	 * @class
 	 * The AccButton control represents button with additional capabilities for accessability settings. It is meant for private usage.
 	 *
-	 * @extends sap.ui.core.Control
+	 * @extends sap.m.Button
 	 *
 	 * @author SAP SE
 	 * @version ${version}
@@ -24,17 +24,19 @@ sap.ui.define(['jquery.sap.global', './Button' ],
 	 * @constructor
 	 * @private
 	 * @alias sap.m.AccButton
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var AccButton = Button.extend("sap.m.AccButton", {
 		metadata: {
 			library : "sap.m",
 			properties : {
 				"tabIndex": {type : "string", defaultValue : null, bindable : "bindable"},
-				"ariaHidden": {type : "string", defaultValue : null, bindable : "bindable"}
+				"ariaHidden": {type : "string", defaultValue : null, bindable : "bindable"},
+				"ariaHaspopup": {type : "string", defaultValue : null, bindable : "bindable"}
 			}
-		}
+		},
+
+		renderer: AccButtonRenderer
 	});
 
 	return AccButton;
-}, /* bExport= */ false);
+});

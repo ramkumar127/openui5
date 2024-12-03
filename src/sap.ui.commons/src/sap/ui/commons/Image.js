@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.ui.commons.Image.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
-	function(jQuery, library, Control) {
+sap.ui.define(['./library', 'sap/ui/core/Control', './ImageRenderer'],
+	function(library, Control, ImageRenderer) {
 	"use strict";
 
 
@@ -19,23 +19,25 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 * A wrapper around the IMG tag. The image can be loaded from a remote or local server.
 	 * There are various size setting options available, and the images can be combined with actions.
 	 * @extends sap.ui.core.Control
-	 * @implements sap.ui.commons.ToolbarItem,sap.ui.commons.FormattedTextViewControl
+	 * @implements sap.ui.commons.ToolbarItem,sap.ui.commons.FormattedTextViewControl, sap.ui.core.IFormContent
 	 *
 	 * @author SAP SE
 	 * @version ${version}
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated as of version 1.38, replaced by {@link sap.m.Image}
 	 * @alias sap.ui.commons.Image
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Image = Control.extend("sap.ui.commons.Image", /** @lends sap.ui.commons.Image.prototype */ { metadata : {
 
 		interfaces : [
 			"sap.ui.commons.ToolbarItem",
-			"sap.ui.commons.FormattedTextViewControl"
+			"sap.ui.commons.FormattedTextViewControl",
+			"sap.ui.core.IFormContent"
 		],
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -96,7 +98,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control'],
 	 */
 	Image.prototype.onsapenter = Image.prototype.onclick;
 
+	/*
+	 * Image must not be stretched in Form because should have its original size.
+	 */
+	Image.prototype.getFormDoNotAdjustWidth = function() {
+		return true;
+	};
 
 	return Image;
 
-}, /* bExport= */ true);
+});

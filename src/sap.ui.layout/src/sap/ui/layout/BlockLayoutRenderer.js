@@ -2,41 +2,63 @@
  * ${copyright}
  */
 
-sap.ui.define([],
-	function() {
+sap.ui.define(['./library'],
+	function (library) {
 		"use strict";
 
-		var BlockLayoutRenderer = {};
+		// shortcut for sap.ui.layout.BlockRowColorSets
+		var BlockRowColorSets = library.BlockRowColorSets;
 
-		BlockLayoutRenderer.render = function(rm, blockLayout){
-			this.startLayout(rm, blockLayout);
-			this.addContent(rm, blockLayout);
-			this.endLayout(rm);
+		var BlockLayoutRenderer = {
+			apiVersion: 2
 		};
 
-		BlockLayoutRenderer.startLayout = function (rm, blockLayout) {
-			var backgroundType = blockLayout.getBackground();
+		BlockLayoutRenderer.render = function (oRm, oBlockLayout) {
+			this.startLayout(oRm, oBlockLayout);
+			this.addContent(oRm, oBlockLayout);
+			this.endLayout(oRm);
+		};
 
-			rm.write("<div");
-			rm.writeControlData(blockLayout);
-			rm.addClass("sapUiBlockLayout");
-			if (backgroundType == "Light") {
-				rm.addClass("sapUiBlockLayoutLightBackground");
+		BlockLayoutRenderer.startLayout = function (oRm, oBlockLayout) {
+			oRm.openStart("div", oBlockLayout)
+				.class("sapUiBlockLayout")
+				.class("sapUiBlockLayoutBackground" + oBlockLayout.getBackground());
+
+			if (oBlockLayout.getKeepFontSize()) {
+				oRm.class("sapUiBlockLayoutKeepFontSize");
 			}
-			rm.writeStyles();
-			rm.writeClasses();
-			rm.write(">");
+			oRm.openEnd();
 		};
 
-		BlockLayoutRenderer.addContent = function (rm, blockLayout) {
-			var content = blockLayout.getContent();
-			content.forEach(rm.renderControl);
+		BlockLayoutRenderer.addContent = function (oRm, blockLayout) {
+			var aContent = blockLayout.getContent(),
+				aTypes = Object.keys(BlockRowColorSets).map(function (sKey) {
+					return BlockRowColorSets[sKey];
+				}),
+				iNumTypes = aTypes.length;
+
+
+			aContent.forEach(function (oBlockRow, iIndex, aRows) {
+				var sType = oBlockRow.getRowColorSet() || aTypes[iIndex % iNumTypes], // Get the type or fetch it from the stack
+					sClass = "sapUiBlockLayoutBackground" + sType, // Build the CSS class
+					oPrevBlockRow = (iIndex && aRows[iIndex - 1]) || null;
+
+				if (oPrevBlockRow && oPrevBlockRow.hasStyleClass(sClass)) {
+					oBlockRow.removeStyleClass(sClass);
+					sClass += "Inverted";
+				}
+
+				if (sClass) {
+					oBlockRow.addStyleClass(sClass);
+				}
+
+				oRm.renderControl(oBlockRow);
+			});
 		};
 
-		BlockLayoutRenderer.endLayout = function (rm) {
-			rm.write("</div>");
+		BlockLayoutRenderer.endLayout = function (oRm) {
+			oRm.close("div");
 		};
 
 		return BlockLayoutRenderer;
-
 	}, /* bExport= */ true);

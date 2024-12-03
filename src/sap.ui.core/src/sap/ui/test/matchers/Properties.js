@@ -2,11 +2,38 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global'], function (jQuery) {
+sap.ui.define([
+	"sap/base/Log",
+	"sap/base/strings/capitalize",
+	"sap/base/util/each",
+	"sap/base/util/isPlainObject"
+], function (Log, capitalize, each, isPlainObject) {
 	"use strict";
+	var oLogger = Log.getLogger("sap.ui.test.matchers.Properties");
 
 	/**
-	 * @class Properties - checks if a control's properties have the provided values - all properties have to match their values.
+	 * @class
+	 * Checks if a control's properties have the provided values - all properties have to match their values.
+	 *
+	 * As of version 1.72, it is available as a declarative matcher with the following syntax:
+	 * <code><pre>{
+	 *     properties: {
+	 *         propertyName: "propertyValue"
+	 *     }
+	 * }
+	 * </pre></code>
+	 * As of version 1.74, you can use regular expressions in declarative syntax:
+	 * <code><pre>{
+	 *     properties: {
+	 *         propertyName: {
+	 *             regex: {
+	 *                 source: "propertyValue$",
+	 *                 flags: "ig"
+	 *             }
+	 *         }
+	 *     }
+	 * }
+	 * </pre></code>
 	 * @param {object} oProperties the object with the properties to be checked. Example:
 	 * <pre>
 	 * // Would filter for an enabled control with the text "Accept".
@@ -23,26 +50,35 @@ sap.ui.define(['jquery.sap.global'], function (jQuery) {
 	 * @author SAP SE
 	 * @since 1.27
 	 */
+
 	return function (oProperties) {
-		return function(oControl) {
+		return function (oControl) {
 			var bIsMatching = true;
-			jQuery.each(oProperties, function(sPropertyName, oPropertyValue) {
-				var fnProperty = oControl["get" + jQuery.sap.charToUpperCase(sPropertyName, 0)];
+
+			each(oProperties, function (sPropertyName, oPropertyValue) {
+				var fnProperty = oControl["get" + capitalize(sPropertyName, 0)];
 
 				if (!fnProperty) {
 					bIsMatching = false;
-					jQuery.sap.log.error("Control " + oControl.sId + " does not have a property called: " + sPropertyName, this._sLogPrefix);
+					oLogger.error("Control '" + oControl + "' does not have a property '" + sPropertyName + "'");
 					return false;
 				}
 
 				var vCurrentPropertyValue = fnProperty.call(oControl);
+				// propertyValue is set in parent frame (on matcher instantiation), so match it against the parent's RegExp constructor
 				if (oPropertyValue instanceof RegExp) {
 					bIsMatching = oPropertyValue.test(vCurrentPropertyValue);
+				} else if (isPlainObject(oPropertyValue) && oPropertyValue.regex && oPropertyValue.regex.source) {
+					// declarative syntax
+					var oRegExp = new RegExp(oPropertyValue.regex.source, oPropertyValue.regex.flags);
+					bIsMatching = oRegExp.test(vCurrentPropertyValue);
 				} else {
 					bIsMatching = vCurrentPropertyValue === oPropertyValue;
 				}
 
 				if (!bIsMatching) {
+					oLogger.debug("Control '" + oControl + "' property '" + sPropertyName +
+						"' has value '" + vCurrentPropertyValue + "' but should have value '" + oPropertyValue + "'");
 					return false;
 				}
 			});

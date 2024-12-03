@@ -2,20 +2,19 @@
 <html>
 	<head>
 		<meta charset="utf-8">
-		<meta http-equiv="X-UA-Compatible" content="IE=edge">
 		<title>Header - sap.ui.unified.calendar</title>
 		<link rel="shortcut icon" type="image/x-icon" href="../images/controls/sap.ui.unified.calendar.Header.gif">
 
+		<script src="../shared-config.js"></script>
 		<script id="sap-ui-bootstrap"
-				data-sap-ui-theme="sap_bluecrystal"
-				data-sap-ui-trace="false"
-				type="text/javascript"
-				data-sap-ui-libs="sap.ui.commons, sap.ui.unified"
+				data-sap-ui-async="true"
+				data-sap-ui-compat-version="edge"
+				data-sap-ui-libs="sap.m, sap.ui.unified"
 				src="../../../../../resources/sap-ui-core.js"
 		>
 		</script>
-		<script type="text/javascript">
-
+		<script>
+		sap.ui.getCore().attachInit(() => {
 			var oHeader = new sap.ui.unified.calendar.Header("H1",{
 				textButton0: "Day",
 				textButton1: "Month",
@@ -37,51 +36,47 @@
 				}
 			}).placeAt("sample1");
 
-			var oLabel = new sap.ui.commons.Label({text: "Text 1", labelFor: "TF1"}).placeAt("event1");
-			var oInput = new sap.ui.commons.TextField("TF1",{
-				editable: true,
+			new sap.m.Label({text: "Text 1", labelFor: "Input1"}).placeAt("event1");
+			new sap.m.Input("Input1",{
 				change: function(oEvent){
-					var oTF = oEvent.oSource;
-					var sValue = oEvent.getParameter('newValue');
+					var oInput = oEvent.getSource();
+					var sValue = oEvent.getParameter('value');
 					var oHeader = sap.ui.getCore().byId("H1");
 					oHeader.setTextButton1(sValue);
 				}
 			}).placeAt("event1");
 
-			var oLabel = new sap.ui.commons.Label({text: "additional text 1", labelFor: "TF2"}).placeAt("event1");
-			var oInput = new sap.ui.commons.TextField("TF2",{
-				editable: true,
+			new sap.m.Label({text: "additional text 1", labelFor: "Input2"}).placeAt("event1");
+			new sap.m.Input("Input2",{
 				change: function(oEvent){
-					var oTF = oEvent.oSource;
-					var sValue = oEvent.getParameter('newValue');
+					var oInput = oEvent.getSource();
+					var sValue = oEvent.getParameter('value');
 					var oHeader = sap.ui.getCore().byId("H1");
 					oHeader.setAdditionalTextButton1(sValue);
 				}
 			}).placeAt("event1");
 
-			var oLabel = new sap.ui.commons.Label({text: "Text 2", labelFor: "TF3"}).placeAt("event1");
-			var oInput = new sap.ui.commons.TextField("TF3",{
-				editable: true,
+			new sap.m.Label({text: "Text 2", labelFor: "Input3"}).placeAt("event1");
+			new sap.m.Input("Input3",{
 				change: function(oEvent){
-					var oTF = oEvent.oSource;
-					var sValue = oEvent.getParameter('newValue');
+					var oInput = oEvent.getSource();
+					var sValue = oEvent.getParameter('value');
 					var oHeader = sap.ui.getCore().byId("H1");
 					oHeader.setTextButton2(sValue);
 				}
 			}).placeAt("event1");
 
-			var oLabel = new sap.ui.commons.Label({text: "additional text 2", labelFor: "TF4"}).placeAt("event1");
-			var oInput = new sap.ui.commons.TextField("TF4",{
-				editable: true,
+			new sap.m.Label({text: "additional text 2", labelFor: "Input4"}).placeAt("event1");
+			new sap.m.Input("Input4",{
 				change: function(oEvent){
-					var oTF = oEvent.oSource;
-					var sValue = oEvent.getParameter('newValue');
+					var oInput = oEvent.getSource();
+					var sValue = oEvent.getParameter('value');
 					var oHeader = sap.ui.getCore().byId("H1");
 					oHeader.setAdditionalTextButton2(sValue);
 				}
 			}).placeAt("event1");
 
-			var oButton = new sap.ui.commons.ToggleButton({
+			new sap.m.ToggleButton({
 				text: "Pevious",
 				pressed: true,
 				press: function(oEvent){
@@ -91,7 +86,7 @@
 				}
 			}).placeAt("event1");
 
-			oButton = new sap.ui.commons.ToggleButton({
+			new sap.m.ToggleButton({
 				text: "Next",
 				pressed: true,
 				press: function(oEvent){
@@ -101,7 +96,7 @@
 				}
 			}).placeAt("event1");
 
-			oButton = new sap.ui.commons.ToggleButton({
+			new sap.m.ToggleButton({
 				text: "Button 0",
 				pressed: false,
 				press: function(oEvent){
@@ -111,7 +106,7 @@
 				}
 			}).placeAt("event1");
 
-			oButton = new sap.ui.commons.ToggleButton({
+			new sap.m.ToggleButton({
 				text: "Button 1",
 				pressed: true,
 				press: function(oEvent){
@@ -121,7 +116,7 @@
 				}
 			}).placeAt("event1");
 
-			oButton = new sap.ui.commons.ToggleButton({
+			new sap.m.ToggleButton({
 				text: "Button 2",
 				pressed: true,
 				press: function(oEvent){
@@ -130,11 +125,11 @@
 					oHeader.setVisibleButton2(bPressed);
 				}
 			}).placeAt("event1");
-
+		});
 		</script>
 
 	</head>
-	<body class="sapUiBody" role="application">
+	<body class="sapUiBody">
 
 		<h1>Test Page for <code>sap.ui.unified.calendar.Header</code></h1>
 		<br>

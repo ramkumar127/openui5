@@ -1,7 +1,6 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-<meta content="IE=edge" http-equiv="X-UA-Compatible">
 <title>QuickView - sap.ui.ux3</title>
 <style>
 	#target1 {
@@ -44,15 +43,14 @@
 		padding: 0px;
 	}
 </style>
+<script src="shared-config.js"></script>
 <script src="../../../../resources/sap-ui-core.js"
-	type="text/javascript"
 	id="sap-ui-bootstrap"
-	data-sap-ui-theme="sap_goldreflection"
 	data-sap-ui-libs="sap.ui.core,sap.ui.commons,sap.ui.ux3">
 </script>
 <!--script src="../../../../resources/sap-ui-debug.js"></script-->
 
-<script type="text/javascript">
+<script>
 sap.ui.getCore().attachInitEvent(function () {
 	var oButton,
 		oQuickView,
@@ -168,7 +166,7 @@ sap.ui.getCore().attachInitEvent(function () {
 
 	function onNavigate(event){
 		jQuery.sap.log.debug("Navigate event with the reference to: " + event.getParameter("href"));
-		// Supress link navigation from a QuickView
+		// suppress link navigation from a QuickView
 		event.preventDefault();
 		// Close the QuickView after a click on a link
 		event.getSource().close();

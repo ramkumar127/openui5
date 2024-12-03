@@ -1,26 +1,41 @@
-jQuery.sap.require("sap.m.MessageStrip");
+sap.ui.define([
+	"sap/ui/core/Element",
+	'sap/ui/core/mvc/Controller',
+	'sap/m/MessageStrip',
+	'sap/ui/core/InvisibleMessage',
+	'sap/ui/core/library'
+], function(Element, Controller, MessageStrip, InvisibleMessage, library) {
+	"use strict";
 
+	var InvisibleMessageMode = library.InvisibleMessageMode;
 
-sap.ui.controller("sap.m.sample.DynamicMessageStripGenerator.C", {
-	showMsgStrip: function() {
-		var oMs = sap.ui.getCore().byId("msgStrip");
+	return Controller.extend("sap.m.sample.DynamicMessageStripGenerator.C", {
+		onInit: function () {
+			this.oInvisibleMessage = InvisibleMessage.getInstance();
+		},
+		showMsgStrip: function () {
+			var oMs = Element.getElementById("msgStrip");
 
-		if (oMs) {
-			oMs.destroy();
+			if (oMs) {
+				oMs.destroy();
+			}
+			this._generateMsgStrip();
+		},
+
+		_generateMsgStrip: function () {
+			var aTypes = ["Information", "Warning", "Error", "Success"],
+				sText = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco.",
+				sType = aTypes[Math.round(Math.random() * 3)],
+				oVC = this.byId("oVerticalContent"),
+				oMsgStrip = new MessageStrip("msgStrip", {
+					text: sText,
+					showCloseButton: !(Math.round(Math.random())),
+					showIcon: !(Math.round(Math.random())),
+					type: sType
+				});
+
+			this.oInvisibleMessage.announce("New Information Bar of type " + sType + " " + sText, InvisibleMessageMode.Assertive);
+			oVC.addContent(oMsgStrip);
 		}
-		this._generateMsgStrip();
-	},
-	_generateMsgStrip: function() {
-		var aTypes = ["Information", "Warning", "Error", "Success"],
-			oVC = this.getView().byId("oVerticalContent"),
-
-			oMsgStrip = new sap.m.MessageStrip("msgStrip", {
-				text: "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua ut enim ad minim veniam, quis nostrud exercitation ullamco.",
-				showCloseButton: !(Math.round(Math.random())),
-				showIcon: !(Math.round(Math.random())),
-				type: aTypes[Math.round(Math.random() * 4)]
-			});
-
-		oVC.addContent(oMsgStrip);
-	}
+	});
 });

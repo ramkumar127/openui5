@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.m.ActionSelect.
-sap.ui.define(['jquery.sap.global', './Select', './library'],
-	function(jQuery, Select, library) {
+sap.ui.define(['./Select', "sap/ui/core/Element", 'sap/ui/core/InvisibleText', 'sap/ui/Device', "sap/ui/core/Lib", './ActionSelectRenderer'],
+	function(Select, Element, InvisibleText, Device, Library, ActionSelectRenderer) {
 		"use strict";
 
 		/**
@@ -23,20 +23,24 @@ sap.ui.define(['jquery.sap.global', './Select', './library'],
 		 * @constructor
 		 * @public
 		 * @since 1.16
+		 * @deprecated As of version 1.111 with no replacement. The control is no longer considered part of the Fiori concept.
 		 * @alias sap.m.ActionSelect
-		 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 		 */
-		var ActionSelect = Select.extend("sap.m.ActionSelect", /** @lends sap.m.ActionSelect.prototype */ { metadata : {
+		var ActionSelect = Select.extend("sap.m.ActionSelect", /** @lends sap.m.ActionSelect.prototype */ {
+			metadata : {
 
-			library : "sap.m",
-			associations : {
+				library : "sap.m",
+				associations : {
 
-				/**
-				 * Buttons to be added to the ActionSelect content.
-				 */
-				buttons : {type : "sap.m.Button", multiple : true, singularName : "button"}
-			}
-		}});
+					/**
+					 * Buttons to be added to the ActionSelect content.
+					 */
+					buttons : {type : "sap.m.Button", multiple : true, singularName : "button"}
+				}
+			},
+
+			renderer: ActionSelectRenderer
+		});
 
 		ActionSelect.prototype.init = function() {
 			Select.prototype.init.call(this);
@@ -55,7 +59,7 @@ sap.ui.define(['jquery.sap.global', './Select', './library'],
 		/**
 		 * Determines whether the ActionSelect has content or not.
 		 *
-		 * @return {boolean}
+		 * @return {boolean} Whether the ActionSelect has content
 		 * @override
 		 * @private
 		 */
@@ -64,23 +68,30 @@ sap.ui.define(['jquery.sap.global', './Select', './library'],
 		};
 
 		/**
-		 * Add additional content.
+		 * Add additional content to Select's SimpleFixFlex flexContent aggregation.
 		 *
 		 * @override
 		 * @private
 		 */
-		ActionSelect.prototype.addContent = function() {
-			var oCore = sap.ui.getCore(),
-				oPicker = this.getPicker();
+		ActionSelect.prototype.addContentToFlex = function() {
+			var oSimpleFixFlex = this.getSimpleFixFlex();
 
 			this.getButtons().forEach(function(sButtonId) {
-				oPicker.addContent(oCore.byId(sButtonId));
+				oSimpleFixFlex.addFlexContent(Element.getElementById(sButtonId));
 			});
 		};
 
 		/* =========================================================== */
 		/* Lifecycle methods                                           */
 		/* =========================================================== */
+
+		ActionSelect.prototype._onBeforeRenderingPopover = function () {
+			Select.prototype._onBeforeRenderingPopover.call(this);
+			var oPicker = this.getPicker();
+			oPicker && oPicker._setAriaRoleApplication(true);
+
+			this._updateTutorMessage();
+		};
 
 		ActionSelect.prototype.onAfterRenderingPicker = function() {
 			Select.prototype.onAfterRenderingPicker.call(this);
@@ -96,27 +107,29 @@ sap.ui.define(['jquery.sap.global', './Select', './library'],
 		/* API methods                                                 */
 		/* =========================================================== */
 
+		ActionSelect.prototype.createPickerCloseButton = function() {};
+
 		/* ----------------------------------------------------------- */
 		/* Public methods                                              */
 		/* ----------------------------------------------------------- */
 
 		/**
-		 * Button to be removed from the ActionSelect content.
+		 * Removes the given button from the <code>ActionSelect</code> content.
 		 *
-		 * @param {int | string | sap.m.Button} vButton The button to remove or its index or id.
-		 * @returns {string} The id of the removed button or null.
+		 * @param {int | sap.ui.core.ID | sap.m.Button} vButton The button to remove or its index or ID.
+		 * @returns {string|null} The ID of the removed button or <code>null</code>.
 		 * @public
 		 */
 		ActionSelect.prototype.removeButton = function(vButton) {
-			var oPicker = this.getPicker();
+			var oSimpleFixFlex = this.getSimpleFixFlex();
 
-			if (oPicker) {
+			if (oSimpleFixFlex) {
 
 				if (typeof vButton === "number") {
 					vButton = this.getButtons()[vButton];
 				}
 
-				oPicker.removeContent(vButton);
+				oSimpleFixFlex.removeFlexContent(vButton);
 			}
 
 			return this.removeAssociation("buttons", vButton);
@@ -129,11 +142,11 @@ sap.ui.define(['jquery.sap.global', './Select', './library'],
 		 * @public
 		 */
 		ActionSelect.prototype.removeAllButtons = function() {
-			var oPicker = this.getPicker();
+			var oSimpleFixFlex = this.getSimpleFixFlex();
 
-			if (oPicker) {
+			if (oSimpleFixFlex) {
 				this.getButtons().forEach(function(sButtonId) {
-					oPicker.removeContent(sButtonId);
+					oSimpleFixFlex.removeFlexContent(Element.getElementById(sButtonId));
 				});
 			}
 
@@ -143,13 +156,18 @@ sap.ui.define(['jquery.sap.global', './Select', './library'],
 		// Keyboard Navigation for Action buttons
 
 		/**
-		 * Handler for SHIFT-TAB key  - 'tab previous' sap ui5 key event.
+		 * Handler for SHIFT-TAB key  - 'tab previous' key event.
 		 *
-		 * @param oEvent - key event
+		 * @param {jQuery.Event} oEvent The event object.
 		 * @private
 		 *
 		 */
 		ActionSelect.prototype.onsaptabprevious = function(oEvent) {
+			var aButtons = this.getButtons(),
+				oPicker = this.getPicker(),
+				i;
+
+			this._bProcessChange = false;
 
 			// check whether event is marked or not
 			if ( oEvent.isMarked() || !this.getEnabled()) {
@@ -158,23 +176,30 @@ sap.ui.define(['jquery.sap.global', './Select', './library'],
 
 			// mark the event for components that needs to know if the event was handled
 			oEvent.setMarked();
-			var aButtons = this.getButtons();
-			var oPicker = this.getPicker();
 
 			if (oPicker && oPicker.isOpen() && aButtons.length > 0) {
-				sap.ui.getCore().byId(aButtons[aButtons.length - 1]).focus();
-				oEvent.preventDefault();
+				for (i = aButtons.length - 1; i >= 0; i--) {
+					if (Element.getElementById(aButtons[i]).getEnabled()) {
+						Element.getElementById(aButtons[i]).focus();
+						oEvent.preventDefault();
+						break;
+					}
+				}
 			}
 		};
 
 		/**
 		 * Handler for TAB key - sap 'tab next' key event.
 		 *
-		 * @param oEvent - key event
+		 * @param {jQuery.Event} oEvent The event object.
 		 * @private
 		 *
 		 */
 		ActionSelect.prototype.onsaptabnext = function(oEvent) {
+			var aButtons = this.getButtons(),
+				oPicker = this.getPicker(),
+				i;
+				this._bProcessChange = false;
 
 			// check whether event is marked or not
 			if ( oEvent.isMarked() || !this.getEnabled()) {
@@ -184,12 +209,14 @@ sap.ui.define(['jquery.sap.global', './Select', './library'],
 			// mark the event for components that needs to know if the event was handled
 			oEvent.setMarked();
 
-			var aButtons = this.getButtons();
-			var oPicker = this.getPicker();
-
 			if (oPicker && oPicker.isOpen() && aButtons.length > 0) {
-				sap.ui.getCore().byId(aButtons[0]).focus();
-				oEvent.preventDefault();
+				for (i = 0; i < aButtons.length; i++) {
+					if (Element.getElementById(aButtons[i]).getEnabled()) {
+						Element.getElementById(aButtons[i]).focus();
+						oEvent.preventDefault();
+						break;
+					}
+				}
 			}
 		};
 
@@ -204,25 +231,100 @@ sap.ui.define(['jquery.sap.global', './Select', './library'],
 			// Keep focus on Action Select's input field if does not go to
 			// the buttons in Action sheet part of the ActionSelect
 			var aButtons = this.getButtons();
-			var bKeepFocus = (aButtons.indexOf(oEvent.relatedControlId) == -1);
+			var bKeepFocus = (aButtons.indexOf(oEvent.relatedControlId) === -1);
 
 			if (bKeepFocus) {
 				Select.prototype.onsapfocusleave.apply(this, arguments);
 			}
+
+			this._toggleListFocusIndication(true);
 		};
 
 		/**
 		 * Handler for focus in event on The Selection List.
 		 *
-		 * @param oEvent - key event
+		 * @param {jQuery.Event} oEvent The event object.
 		 * @private
 		 */
 		ActionSelect.prototype.onfocusinList = function(oEvent) {
-			if (document.activeElement !== this.getList().getDomRef()) {
+			if (document.activeElement !== this.getList().getDomRef() && !Device.system.phone) {
 				this.focus();
+			}
+		};
+
+		ActionSelect.prototype.onfocusin = function() {
+			Select.prototype.onfocusin.apply(this, arguments);
+			this._toggleListFocusIndication(false);
+		};
+
+		/**
+		 * Handles toggling of focus indication from the list items.
+		 * If drop down is open and there is a selected item focus indication will be toggled.
+		 *
+		 * @param {boolean} bRemove - defines whether the focus indication should be removed or not.
+		 * @private
+		 */
+		ActionSelect.prototype._toggleListFocusIndication = function(bRemove) {
+			var oSelecteditem = this.getSelectedItem();
+
+			if (this.isOpen() && oSelecteditem) {
+				oSelecteditem.$().toggleClass("sapMActionSelectItemWithoutFocus", bRemove);
+			}
+		};
+
+		/**
+		 * Handles the creating and setting of a tutor message when the control has buttons.
+		 *
+		 * @private
+		 */
+		ActionSelect.prototype._updateTutorMessage = function() {
+			var oPicker = this.getPicker(),
+				aAriaLabels = oPicker.getAriaLabelledBy(),
+				bHasButtons = !!this.getButtons().length,
+				bTutorMessageNotReferenced;
+
+			if (!this._sTutorMessageId) {
+				this._sTutorMessageId = this._getTutorMessageId();
+				this._oTutorMessageText = new InvisibleText(this._sTutorMessageId, {
+					text: Library.getResourceBundleFor("sap.m").getText("ACTION_SELECT_TUTOR_MESSAGE")
+				}).toStatic();
+			}
+
+			bTutorMessageNotReferenced = (aAriaLabels.indexOf(this._sTutorMessageId) === -1);
+
+			if (bTutorMessageNotReferenced && bHasButtons) {
+				oPicker.addAriaLabelledBy(this._sTutorMessageId);
+			} else {
+				if (!bHasButtons) {
+					oPicker.removeAriaLabelledBy(this._sTutorMessageId);
+				}
+			}
+		};
+
+		/**
+		 * Gets the tutor message id.
+		 *
+		 * @returns {string} The id of the tutor message.
+		 * @private
+		 */
+		ActionSelect.prototype._getTutorMessageId = function() {
+			return this.getId() + "-tutorMessage";
+		};
+
+		/**
+		 * Called when the control is destroyed
+		 *
+		 * @private
+		 */
+		ActionSelect.prototype.exit = function () {
+			Select.prototype.exit.call(this);
+
+			if (this._oTutorMessageText) {
+				this._oTutorMessageText.destroy();
+				this._oTutorMessageText = null;
 			}
 		};
 
 		return ActionSelect;
 
-	}, /* bExport= */ true);
+	});

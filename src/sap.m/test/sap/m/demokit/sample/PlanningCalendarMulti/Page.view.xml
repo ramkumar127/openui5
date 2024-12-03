@@ -10,6 +10,7 @@
 			showIntervalHeaders="false"
 			startDate="{path: '/startDate'}"
 			rows="{path: '/people'}"
+			appointmentsVisualization="Filled"
 			appointmentSelect="handleAppointmentSelect"
 			intervalSelect="handleIntervalSelect">
 			<toolbarContent>
@@ -20,7 +21,7 @@
 					icon="{pic}"
 					title="{name}"
 					text="{role}"
-					appointments="{appointments}">
+					appointments="{path : 'appointments', templateShareable: false}">
 					<appointments>
 						<unified:CalendarAppointment
 							startDate="{start}"

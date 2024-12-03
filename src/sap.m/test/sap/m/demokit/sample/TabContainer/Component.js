@@ -1,21 +1,11 @@
-jQuery.sap.declare("sap.m.sample.TabContainer.Component");
+sap.ui.define([
+	'sap/ui/core/UIComponent'
+], function (UIComponent) {
+	"use strict";
 
-sap.ui.core.UIComponent.extend("sap.m.sample.TabContainer.Component", {
-
-	metadata : {
-		rootView : "sap.m.sample.TabContainer.TabContainer",
-		dependencies : {
-			libs : [
-				"sap.m"
-			]
-		},
-		config : {
-			sample : {
-				files : [
-					"TabContainer.view.xml",
-					"TabContainer.controller.js"
-				]
-			}
+	return UIComponent.extend("sap.m.sample.TabContainer.Component", {
+		metadata: {
+			manifest: "json"
 		}
-	}
+	});
 });

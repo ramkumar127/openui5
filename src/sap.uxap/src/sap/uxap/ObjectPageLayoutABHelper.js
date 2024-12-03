@@ -3,24 +3,51 @@
  */
 
 sap.ui.define([
-	"jquery.sap.global",
-	"sap/ui/base/Metadata",
-	"sap/ui/core/CustomData",
-	"./AnchorBar",
-	"sap/m/Button",
-	"sap/ui/core/IconPool"
-], function (jQuery, Metadata, CustomData, AnchorBar, Button, IconPool) {
+	"sap/ui/core/Element",
+	"sap/ui/base/Object",
+	"sap/ui/base/ManagedObject",
+	"sap/ui/base/ManagedObjectObserver",
+	"sap/m/IconTabFilter",
+	"sap/m/IconTabHeader",
+	"sap/m/library",
+	"sap/uxap/ObjectPageSection"
+], function(Element, BaseObject, ManagedObject, ManagedObjectObserver, IconTabFilter, IconTabHeader, mobileLibrary, ObjectPageSection) {
 	"use strict";
 
-	var ABHelper = Metadata.createClass("sap.uxap._helpers.AB", {
+	// shortcut for sap.m.TabsOverflowMode
+	var TabsOverflowMode = mobileLibrary.TabsOverflowMode;
+	// shortcut for sap.m.IconTabHeaderMode
+	var IconTabHeaderMode = mobileLibrary.IconTabHeaderMode;
+
+	var ABHelper = BaseObject.extend("sap.uxap._helpers.AB", {
 		/**
 		 * @private
 		 * @param {sap.uxap.ObjectPageLayout} oObjectPageLayout Object Page layout instance
 		 */
 		constructor: function (oObjectPageLayout) {
 			this._oObjectPageLayout = oObjectPageLayout;
+			this._oObserver = new ManagedObjectObserver(this._proxyStateChanges.bind(this));
+		},
+		getInterface: function() {
+			return this; // no facade
 		}
 	});
+
+	/** STATIC MEMBERS **/
+
+	/**
+	 * @static
+	 * @param {sap.uxap.ObjectPageSectionBase} oSection the section or subsection to be focused
+	 * @param {object} oParams a params object to be passed to the focus call
+	 * @private
+	 */
+	ABHelper._focusSection = function (oSection, oParams) {
+		var oSectionDomRef = oSection.getDomRef();
+
+		if (oSectionDomRef) {
+			oSectionDomRef.focus(oParams);
+		}
+	};
 
 	ABHelper.prototype.getObjectPageLayout = function () {
 		return this._oObjectPageLayout;
@@ -32,16 +59,34 @@ sap.ui.define([
 	 * @private
 	 */
 	ABHelper.prototype._getAnchorBar = function () {
-		var oAnchorBar = this.getObjectPageLayout().getAggregation("_anchorBar");
+		var oObjectPageLayout = this.getObjectPageLayout(),
+			oAnchorBar = oObjectPageLayout.getAggregation("_anchorBar"),
+			bUpperCaseAnchors = oObjectPageLayout.getUpperCaseAnchorBar();
 
 		if (!oAnchorBar) {
 
-			oAnchorBar = new AnchorBar({
-				id: this.getObjectPageLayout().getId() + "-anchBar",
-				showPopover: this.getObjectPageLayout().getShowAnchorBarPopover()
+			oAnchorBar = new IconTabHeader({
+				id: oObjectPageLayout.getId() + "-anchBar",
+				tabsOverflowMode: TabsOverflowMode.StartAndEnd,
+				backgroundDesign: ManagedObject.escapeSettingsValue(oObjectPageLayout.getBackgroundDesignAnchorBar()),
+				mode: IconTabHeaderMode.Inline
 			});
 
-			this.getObjectPageLayout().setAggregation("_anchorBar", oAnchorBar);
+			oAnchorBar.attachSelect(function(oEvent) {
+				var sSectionId = oEvent.getParameter("key");
+				this._moveFocusOnSection(sSectionId);
+				oObjectPageLayout.onAnchorBarTabPress(sSectionId);
+			}.bind(this));
+
+			oAnchorBar.addEventDelegate({
+				onAfterRendering: oObjectPageLayout._adjustTitlePositioning.bind(oObjectPageLayout)
+			});
+
+			if (bUpperCaseAnchors) {
+				oAnchorBar.addStyleClass("sapUxAPAnchorBarUpperCase");
+			}
+
+			this.getObjectPageLayout().setAggregation("_anchorBar", oAnchorBar, true);
 		}
 
 		return oAnchorBar;
@@ -52,147 +97,198 @@ sap.ui.define([
 	 * @private
 	 */
 	ABHelper.prototype._buildAnchorBar = function () {
-		var aSections = this.getObjectPageLayout().getSections() || [],
-			oAnchorBar = this._getAnchorBar();
+		var oObjectPage = this.getObjectPageLayout(),
+			oIconTabHeader = this._getAnchorBar(),
+			bUpperCase = oObjectPage.getUpperCaseAnchorBar();
 
-		//tablet & desktop mechanism
-		if (oAnchorBar && this.getObjectPageLayout().getShowAnchorBar()) {
+		this.resetControl();
+		this._oObserver.disconnect(); // unobrveserve all previousy obsed objects
 
-			oAnchorBar._resetControl();
+		oObjectPage._getVisibleSections().forEach(function (oSection) {
+			var sSectionFilterId = oIconTabHeader.getId() + "-" + oSection.getId() + "-anchor",
+				oSectionFilter = new IconTabFilter(sSectionFilterId, {
+					text: ManagedObject.escapeSettingsValue(oSection._getTitle()),
+					key: oSection.getId(),
+					iconColor: ManagedObject.escapeSettingsValue(oSection.getAnchorBarButtonColor())
+				}),
+				aSubSections = oSection._getVisibleSubSections();
 
-			//first level
-			aSections.forEach(function (oSection) {
+			this._setupCustomButtonForwarding(oSection, oSectionFilter, bUpperCase);
 
-				if (!oSection.getVisible() || !oSection._getInternalVisible()) {
-					return;
-				}
-
-				var oButtonClone,
-					aSubSections = oSection.getSubSections() || [];
-
-				oButtonClone = this._buildAnchorBarButton(oSection, true);
-
-				if (oButtonClone) {
-					oAnchorBar.addContent(oButtonClone);
-
-					//second Level
+			if (oObjectPage.getShowAnchorBarPopover()) {
+				if (aSubSections.length > 1) {
 					aSubSections.forEach(function (oSubSection) {
+						var sSubSectionFilterId = oIconTabHeader.getId() + "-" + oSubSection.getId() + "-anchor",
+							oSubSectionFilter = new IconTabFilter(sSubSectionFilterId, {
+							text: ManagedObject.escapeSettingsValue(oSubSection._getTitle()),
+							key: oSubSection.getId()
+						});
 
-						if (!oSubSection.getVisible() || !oSubSection._getInternalVisible()) {
-							return;
-						}
-
-						var oSecondLevelButtonClone = this._buildAnchorBarButton(oSubSection, false);
-
-						if (oSecondLevelButtonClone) {
-							oAnchorBar.addContent(oSecondLevelButtonClone);
-						}
-
+						oSectionFilter.addItem(oSubSectionFilter);
+						this._setupCustomButtonForwarding(oSubSection, oSubSectionFilter);
 					}, this);
+				} else if (aSubSections.length === 1 && !oSection.getCustomAnchorBarButton() && aSubSections[0]._getTitle()?.trim()) { // promoted section
+					oSectionFilter.setText(aSubSections[0]._getTitle());
+					this._setupCustomButtonForwarding(aSubSections[0], oSectionFilter, bUpperCase);
 				}
+			}
 
-			}, this);
+			oIconTabHeader.addItem(oSectionFilter);
+		}, this);
+		oObjectPage.setAggregation("_anchorBar", oIconTabHeader);
+	};
+
+	ABHelper.prototype._setupCustomButtonForwarding = function (oSectionBase, oSectionBaseTab, bUpperCase) {
+		var oCustomAnchorBarButton = oSectionBase.getCustomAnchorBarButton();
+		if (!oCustomAnchorBarButton) {
+			return;
 		}
+		// set initial property values
+		oSectionBaseTab.setText(oCustomAnchorBarButton.getText());
+		oSectionBaseTab.setIcon(oCustomAnchorBarButton.getIcon());
+
+		// forward updates to property values
+		this._oObserver.observe(oCustomAnchorBarButton, {
+			properties: true
+		});
+
+		// forward press event
+		this._getAnchorBar().attachSelect(function(oEvent) {
+			this._forwardPressToCustomButton(oEvent.getParameter("item"));
+		}, this);
+	};
+
+	ABHelper.prototype._forwardPressToCustomButton = function (oPressedAnchor) {
+		var sSectionBaseId = oPressedAnchor.getKey(),
+			oSectionBase = Element.getElementById(sSectionBaseId),
+			oCustomButton = oSectionBase?.getCustomAnchorBarButton();
+
+		if (oCustomButton) {
+			oCustomButton.firePress();
+		}
+	};
+
+	ABHelper.prototype.resetControl = function () {
+		this._getAnchorBar().destroyItems();
+	};
+
+	ABHelper.prototype.selectAnchorForSection = function (sId) {
+		var oSectionBase = sap.ui.getCore().byId(sId),
+			bIsSubsection;
+
+		if (!oSectionBase) {
+			return;
+		}
+
+		bIsSubsection = oSectionBase.isA("sap.uxap.ObjectPageSubSection");
+
+		if (bIsSubsection) {
+			sId = oSectionBase.getParent().getId();
+		}
+
+
+		this._getAnchorBar().setSelectedKey(sId);
+	};
+
+	ABHelper.prototype._setAnchorButtonsTabFocusValues = function (sSelectedKey) {
+		var aAnchorBarContent = this._getAnchorBar().getItems(),
+			$anchorBarItem,
+			sFocusable = '0',
+			sNotFocusable = '-1',
+			sTabIndex = "tabIndex";
+
+		aAnchorBarContent.forEach(function (oAnchorBarItem) {
+			$anchorBarItem = oAnchorBarItem.$();
+			if (oAnchorBarItem.getKey() === sSelectedKey) {
+				$anchorBarItem.attr(sTabIndex, sFocusable);
+			} else {
+				$anchorBarItem.attr(sTabIndex, sNotFocusable);
+			}
+		});
 	};
 
 	/**
-	 * build a sap.m.button equivalent to a section or sub section for insertion in the anchorBar
-	 * also registers the section info for further dom position updates
-	 * @param oSectionBase
-	 * @param bIsSection
-	 * @returns {null}
+	 * Moves focus on the corresponding subsection when MenuItem is selected
+	 * @param {sap.ui.core.Control} oSourceControl selected Item
 	 * @private
 	 */
-	ABHelper.prototype._buildAnchorBarButton = function (oSectionBase, bIsSection) {
-		var oButtonClone = null,
-			oObjectPageLayout = this.getObjectPageLayout(),
-			oButton,
-			oAnchorBar = this._getAnchorBar(),
-			oSectionBindingInfo,
-			sModelName,
-			sId,
-			aSubSections = oSectionBase.getAggregation("subSections");
+	ABHelper.prototype._moveFocusOnSection = function (sectionId) {
+		var oSectionBase = Element.getElementById(sectionId),
+			oSection,
+			oSectionFilter,
+			oFocusParams = { preventScroll: true },
+			oDelegate;
 
-		if (oSectionBase.getVisible() && oSectionBase._getInternalVisible()) {
-			oButton = oSectionBase.getCustomAnchorBarButton();
-
-			//by default we get create a button with the section title as text
-			if (!oButton) {
-				sId = oAnchorBar.getId() + "-" + oSectionBase.getId() + "-anchor";
-
-				oButtonClone = new Button({
-					ariaDescribedBy: oSectionBase,
-					id: sId
-				});
-
-				//has a ux rule been applied that we need to reflect here?
-				if (oSectionBase._getInternalTitle() != "") {
-					oButtonClone.setText(oSectionBase._getInternalTitle());
-				} else {
-
-					//is the section title bound to a model? in this case we need to apply the same binding
-					oSectionBindingInfo = oSectionBase.getBindingInfo("title");
-					if (oSectionBindingInfo && oSectionBindingInfo.parts && oSectionBindingInfo.parts.length > 0) {
-
-						sModelName = oSectionBindingInfo.parts[0].model;
-
-						//handle relative binding scenarios
-						oButtonClone.setBindingContext(oSectionBase.getBindingContext(sModelName), sModelName);
-
-						//copy binding information
-						oButtonClone.bindProperty("text", {
-							path: oSectionBindingInfo.parts[0].path,
-							model: sModelName
-						});
-					} else { //otherwise just copy the plain text
-						oButtonClone.setText(oSectionBase.getTitle());
-					}
-				}
-			} else {
-				oButtonClone = oButton.clone(); //keep original button parent control hierarchy
-			}
-
-			//update the section info
-			oObjectPageLayout._oSectionInfo[oSectionBase.getId()].buttonId = oButtonClone.getId();
-
-			//the anchorBar needs to know the sectionId for automatic horizontal scrolling
-			oButtonClone.addCustomData(new CustomData({
-				key: "sectionId",
-				value: oSectionBase.getId()
-			}));
-
-			//the anchorBar needs to know whether the title is actually displayed or not (so the anchorBar is really reflecting the objactPage layout state)
-			oButtonClone.addCustomData(new CustomData({
-				key: "bTitleVisible",
-				value: oSectionBase._getInternalTitleVisible()
-			}));
-
-			if (!bIsSection) {
-				//the anchorBar needs to know that this is a second section because it will handle responsive scenarios
-				oButtonClone.addCustomData(new CustomData({
-					key: "secondLevel",
-					value: true
-				}));
-			}
-
-			if (aSubSections && aSubSections.length > 1) {
-				// the anchor bar need to know if the button has submenu for accessibility rules
-				oButtonClone.addCustomData(new CustomData({
-					key: "bHasSubMenu",
-					value: true
-				}));
-
-				if (oObjectPageLayout.getShowAnchorBarPopover()) {
-					// Add arrow icon-down in order to indicate that on click will open popover
-					oButtonClone.setIcon(IconPool.getIconURI("slim-arrow-down"));
-					oButtonClone.setIconFirst(false);
-				}
-			}
+		if (!oSectionBase) {
+			return;
 		}
 
-		return oButtonClone;
+		if (!oSectionBase.isActive()) {
+			// with IconTabBar section may not be rendered
+			oDelegate = {
+				"onAfterRendering": function () {
+					oSectionBase.removeEventDelegate(oDelegate);
+					ABHelper._focusSection(oSectionBase, oFocusParams);
+				}
+			};
+
+			oSectionBase.addEventDelegate(oDelegate);
+			return;
+		}
+
+		oSection = ObjectPageSection._getClosestSection(oSectionBase);
+		oSectionFilter = this._getAnchorBar().getItems().find((i) => i.getKey() === oSection.getId());
+
+		if (document.activeElement !== oSectionFilter.getDomRef()) {
+
+				oDelegate = {
+					"onfocusin": function () {
+						oSectionFilter.removeEventDelegate(oDelegate);
+						ABHelper._focusSection(oSectionBase, oFocusParams);
+					}
+				};
+				oSectionFilter.addEventDelegate(oDelegate);
+		}
+
+		ABHelper._focusSection(oSectionBase, oFocusParams);
 	};
+
+	ABHelper.prototype._proxyStateChanges = function (oChanges) {
+		var oObject = oChanges.object,
+			oSectionBase = oObject.getParent(),
+			oSectionBaseAnchor = this._findAnchorForSectionBase(oSectionBase),
+			sPropertyName = oChanges.name,
+			vCurrentValue = oChanges.current,
+			sSetter = "set" + fnCapitalize(sPropertyName);
+
+			if (oSectionBaseAnchor) {
+				oSectionBaseAnchor[sSetter].call(oSectionBaseAnchor, vCurrentValue);
+			}
+	};
+
+	ABHelper.prototype._findAnchorForSectionBase = function (oSectionBase) {
+		var sSectionBaseId = oSectionBase?.getId(),
+			oAnchorBar = this._getAnchorBar(),
+			aAnchors = oAnchorBar.getItems(),
+			oSelectedAnchor,
+			fnFindAnchor = function(oItems) {
+				return oItems.some(function(oItem) {
+					if (oItem.getKey() === sSectionBaseId) {
+						oSelectedAnchor = oItem;
+						return true;
+					}
+					return fnFindAnchor(oItem.getItems());
+				});
+			};
+
+		fnFindAnchor(aAnchors);
+		return oSelectedAnchor;
+	};
+
+	function fnCapitalize(sName) {
+		return sName.substring(0, 1).toUpperCase() + sName.substring(1);
+	}
 
 	return ABHelper;
 
-}, /* bExport= */ false);
+});

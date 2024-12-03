@@ -1,18 +1,18 @@
 // require mock server implementation
-sap.ui.define(['./MockServer','sap/ui/core/mvc/Controller','sap/ui/model/odata/ODataModel'],
+sap.ui.define(['./MockServer','sap/ui/core/mvc/Controller','sap/ui/model/odata/v2/ODataModel'],
 	function(MockServer, Controller, ODataModel) {
 	"use strict";
 
 	var ListController = Controller.extend("sap.m.sample.ListDeletion.List", {
 
-		onInit: function(oEvent) {
+		onInit: function() {
 
 			// NOTE TO DEVELOPERS: You do not need to reproduce this following section
 			// It is just so we can simulate 1000ms delay from the fictional OData service
 			MockServer.start();
 
 			// create and set ODATA Model
-			this.oProductModel = new ODataModel("/mockserver", true);
+			this.oProductModel = new ODataModel("/mockserver");
 			this.getView().setModel(this.oProductModel);
 		},
 
@@ -35,7 +35,7 @@ sap.ui.define(['./MockServer','sap/ui/core/mvc/Controller','sap/ui/model/odata/O
 
 			// send a delete request to the odata service
 			this.oProductModel.remove(sPath);
-		},
+		}
 	});
 
 

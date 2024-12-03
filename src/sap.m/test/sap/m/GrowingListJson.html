@@ -1,15 +1,15 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
 <title>sap.m.List with Growing Feature Test with JSON Model</title>
 
-<script src="../../../resources/sap-ui-core.js" type="text/javascript" id="sap-ui-bootstrap" data-sap-ui-libs="sap.m" data-sap-ui-theme="sap_bluecrystal">
+<script src="shared-config.js"></script>
+<script src="../../../resources/sap-ui-core.js" id="sap-ui-bootstrap" data-sap-ui-libs="sap.m">
 
 </script>
 
-<script type="text/javascript">
+<script>
 
 
 	// ================================================================================
@@ -32,7 +32,7 @@
 	});
 
 
-	var nav = new Array();
+	var nav = [];
 	for ( var i = 0; i < 1000; i++) {
 		nav[i] = {};
 		nav[i].title = "Data 1 No: " + i;
@@ -43,9 +43,9 @@
 
 	var dataOverview1 = {
 		navigation : nav
-	}
+	};
 
-	var nav2 = new Array();
+	var nav2 = [];
 	for ( var i = 0; i < 18; i++) {
 		nav2[i] = {};
 		nav2[i].title = "Data 2 No: " + i;
@@ -56,7 +56,7 @@
 
 	var dataOverview2 = {
 		navigation : nav2
-	}
+	};
 
 	var oItemTemplate = new sap.m.StandardListItem({
 		title : "{test>title}",
@@ -110,7 +110,6 @@
 		oModel.setData(data);
 		// set the model to the list
 		list.setModel(oModel, "test");
-		//sap.ui.getCore().setModel(oModel);
 
 		// create a CustomData template, set its key to "answer" and bind its value to the answer data
 		var oDataTemplate = new sap.ui.core.CustomData({
@@ -132,7 +131,6 @@
 
 		// set the model to the list
 		list.setModel(oModel, "test");
-		//sap.ui.getCore().setModel(oModel);
 
 		// create a CustomData template, set its key to "answer" and bind its value to the answer data
 		var oDataTemplate = new sap.ui.core.CustomData({
@@ -176,7 +174,7 @@
 	*/
 
 	listOverview.addContent(oList);
-	app.addPage(listOverview)
+	app.addPage(listOverview);
 
 	app.placeAt("body");
 </script>

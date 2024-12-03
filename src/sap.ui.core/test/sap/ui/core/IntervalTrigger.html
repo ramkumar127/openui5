@@ -1,7 +1,6 @@
 <!DOCTYPE HTML>
 <html>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
 <title>IntervalTrigger - sap.ui.core</title>
 
@@ -16,42 +15,38 @@
 }
 </style>
 
-<script id="sap-ui-bootstrap" type="text/javascript"
+<script src="shared-config.js"></script>
+<script id="sap-ui-bootstrap"
 	src="../../../../resources/sap-ui-core.js"
-	data-sap-ui-theme="sap_goldreflection">
+	data-sap-ui-theme="sap_bluecrystal"
+	data-sap-ui-libs="sap.m, sap.ui.layout">
 
 </script>
 
-<script type="text/javascript">
-	try {
-		jQuery.sap.require("sap.ui.core.IntervalTrigger");
-		jQuery.sap.require("sap.ui.commons.ButtonRenderer");
-
-		sap.ui.getCore().loadLibrary("sap.ui.commons");
-	} catch (e) {
-		alert("This test page requires the library 'sap.ui.commons' which is not available.");
-		throw (e);
-	}
+<script>
+	jQuery.sap.require("sap.ui.core.IntervalTrigger");
+	jQuery.sap.require("sap.m.ButtonRenderer");
 
 	var triggerCounter = 0;
 
-	sap.ui.core.Control.extend("mySampleListener", {
+	var MySampleListener = sap.ui.core.Control.extend("MySampleListener", {
 		metadata : {
 			properties : {
 				"index" : "int"
 			}
 		},
 
-		renderer : function(oRm, oControl) {
-			oRm.write("<div");
-			oRm.writeControlData(oControl);
-			oRm.addClass("sampleListener");
-			oRm.writeClasses();
-			oRm.write(">");
-
-			oRm.write("Lorem Ipsum")
-
-			oRm.write("</div>");
+		renderer : {
+			apiVersion: 2,
+			render: function(oRm, oControl) {
+				oRm.openStart("div", oControl);
+				oRm.class("sampleListener");
+				oRm.openEnd();
+	
+				oRm.text("Lorem Ipsum");
+	
+				oRm.close("div");
+			}
 		},
 
 		onclick : function(oEvent) {
@@ -71,7 +66,7 @@
 		}
 	});
 
-	var oLbl = new sap.ui.commons.Label({
+	var oLbl = new sap.m.Label({
 		text : "Call back calls: " + triggerCounter
 	}).placeAt("counter");
 
@@ -82,23 +77,23 @@
 
 	var oTrigger = new sap.ui.core.IntervalTrigger();
 
-	sap.ui.commons.Button.extend("myTriggerButton", {
+	var MyTriggerButton = sap.m.Button.extend("MyTriggerButton", {
 		metadata : {
 			properties : {
-				"index" : "int",
+				"index" : "int"
 			}
 		},
 
-		renderer : sap.ui.commons.ButtonRenderer.render
+		renderer : sap.m.ButtonRenderer
 	});
 
 	var aListeners = [];
 	var oBtn = {};
-	var oLayout = new sap.ui.commons.layout.MatrixLayout().placeAt("triggers");
+	var oLayout = new sap.ui.layout.VerticalLayout().placeAt("triggers");
 
 	for ( var i = 0; i < 10; i++) {
-		aListeners[i] = new mySampleListener();
-		oBtn = new myTriggerButton({
+		aListeners[i] = new MySampleListener();
+		oBtn = new MyTriggerButton({
 			text : "Remove from trigger",
 			index : i,
 			press : function() {
@@ -106,11 +101,18 @@
 			}
 		});
 
-		oLayout.createRow(aListeners[i], oBtn);
+		oLayout.addContent(
+			new sap.ui.layout.HorizontalLayout({
+				content: [
+					aListeners[i],
+					oBtn
+				]
+			})
+		);
 		oTrigger.addListener(aListeners[i].trigger, aListeners[i]);
 	}
 
-	var oAttachIntervalBtn = new sap.ui.commons.Button({
+	var oAttachIntervalBtn = new sap.m.Button({
 		text : "Start trigger",
 		press : function() {
 			oTrigger.setInterval(1000);
@@ -118,7 +120,7 @@
 	}).placeAt("attachIntervalBtn");
 </script>
 </head>
-<body class="sapUiBody" role="application">
+<body class="sapUiBody">
 	<h1>Test Page for sap.ui.core.IntervalTrigger</h1>
 
 	<div id="attachIntervalBtn"></div>

@@ -3,24 +3,67 @@
  */
 
 // Provides control sap.m.RadioButtonGroup.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/core/delegate/ItemNavigation'],
-		function(jQuery, library, Control, ItemNavigation) {
+sap.ui.define([
+	'./library',
+	'sap/ui/core/Control',
+	"sap/ui/core/Element",
+	'sap/ui/core/delegate/ItemNavigation',
+	'sap/ui/core/library',
+	'sap/ui/base/ManagedObjectObserver',
+	'./RadioButton',
+	'./RadioButtonGroupRenderer',
+	"sap/base/Log"
+],
+	function(
+		library,
+		Control,
+		Element,
+		ItemNavigation,
+		coreLibrary,
+		ManagedObjectObserver,
+		RadioButton,
+		RadioButtonGroupRenderer,
+		Log
+	) {
 			"use strict";
+
+			// shortcut for sap.ui.core.TextDirection
+			var TextDirection = coreLibrary.TextDirection;
+
+			// shortcut for sap.ui.core.ValueState
+			var ValueState = coreLibrary.ValueState;
+
 			/**
 			 * Constructor for a new RadioButtonGroup.
 			 *
 			 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
 			 * @param {object} [mSettings] Initial settings for the new control
-			 *
+			 * A wrapper control for a group of radio buttons.
 			 * @class
-			 * This control is used as a wrapper for a group of sap.m.RadioButton controls, which then can be used as a single UI element.
+			 * This control is used as a wrapper for a group of {@link sap.m.RadioButton} controls, which can be used as a single UI element.
 			 * You can select only one of the grouped radio buttons at a time.
-			 * The RadioButtonGroup lets you do things like attach a single event handler on a group of buttons, rather than on each individual button.
-			 * The grouped radio buttons can be arranged within different number of columns.
-			 * Based on the number of specified columns and the number of radio buttons used, different layout types can be achieved - as a 'matrix',
-			 * horizontally or vertically aligned radio buttons.
-
+			 * <h3>Structure</h3>
+			 * <ul>
+			 * <li>The radio buttons are stored in the <code>buttons</code> aggregation.</li>
+			 * <li>By setting the <code>columns</code> property, you can create layouts like a 'matrix', 'vertical' or 'horizontal'.</li>
+			 * <li><b>Note:</b>For proper display on all devices, we recommend creating radio button groups with only one row or only one column.</li>
+			 * </ul>
+			 * <h3>Usage</h3>
+			 * <h4>When to use:</h4>
+			 * <ul>
+			 * <li>You want to attach a single event handler on a group of buttons, rather than on each individual button.</li>
+			 * </ul>
+			 * <h4>When not to use:</h4>
+			 * <ul>
+			 * <li>Do not put two radio button groups right next to each other as it is difficult to determine which buttons belong to which group.</li>
+			 * </ul>
 			 * @extends sap.ui.core.Control
+			 * @implements sap.ui.core.IFormContent, sap.ui.core.ISemanticFormContent
+			 *
+			 * @borrows sap.ui.core.ISemanticFormContent.getFormFormattedValue as #getFormFormattedValue
+			 * @borrows sap.ui.core.ISemanticFormContent.getFormValueProperty as #getFormValueProperty
+			 * @borrows sap.ui.core.ISemanticFormContent.getFormObservingProperties as #getFormObservingProperties
+			 * @borrows sap.ui.core.ISemanticFormContent.getFormRenderAsControl as #getFormRenderAsControl
 			 *
 			 * @author SAP SE
 			 * @version ${version}
@@ -29,94 +72,114 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			 * @public
 			 * @since 1.25.0
 			 * @alias sap.m.RadioButtonGroup
-			 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 			 */
-			var RadioButtonGroup = Control.extend("sap.m.RadioButtonGroup", /** @lends sap.m.RadioButtonGroup.prototype */ { metadata : {
+			var RadioButtonGroup = Control.extend("sap.m.RadioButtonGroup", /** @lends sap.m.RadioButtonGroup.prototype */ {
+				metadata : {
 
-				library : "sap.m",
-				properties : {
+					interfaces: [
+						"sap.ui.core.IFormContent",
+						"sap.ui.core.ISemanticFormContent"
+					],
+					library : "sap.m",
+					designtime: "sap/m/designtime/RadioButtonGroup.designtime",
+					properties : {
 
-					/**
-					 * Specifies the width of the RadioButtonGroup.
-					 */
-					width : {type : "sap.ui.core.CSSSize", group : "Dimension", defaultValue : null},
+						/**
+						 * Specifies the width of the RadioButtonGroup.
+						 */
+						width : {type : "sap.ui.core.CSSSize", group : "Dimension", defaultValue : null},
 
-					/**
-					 * Specifies the maximum number of radio buttons displayed in one line.
-					 */
-					columns : {type : "int", group : "Appearance", defaultValue : 1},
+						/**
+						 * Specifies the maximum number of radio buttons displayed in one line.
+						 */
+						columns : {type : "int", group : "Appearance", defaultValue : 1},
 
-					/**
-					 * Specifies whether the user can change the selected value of the RadioButtonGroup.
-					 * When the property is set to false, the control obtains visual styles
-					 * different from its visual styles for the normal and the disabled state.
-					 * Additionally, the control is no longer interactive, but can receive focus.
-					 */
-					editable : {type : "boolean", group : "Behavior", defaultValue : true},
+						/**
+						 * Specifies whether the user can change the selected value of the RadioButtonGroup.
+						 * When the property is set to false, the control obtains visual styles
+						 * different from its visual styles for the normal and the disabled state.
+						 * Additionally, the control is no longer interactive, but can receive focus.
+						 */
+						editable : {type : "boolean", group : "Behavior", defaultValue : true},
 
-					/**
-					 * Тhe value state to be displayed for the radio button. Possible values are: sap.ui.core.ValueState.Error,
-					 * sap.ui.core.ValueState.Warning, sap.ui.core.ValueState.Success and sap.ui.core.ValueState.None.
-					 * Note: Setting this attribute to sap.ui.core.ValueState.Error when the accessibility feature is enabled,
-					 * sets the value of the invalid propery for the whole RadioButtonGroup to “true”.
-					 */
-					valueState : {type : "sap.ui.core.ValueState", group : "Data", defaultValue : sap.ui.core.ValueState.None},
+						/**
+						 * Marker for the correctness of the current value e.g., Error, Success, etc.
+						 * Changing this property will also change the state of all radio buttons inside the group.
+						 * Note: Setting this attribute to sap.ui.core.ValueState.Error when the accessibility feature is enabled,
+						 * sets the value of the invalid property for the whole RadioButtonGroup to "true".
+						 */
+						valueState : {type : "sap.ui.core.ValueState", group : "Data", defaultValue : ValueState.None},
 
-					/**
-					 * Determines the index of the selected/checked RadioButton. Default is 0.
-					 * If no radio button is selected, the selectedIndex property will return -1.
-					 */
-					selectedIndex : {type : "int", group : "Data", defaultValue : 0},
+						/**
+						 * Determines the index of the selected/checked RadioButton. Default is 0.
+						 * If no radio button is selected, the selectedIndex property will return -1.
+						 */
+						selectedIndex : {type : "int", group : "Data", defaultValue : 0},
 
-					/**
-					 * Switches the enabled state of the control. All Radio Buttons inside a disabled group are disabled. Default value is “true”.
-					 */
-					enabled : {type : "boolean", group : "Behavior", defaultValue : true},
+						/**
+						 * Switches the enabled state of the control. All radio buttons inside a disabled group are disabled.
+						 */
+						enabled : {type : "boolean", group : "Behavior", defaultValue : true},
 
-					/**
-					 * This property specifies the element's text directionality with enumerated options. By default, the control inherits text direction from the DOM.
-					 * @since 1.28.0
-					 */
-					textDirection : {type : "sap.ui.core.TextDirection", group : "Appearance", defaultValue : sap.ui.core.TextDirection.Inherit}
-				},
-				defaultAggregation : "buttons",
-				aggregations : {
+						/**
+						 * This property specifies the element's text directionality with enumerated options. By default, the control inherits text direction from the DOM.
+						 * @since 1.28.0
+						 */
+						textDirection : {type : "sap.ui.core.TextDirection", group : "Appearance", defaultValue : TextDirection.Inherit}
+					},
+					defaultAggregation : "buttons",
+					aggregations : {
 
-					/**
-					 * Returns a list of the RadioButtons in a RadioButtonGroup
-					 */
-					buttons : {type : "sap.m.RadioButton", multiple : true, singularName : "button", bindable : "bindable"}
-				},
-				associations : {
+						/**
+						 * Returns a list of the RadioButtons in a RadioButtonGroup
+						 */
+						buttons : {type : "sap.m.RadioButton", multiple : true, singularName : "button", bindable : "bindable"}
+					},
+					associations : {
 
-					/**
-					 * Association to controls / IDs which describe this control (see WAI-ARIA attribute aria-describedby).
-					 */
-					ariaDescribedBy : {type : "sap.ui.core.Control", multiple : true, singularName : "ariaDescribedBy"},
+						/**
+						 * Association to controls / IDs which describe this control (see WAI-ARIA attribute aria-describedby).
+						 */
+						ariaDescribedBy : {type : "sap.ui.core.Control", multiple : true, singularName : "ariaDescribedBy"},
 
-					/**
-					 * Association to controls / IDs which label this control (see WAI-ARIA attribute aria-labelledby).
-					 */
-					ariaLabelledBy : {type : "sap.ui.core.Control", multiple : true, singularName : "ariaLabelledBy"}
-				},
-				events : {
+						/**
+						 * Association to controls / IDs which label this control (see WAI-ARIA attribute aria-labelledby).
+						 */
+						ariaLabelledBy : {type : "sap.ui.core.Control", multiple : true, singularName : "ariaLabelledBy"}
+					},
+					events : {
 
-					/**
-					 * Fires when selection is changed by user interaction.
-					 */
-					select : {
-						parameters : {
+						/**
+						 * Fires when selection is changed by user interaction.
+						 */
+						select : {
+							parameters : {
 
-							/**
-							 * Index of the selected RadioButton.
-							 */
-							selectedIndex : {type : "int"}
+								/**
+								 * Index of the selected RadioButton.
+								 */
+								selectedIndex : {type : "int"}
+							}
 						}
 					}
-				}
-			}});
+				},
 
+				renderer: RadioButtonGroupRenderer
+			});
 
+			RadioButtonGroup.prototype.init = function() {
+				this._iSelectionNumber = -1;
+				this._oObserver = new ManagedObjectObserver(this._observeChanges.bind(this));
+				this._oObserver.observe(this, {
+					aggregations: ["buttons"]
+				});
+			};
+
+			/**
+			 * Exits the radio button group.
+			 *
+			 * @public
+			 */
 			RadioButtonGroup.prototype.exit = function() {
 
 				this.destroyButtons();
@@ -126,47 +189,71 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 					this._oItemNavigation.destroy();
 					delete this._oItemNavigation;
 				}
-			};
 
-			RadioButtonGroup.prototype.onBeforeRendering = function() {
-
-				if (this.getSelectedIndex() > this.getButtons().length) {
-					jQuery.sap.log.warning("Invalid index, set to 0");
-					this.setSelectedIndex(0);
-				}
-			};
-
-			RadioButtonGroup.prototype.onAfterRendering = function() {
-
-				this._initItemNavigation();
-
-				// update ARIA information of RadioButtons with visible buttons only
-				var aVisibleRBs = this.aRBs.filter(function(oButton) {
-					return oButton.getVisible();
-				});
-
-				for (var i = 0; i < aVisibleRBs.length; i++) {
-					var oRBDomRef = aVisibleRBs[i].getDomRef();
-					oRBDomRef.setAttribute("aria-posinset", i + 1);
-					oRBDomRef.setAttribute("aria-setsize", aVisibleRBs.length);
+				if (this._oObserver) {
+					this._oObserver.disconnect();
+					this._oObserver = null;
 				}
 			};
 
 			/**
+			 * Overwrites the onBeforeRendering method.
+			 *
+			 * @public
+			 */
+			RadioButtonGroup.prototype.onBeforeRendering = function() {
+				var aButtons = this.getButtons();
+				var bEditable = this.getEditable();
+				var iCurrentSelectedButtonSelectionNumber = -1;
+
+				aButtons.forEach(function (oRadioButton) {
+					if (oRadioButton.getSelected()) {
+						iCurrentSelectedButtonSelectionNumber = Math.max(iCurrentSelectedButtonSelectionNumber, oRadioButton._iSelectionNumber);
+					}
+				});
+
+				if (iCurrentSelectedButtonSelectionNumber === -1 && this._iSelectionNumber === -1) {
+					this._iSelectionNumber = RadioButton.getNextSelectionNumber();
+				}
+
+				aButtons.forEach(function (oRadioButton, i) {
+					oRadioButton._setEditableParent(bEditable);
+					if (i === this.getSelectedIndex() && this._iSelectionNumber > iCurrentSelectedButtonSelectionNumber && oRadioButton.isPropertyInitial("selected")) {
+						oRadioButton.setSelected(true);
+					}
+				}, this);
+
+				if (this.aRBs){
+					var oValueState = this.getValueState();
+					this.aRBs.forEach(function (oRB) { oRB.setValueState(oValueState); });
+				}
+			};
+
+			/**
+			 * Overwrites the onAfterRendering
+			 *
+			 * @public
+			 */
+			RadioButtonGroup.prototype.onAfterRendering = function() {
+				this._initItemNavigation();
+			};
+
+			/**
 			 * Initializes ItemNavigation, which is necessary for the keyboard handling of the group.
+			 *
 			 * @private
 			 */
 			RadioButtonGroup.prototype._initItemNavigation = function() {
-
 				// Collect buttons for ItemNavigation
+				var aRBs = this._getVisibleButtons();
 				var aDomRefs = [];
 				var bHasEnabledRadios = false;
 				var bRadioGroupEnabled = this.getEnabled();
-				for (var i = 0; i < this.aRBs.length; i++) {
-					aDomRefs.push(this.aRBs[i].getDomRef());
+				for (var i = 0; i < aRBs.length; i++) {
+					aDomRefs.push(aRBs[i].getDomRef());
 
 					// if the i-th radio button is enabled - set the flag to true
-					bHasEnabledRadios = bHasEnabledRadios || this.aRBs[i].getEnabled();
+					bHasEnabledRadios = bHasEnabledRadios || aRBs[i].getEnabled();
 				}
 
 				// if no radio buttons are enabled or the whole group is disabled
@@ -190,46 +277,88 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 				this._oItemNavigation.setItemDomRefs(aDomRefs);
 				this._oItemNavigation.setCycling(true);
 				this._oItemNavigation.setColumns(this.getColumns());
-				this._oItemNavigation.setSelectedIndex(this.getSelectedIndex());
-				this._oItemNavigation.setFocusedIndex(this.getSelectedIndex());
+				this._oItemNavigation.setSelectedIndex(this._getSelectedIndexInRange());
+				this._oItemNavigation.setFocusedIndex(this._getSelectedIndexInRange());
+				this._oItemNavigation.setDisabledModifiers({
+					sapnext : ["alt", "meta"],
+					sapprevious : ["alt", "meta"]
+				});
+			};
+
+			RadioButtonGroup.prototype._getVisibleButtons = function() {
+				return this.getButtons().filter(function (oRB) {
+					return oRB.getVisible();
+				});
+			};
+
+			RadioButtonGroup.prototype._observeChanges = function (oChanges) {
+				var oObject = oChanges.object,
+					sChangeName = oChanges.name,
+					sMutationName = oChanges.mutation,
+					oChild = oChanges.child;
+
+				if (oObject === this) {
+					if (sMutationName === "insert") {
+						this._observeVisibility(oChild);
+					} else if (sMutationName === "remove") {
+						this._unobserveVisibility(oChild);
+					}
+				} else if (sChangeName === "visible") {
+					this._initItemNavigation();
+				}
+			};
+
+			RadioButtonGroup.prototype._observeVisibility = function (oControl) {
+				this._oObserver.observe(oControl, {
+					properties: ["visible"]
+				});
+			};
+
+			RadioButtonGroup.prototype._unobserveVisibility = function (oControl) {
+				this._oObserver.unobserve(oControl, {
+					properties: ["visible"]
+				});
 			};
 
 			/**
 			 * Sets the selected sap.m.RadioButton using index.
-			 * @param {sap.ui.core.Integer} iSelectedIndex The index of the radio button which has to be selected
-			 * @returns {sap.m.RadioButtonGroup} Pointer to the control instance for chaining
+			 *
 			 * @public
+			 * @param {number} iSelectedIndex The index of the radio button which has to be selected.
+			 * @returns {this} Pointer to the control instance for chaining.
 			 */
 			RadioButtonGroup.prototype.setSelectedIndex = function(iSelectedIndex) {
-
 				var iIndexOld = this.getSelectedIndex();
 				// if a radio button in the group is focused is true, otherwise - false
-				var hasFocusedRadioButton = document.activeElement && document.activeElement.parentNode &&
-					document.activeElement.parentNode.parentNode === this.getDomRef();
-				// if radio button group has buttons and one of them is selected is true, otherwise - false
-				var isRadioGroupSelected = !!(this.aRBs && this.aRBs[iSelectedIndex]);
+				var hasFocusedRadioButton = this.getDomRef() && this.getDomRef().contains(document.activeElement);
+				var isRadioGroupSelected = this.aRBs && this.aRBs[iSelectedIndex] && this.aRBs[iSelectedIndex].getDomRef();
+				var iFocusedIndex;
 
 				if (iSelectedIndex < -1) {
 					// invalid negative index -> don't change index.
-					jQuery.sap.log.warning("Invalid index, will not be changed");
+					Log.warning("Invalid index, will not be changed");
 					return this;
 				}
 
 				this.setProperty("selectedIndex", iSelectedIndex, true); // no re-rendering
+				this._iSelectionNumber = RadioButton.getNextSelectionNumber();
+				iFocusedIndex = this._getSelectedIndexInRange();
 
 				// deselect old RadioButton
 				if (!isNaN(iIndexOld) && this.aRBs && this.aRBs[iIndexOld]) {
 					this.aRBs[iIndexOld].setSelected(false);
+					this.aRBs[iIndexOld].setTabIndex(-1);
 				}
 
 				// select new one
 				if (this.aRBs && this.aRBs[iSelectedIndex]) {
 					this.aRBs[iSelectedIndex].setSelected(true);
+					this.aRBs[iSelectedIndex].setTabIndex(0);
 				}
 
 				if (this._oItemNavigation) {
-					this._oItemNavigation.setSelectedIndex(iSelectedIndex);
-					this._oItemNavigation.setFocusedIndex(iSelectedIndex);
+					this._oItemNavigation.setFocusedIndex(iFocusedIndex);
+					this._oItemNavigation.setSelectedIndex(iFocusedIndex);
 				}
 
 				// if focus is in the group - focus the selected element
@@ -242,25 +371,21 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 			/**
 			 * Sets the selected sap.m.RadioButton using sap.m.RadioButton.
-			 * @param {sap.m.RadioButton} oSelectedButton The item to be selected
-			 * @returns {sap.m.RadioButtonGroup} Pointer to the control instance for chaining
+			 *
 			 * @public
+			 * @param {sap.m.RadioButton} oSelectedButton The item to be selected.
+			 * @returns {this} Pointer to the control instance for chaining.
 			 */
-			RadioButtonGroup.prototype.setSelectedButton = function(oSelectedButton) {
+			RadioButtonGroup.prototype.setSelectedButton = function (oSelectedButton) {
+				if (!oSelectedButton) {
+					return this.setSelectedIndex(-1);
+				}
 
 				var aButtons = this.getButtons();
-
-				if (oSelectedButton) {
-					if (aButtons) {
-						for (var i = 0; i < aButtons.length; i++) {
-							if (oSelectedButton.getId() == aButtons[i].getId()) {
-								this.setSelectedIndex(i);
-								break;
-							}
-						}
+				for (var i = 0; i < aButtons.length; i++) {
+					if (oSelectedButton.getId() == aButtons[i].getId()) {
+						return this.setSelectedIndex(i);
 					}
-				} else {
-					this.setSelectedIndex(-1);
 				}
 
 				return this;
@@ -268,52 +393,51 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 			/**
 			 * Returns the selected radio button.
-			 * @returns {sap.m.RadioButton} The selected radio button
+			 *
 			 * @public
+			 * @returns {sap.m.RadioButton} The selected radio button.
 			 */
 			RadioButtonGroup.prototype.getSelectedButton = function() {
-
 				return this.getButtons()[this.getSelectedIndex()];
 			};
 
 			/**
 			 * Adds a new radio button to the group.
-			 * @param {sap.m.RadioButton} oButton The button which will be added to the group
-			 * @returns {sap.m.RadioButtonGroup} Pointer to the control instance for chaining
+			 *
 			 * @public
+			 * @param {sap.m.RadioButton} oButton The button which will be added to the group.
+			 * @returns {this} Pointer to the control instance for chaining.
 			 */
 			RadioButtonGroup.prototype.addButton = function(oButton) {
-				if (!this._bUpdateButtons && this.getSelectedIndex() === undefined) {
-					// if not defined -> select first one
-					this.setSelectedIndex(0);
-				}
-
 				if (!this.aRBs) {
 					this.aRBs = [];
 				}
 
 				var iIndex = this.aRBs.length;
 
-				this.aRBs[iIndex] = this._createRadioButton(oButton, iIndex);
+				this.aRBs[iIndex] = this._createRadioButton(oButton);
 
 				this.addAggregation("buttons",  this.aRBs[iIndex]);
-				this.aRBs[iIndex].attachEvent("_change", this._handleItemChanged, this);
 				return this;
 			};
 
 			/**
 			 * Adds a new radio button to the group at a specified index.
-			 * @param {sap.m.RadioButton} oButton The radio button which will be added to the group
-			 * @param {sap.ui.core.Integer} iIndex The index, at which the radio button will be added
-			 * @returns {sap.m.RadioButtonGroup} Pointer to the control instance for chaining
+			 *
 			 * @public
+			 * @param {sap.m.RadioButton} oButton The radio button which will be added to the group.
+			 * @param {number} iIndex The index, at which the radio button will be added.
+			 * @returns {this} Pointer to the control instance for chaining.
 			 */
 			RadioButtonGroup.prototype.insertButton = function(oButton, iIndex) {
 				if (!this.aRBs) {
 					this.aRBs = [];
 				}
 
-				var iLength = this.aRBs.length;
+				var iLength = this.aRBs.length,
+					iMaxLength = this.getButtons().length;
+
+				iIndex = Math.max(Math.min(iIndex, iMaxLength), 0);
 
 				if (!this._bUpdateButtons) {
 					if (this.getSelectedIndex() === undefined || iLength == 0) {
@@ -326,51 +450,32 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 				}
 
 				if (iIndex >= iLength) {
-					this.aRBs[iIndex] = this._createRadioButton(oButton, iIndex);
+					this.aRBs[iIndex] = this._createRadioButton(oButton);
 				} else {
 					// Insert RadioButton: loop backwards over Array and shift everything
 					for (var i = (iLength); i > iIndex; i--) {
 						this.aRBs[i] = this.aRBs[i - 1];
 						if ((i - 1) == iIndex) {
-							this.aRBs[i - 1] = this._createRadioButton(oButton, iIndex);
+							this.aRBs[i - 1] = this._createRadioButton(oButton);
 						}
 					}
 				}
 
 				this.insertAggregation("buttons", oButton, iIndex);
-				oButton.attachEvent("_change", this._handleItemChanged, this);
 
 				return this;
 			};
 
 			/**
-			 * Creates a copy of the sap.m.RadioButton passed as a first argument and
-			 * adds it to the RadioButtonGroup at the index specified in the second argument.
-			 * @param {sap.m.RadioButton} oButton The button from which a radio button will be created
-			 * @param {sap.ui.core.Integer} iIndex The index in the group at which the radio button will be placed
-			 * @returns {sap.m.RadioButton} The created radio button
+			 * Creates a copy of the sap.m.RadioButton passed as a first argument
+			 *
 			 * @private
+			 * @param {sap.m.RadioButton} oButton The button from which a radio button will be created.
+			 * @returns {sap.m.RadioButton} The created radio button.
 			 */
-			RadioButtonGroup.prototype._createRadioButton = function(oButton, iIndex) {
-
-				if (this.iIDCount == undefined) {
-					this.iIDCount = 0;
-				} else {
-					this.iIDCount++;
-				}
-
-				// Enabled if both the group and the button are enabled
-				oButton.setEnabled(this.getEnabled() && oButton.getEnabled());
-				oButton.setTextDirection(oButton.getTextDirection());
-				oButton.setEditable(this.getEditable() && oButton.getEditable());
-				oButton.setVisible(this.getVisible() && oButton.getVisible());
+			RadioButtonGroup.prototype._createRadioButton = function(oButton) {
 				oButton.setValueState(this.getValueState());
 				oButton.setGroupName(this.getId());
-
-				if (iIndex == this.getSelectedIndex()) {
-					oButton.setSelected(true);
-				}
-
 				oButton.attachEvent("select", this._handleRBSelect, this);
 
 				return oButton;
@@ -378,21 +483,22 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 			/**
 			 * Removes a radio button from the group.
-			 * @returns {sap.m.RadioButton} The removed radio button
+			 *
 			 * @public
+			 * @param {int|sap.ui.core.ID|sap.m.RadioButton} vElement The button to remove
+			 * @returns {sap.m.RadioButton} vElement The removed radio button.
 			 */
 			RadioButtonGroup.prototype.removeButton = function(vElement) {
 
 				var iIndex = vElement;
 				if (typeof (vElement) == "string") { // ID of the element is given
-					vElement = sap.ui.getCore().byId(vElement);
+					vElement = Element.getElementById(vElement);
 				}
 				if (typeof (vElement) == "object") { // the element itself is given or has just been retrieved
 					iIndex = this.indexOfButton(vElement);
 				}
 
 				var oButton = this.removeAggregation("buttons", iIndex);
-				oButton.detachEvent("_change", this._handleItemChanged, this);
 
 				if (!this.aRBs) {
 					this.aRBs = [];
@@ -403,7 +509,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 					return null;
 				}
 
-				this.aRBs[iIndex].destroy();
 				this.aRBs.splice(iIndex, 1);
 
 				if (!this._bUpdateButtons) {
@@ -425,45 +530,29 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 			/**
 			 * Removes all radio buttons.
-			 * @returns {Array} Array of removed buttons or null
+			 *
 			 * @public
+			 * @returns {sap.m.RadioButton[]} Array of removed buttons.
 			 */
-			RadioButtonGroup.prototype.removeAllButtons = function() {
-				var aButtons = this.removeAllAggregation("buttons");
-				for (var i = 0; i < aButtons.length; i++) {
-					aButtons[i].detachEvent("_change", this._handleItemChanged, this);
-				}
-
+			RadioButtonGroup.prototype.removeAllButtons = function () {
 				if (!this._bUpdateButtons) {
 					this.setSelectedIndex(-1);
 				}
 
-				if (this.aRBs) {
-					while (this.aRBs.length > 0) {
-						this.aRBs[0].destroy();
-						this.aRBs.splice(0, 1);
-					}
-					return aButtons;
-				} else {
-					return null;
-				}
+				this.aRBs = [];
+
+				return this.removeAllAggregation("buttons");
 			};
 
 			/**
 			 * Destroys all radio buttons.
-			 * @returns {sap.m.RadioButtonGroup} Pointer to the control instance for chaining
+			 *
 			 * @public
+			 * @returns {this} Pointer to the control instance for chaining.
 			 */
 			RadioButtonGroup.prototype.destroyButtons = function() {
-				var aButtons = this.getButtons();
-				for (var i = 0; i < aButtons.length; i++) {
-					aButtons[i].detachEvent("_change", this._handleItemChanged, this);
-				}
-				this.destroyAggregation("buttons");
 
-				if (!this._bUpdateButtons) {
-					this.setSelectedIndex(-1);
-				}
+				this.destroyAggregation("buttons");
 
 				if (this.aRBs) {
 					while (this.aRBs.length > 0) {
@@ -475,33 +564,24 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 				return this;
 			};
 
+			/**
+			 * Updates the buttons in the group.
+			 *
+			 * @public
+			 */
 			RadioButtonGroup.prototype.updateButtons = function() {
-
-				var iSelectedIndex = this.getSelectedIndex();
-
 				this._bUpdateButtons = true;
 				this.updateAggregation("buttons");
 				this._bUpdateButtons = undefined;
-
-				// if selectedIndex is still valid -> restore
-				var aButtons = this.getButtons();
-				if (aButtons.length > 0) {
-					// if not defined -> select first one
-					this.setSelectedIndex(0);
-				}else if (iSelectedIndex >= 0 && aButtons.length == 0) {
-					this.setSelectedIndex(-1);
-				}else if (iSelectedIndex >= aButtons.length) {
-					// if less items than before -> select last one
-					this.setSelectedIndex(aButtons.length - 1);
-				}
 			};
 
 			/**
 			 * Creates a new instance of RadioButtonGroup, with the same settings as the RadioButtonGroup
 			 * on which the method is called.
 			 * Event handlers are not cloned.
-			 * @returns {sap.m.RadioButtonGroup} New instance of RadioButtonGroup
+			 *
 			 * @public
+			 * @returns {this} New instance of RadioButtonGroup
 			 */
 			RadioButtonGroup.prototype.clone = function(){
 
@@ -509,13 +589,13 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 				var aButtons = this.getButtons();
 				var i = 0;
 				for (i = 0; i < aButtons.length; i++) {
-					aButtons[i].detachEvent("_change", this._handleItemChanged, this);
+					aButtons[i].detachEvent("select", this._handleRBSelect, this);
 				}
 
 				var oClone = Control.prototype.clone.apply(this, arguments);
 
 				for (i = 0; i < aButtons.length; i++) {
-					aButtons[i].attachEvent("_change", this._handleItemChanged, this);
+					aButtons[i].attachEvent("select", this._handleRBSelect, this);
 				}
 
 				return oClone;
@@ -523,8 +603,9 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 			/**
 			 * Select event of single Radio Buttons fires Select Event for group.
-			 * @param {sap.ui.base.Event} oControlEvent
+			 *
 			 * @private
+			 * @param {sap.ui.base.Event} oControlEvent Control event.
 			 */
 			RadioButtonGroup.prototype._handleRBSelect = function(oControlEvent) {
 
@@ -541,154 +622,118 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			};
 
 			/**
-			 * Sets the editable property of all radio buttons in the group.
+			 * Sets the editable property of the RadioButtonGroup. Single buttons preserve the value of their editable property.
+			 * If the group is set to editable=false the buttons are also displayed and function as read only.
 			 * Non editable radio buttons can still obtain focus.
+			 *
+			 * @name sap.m.RadioButtonGroup.prototype.setEditable
+			 * @public
+			 * @function
 			 * @param {boolean} bEditable Defines whether the radio buttons should be interactive.
-			 * @returns {sap.m.RadioButtonGroup} Pointer to the control instance for chaining
-			 * @public
+			 * @returns {this} Pointer to the control instance for chaining.
 			 */
-			RadioButtonGroup.prototype.setEditable = function(bEditable) {
-
-				this.setProperty("editable", bEditable, false); // re-rendering to update ItemNavigation
-
-				if (this.aRBs) {
-					for (var i = 0; i < this.aRBs.length; i++) {
-						this.aRBs[i].setEditable(bEditable);
-					}
-				}
-
-				return this;
-			};
 
 			/**
-			 * Sets the enabled property of all radio buttons in the group.
+			 * Sets the enabled property of the RadioButtonGroup. Single buttons preserve internally the value of their enabled property.
+			 * If the group is set to enabled=false the buttons are also displayed as disabled and getEnabled returns false.
+			 *
+			 * @name sap.m.RadioButtonGroup.prototype.setEnabled
+			 * @public
+			 * @function
 			 * @param {boolean} bEnabled Defines whether the radio buttons should be interactive.
-			 * @returns {sap.m.RadioButtonGroup} Pointer to the control instance for chaining
-			 * @public
+			 * @returns {this} Pointer to the control instance for chaining.
 			 */
-			RadioButtonGroup.prototype.setEnabled = function(bEnabled) {
-
-				this.setProperty("enabled", bEnabled, false); // re-rendering to update ItemNavigation
-
-				if (this.aRBs) {
-					for (var i = 0; i < this.aRBs.length; i++) {
-						this.aRBs[i].setEnabled(bEnabled);
-					}
-				}
-
-				return this;
-			};
-
-			/**
-			 * Sets ValueState of all radio buttons in the group.
-			 * @param {sap.ui.core.String} sValueState The value state of the radio group - none, success, warning, error.
-			 * @returns {sap.m.RadioButtonGroup} Pointer to the control instance for chaining
-			 * @public
-			 */
-			RadioButtonGroup.prototype.setValueState = function(sValueState) {
-
-				this.setProperty("valueState", sValueState, false); // re-rendering to update ItemNavigation
-
-				if (this.aRBs){
-					for (var i = 0; i < this.aRBs.length; i++) {
-						this.aRBs[i].setValueState(sValueState);
-					}
-				}
-
-				return this;
-			};
 
 			/**
 			 * Handles the event that gets fired by the {@link sap.ui.core.delegate.ItemNavigation} delegate.
 			 * Ensures that focused element is selected.
-			 * @param {sap.ui.base.Event} oControlEvent The event that gets fired by the {@link sap.ui.core.delegate.ItemNavigation} delegate.
+			 *
 			 * @private
+			 * @param {sap.ui.base.Event} oControlEvent The event that gets fired by the {@link sap.ui.core.delegate.ItemNavigation} delegate.
 			 */
 			RadioButtonGroup.prototype._handleAfterFocus = function(oControlEvent) {
-
+				var aRBs = this.getButtons();
 				var iIndex = oControlEvent.getParameter("index");
 				var oEvent = oControlEvent.getParameter("event");
+
+				// buttons that are not visible are not included in the HTML
+				// adjust the index to include them
+				for (var i = 0; i <= iIndex; i++) {
+					if (!aRBs[i].getVisible()) {
+						iIndex++;
+					}
+				}
 
 				// handle only keyboard navigation here
 				if (oEvent.keyCode === undefined) {
 					return;
 				}
 
-				if (iIndex != this.getSelectedIndex() && !(oEvent.ctrlKey || oEvent.metaKey) && this.aRBs[iIndex].getEditable()
-						&& this.aRBs[iIndex].getEnabled()) {
+				if (iIndex != this.getSelectedIndex()
+					&& !(oEvent.ctrlKey || oEvent.metaKey)
+					&& this.aRBs[iIndex].getEditable() && this.aRBs[iIndex].getEnabled()
+					&& this.getEditable() && this.getEnabled()) {
 					// if CTRL key is used do not switch selection
 					this.setSelectedIndex(iIndex);
 					this.fireSelect({
 						selectedIndex : iIndex
 					});
+
+					// update tabindex values for all buttons that are part of the item navigation
+					this.aRBs
+						.filter(function (oRB) { return oRB.getEditable() && oRB.getEnabled(); })
+						.forEach(function (oRB) {
+							if (oRB === this.aRBs[iIndex]) {
+								oRB.setTabIndex(0);
+								return;
+							}
+							oRB.setTabIndex(-1);
+						}.bind(this));
 				}
 			};
 
-			/**
-			 * Forwards the change of the RadioButtonGroup to the RadioButton that is affected.
-			 * @param {sap.ui.base.Event} oEvent
-			 * @private
-			 */
-			RadioButtonGroup.prototype._handleItemChanged = function(oEvent){
+			RadioButtonGroup.prototype._getSelectedIndexInRange = function() {
+				var aRBs = this.getButtons(),
+					iLength = aRBs.length,
+					iSelectedIndex = this.getSelectedIndex(),
+					iFocusedIndex = -1;
 
-				var oButton = oEvent.oSource;
-				var sProperty = oEvent.getParameter("name");
-				var sNewValue = oEvent.getParameter("newValue");
-				var aButtons = this.getButtons();
-				var oRB;
+				if (iSelectedIndex <= -1  || iSelectedIndex > iLength - 1) {
+					return -1;
+				}
 
-				for (var i = 0; i < aButtons.length; i++) {
-					if ( aButtons[i] == oButton) {
-						if (this.aRBs[i]) {
-							oRB = this.aRBs[i];
-						}
-						break;
+				// include only the visible buttons to the focused index
+				for (var i = 0; i <= iSelectedIndex; i++) {
+					if (aRBs[i].getVisible()) {
+						iFocusedIndex++;
 					}
 				}
 
-				switch (sProperty) {
-					case "enabled":
-						if (this.getEnabled()) {
-							oRB.setEnabled(sNewValue);
-						}
-						break;
-					case "selected":
-						oRB.setSelected(sNewValue);
-						break;
-					case "groupName":
-						oRB.setGroupName(sNewValue);
-						break;
-					case "text":
-						oRB.setText(sNewValue);
-						break;
-					case "textDirection":
-						oRB.setTextDirection(sNewValue);
-						break;
-					case "width":
-						oRB.setWidth(sNewValue);
-						break;
-					case "activeHandling":
-						oRB.setActiveHandling(sNewValue);
-						break;
-					case "editable":
-						oRB.setEditable(sNewValue);
-						break;
-					case "tooltip":
-						oRB.setTooltip(sNewValue);
-						break;
-					case "valueState":
-						oRB.setValueState(sNewValue);
-						break;
-					case "textAlign":
-						oRB.setTextAlign(sNewValue);
-						break;
+				return iFocusedIndex;
+			};
 
-					default:
-						break;
+			// support for SemanticFormElement
+			RadioButtonGroup.prototype.getFormFormattedValue = function() {
+				var aButtons = this.getButtons();
+				var iSelectedIndex = this.getSelectedIndex();
+
+				if (iSelectedIndex >= 0 && iSelectedIndex < aButtons.length) {
+					return aButtons[iSelectedIndex].getText();
 				}
+			};
 
+			RadioButtonGroup.prototype.getFormValueProperty = function () {
+				return "selectedIndex";
+			};
+
+			RadioButtonGroup.prototype.getFormObservingProperties = function() {
+				return ["selectedIndex"];
+			};
+
+			RadioButtonGroup.prototype.getFormRenderAsControl = function () {
+				return false;
 			};
 
 			return RadioButtonGroup;
 
-		}, /* bExport= */ true);
+		});

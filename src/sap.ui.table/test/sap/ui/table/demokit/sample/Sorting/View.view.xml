@@ -4,7 +4,8 @@
 	xmlns:mvc="sap.ui.core.mvc"
 	xmlns:u="sap.ui.unified"
 	xmlns:c="sap.ui.core"
-	xmlns:m="sap.m">
+	xmlns:m="sap.m"
+	height="100%">
 	<m:Page
 		showHeader="false"
 		enableScrolling="false"
@@ -14,12 +15,11 @@
 				id="table"
 				selectionMode="MultiToggle"
 				rows="{/ProductCollection}"
-				visibleRowCount="7"
 				sort="sortDeliveryDate"
 				ariaLabelledBy="title">
-				<toolbar>
-					<m:Toolbar>
-						<m:Title id="title" text="Products"></m:Title>
+				<extension>
+					<m:OverflowToolbar style="Clear">
+						<m:Title id="title" text="Products"/>
 						<m:ToolbarSpacer/>
 						<m:Button
 							icon="sap-icon://sorting-ranking"
@@ -27,14 +27,14 @@
 							press="sortCategoriesAndName"/>
 						<m:Button
 							icon="sap-icon://sort"
-							tooltip="Sort Categories"
+							tooltip="Sort Categories in addition to current sorting"
 							press="sortCategories"/>
 						<m:Button
 							icon="sap-icon://decline"
 							tooltip="Clear all sortings"
 							press="clearAllSortings"/>
-					</m:Toolbar>
-				</toolbar>
+					</m:OverflowToolbar>
+				</extension>
 				<columns>
 					<Column
 						id="name"
@@ -42,7 +42,7 @@
 						sortProperty="Name">
 						<m:Label text="Product Name" />
 						<template>
-							<m:Text text="{Name}"/>
+							<m:Text text="{Name}" wrapping="false" />
 						</template>
 					</Column>
 					<Column
@@ -52,7 +52,7 @@
 						sortProperty="Category">
 						<m:Label text="Category" />
 						<template>
-							<m:Text text="{Category}"/>
+							<m:Text text="{Category}" wrapping="false" />
 						</template>
 					</Column>
 					<Column width="9rem">
@@ -84,18 +84,12 @@
 								path: 'DeliveryDateStr',
 								type: 'sap.ui.model.type.Date',
 								formatOptions: {source: {pattern: 'dd/MM/yyyy'}, style: 'long'}
-							}"/>
+							}" wrapping="false" />
 						</template>
 					</Column>
 				</columns>
 				<footer>
-					<m:Toolbar>
-						<m:ToolbarSpacer/>
-						<m:Button
-							icon="sap-icon://hint"
-							tooltip="Show information"
-							press="showInfo"/>
-					</m:Toolbar>
+					<m:OverflowToolbar id="infobar"></m:OverflowToolbar>
 				</footer>
 			</Table>
 		</m:content>

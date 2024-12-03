@@ -1,61 +1,63 @@
 <!DOCTYPE HTML>
 <html>
-
-<head>
-	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-
-	<title>XMLView - sap.ui.core.mvc</title>
-
-	<script id="sap-ui-bootstrap" type="text/javascript" src="../../../../resources/sap-ui-core.js" data-sap-ui-theme="sap_bluecrystal" data-sap-ui-libs="sap.m">
+<head><meta charset="utf-8">
+	<title>StashedControlSupport - sap.ui.core</title>
+	<script src="shared-config.js"></script>
+	<script id="sap-ui-bootstrap"
+			src="../../../../resources/sap-ui-core.js"
+			data-sap-ui-libs="sap.m"
+			data-sap-ui-on-init="module:local/StashedControlSupport"
+			data-sap-ui-resource-roots='{
+				"local": "./"
+			}'
+	>
 	</script>
-
 	<script id="myview" type="text/xml">
-		<core:View xmlns:core="sap.ui.core" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:l="sap.ui.layout" xmlns:f="sap.ui.layout.form" controllerName="mycontroller">
+		<mvc:View xmlns:core="sap.ui.core" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:l="sap.ui.layout" xmlns:f="sap.ui.layout.form" controllerName="mycontroller">
 		<Panel id="Panel0">
 		<content>
-			<Panel headerText="Panel1" height="25%" showFooter="true" id="Panel1" stashed="true">
+			<Panel headerText="Panel1" height="25%" id="Panel1" stashed="true">
 				<content>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-
 					<l:VerticalLayout width="50%">
 						<Label text="Vertical Layout 2"></Label>
 						<List width="50%">
@@ -66,7 +68,6 @@
 						<Button text="Button 3" width="100px"></Button>
 						<Button text="Button 4" width="100px"></Button>
 					</l:VerticalLayout>
-
 					<l:VerticalLayout>
 						<ObjectHeader title="Object Header">
 							<attributes>
@@ -76,7 +77,6 @@
 						</ObjectHeader>
 						<Button text=" 5"></Button>
 					</l:VerticalLayout>
-
 					<l:VerticalLayout width="100%">
 						<f:Form>
 							<f:layout>
@@ -133,49 +133,48 @@
 					</l:VerticalLayout>
 				</content>
 			</Panel>
-			<Panel headerText="Panel2" height="25%" showFooter="true" id="Panel2" stashed="false">
+			<Panel headerText="Panel2" height="25%" id="Panel2" stashed="false">
 				<content>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-
 					<l:VerticalLayout width="50%">
 						<Label text="Vertical Layout 2"></Label>
 						<List width="50%">
@@ -186,7 +185,6 @@
 						<Button text="Button 3" width="100px"></Button>
 						<Button text="Button 4" width="100px"></Button>
 					</l:VerticalLayout>
-
 					<l:VerticalLayout>
 						<ObjectHeader title="Object Header">
 							<attributes>
@@ -196,7 +194,6 @@
 						</ObjectHeader>
 						<Button text=" 5"></Button>
 					</l:VerticalLayout>
-
 					<l:VerticalLayout width="100%">
 						<f:Form>
 							<f:layout>
@@ -253,49 +250,48 @@
 					</l:VerticalLayout>
 				</content>
 			</Panel>
-			<Panel headerText="Panel3" height="25%" showFooter="true" id="Panel3" stashed="{/stashed3}">
+			<Panel headerText="Panel3" height="25%" id="Panel3" stashed="{/stashed3}">
 				<content>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-
 					<l:VerticalLayout width="50%">
 						<Label text="Vertical Layout 2"></Label>
 						<List width="50%">
@@ -306,7 +302,6 @@
 						<Button text="Button 3" width="100px"></Button>
 						<Button text="Button 4" width="100px"></Button>
 					</l:VerticalLayout>
-
 					<l:VerticalLayout>
 						<ObjectHeader title="Object Header">
 							<attributes>
@@ -316,7 +311,6 @@
 						</ObjectHeader>
 						<Button text=" 5"></Button>
 					</l:VerticalLayout>
-
 					<l:VerticalLayout width="100%">
 						<f:Form>
 							<f:layout>
@@ -373,49 +367,48 @@
 					</l:VerticalLayout>
 				</content>
 			</Panel>
-			<Panel headerText="Panel4" height="25%" showFooter="true" id="Panel4" stashed="{/stashed4}">
+			<Panel headerText="Panel4" height="25%" id="Panel4" stashed="{/stashed4}">
 				<content>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-					<f:SimpleForm editable="false" layout="ResponsiveGridLayout">
+					<f:SimpleForm editable="true" layout="ResponsiveGridLayout">
 						<f:content>
 							<core:Title text="Title" />
 							<Label text="Label 1" />
-							<Input width="100%" value="Input 1" enabled="false" />
-							<Input width="100%" value="Input 2" enabled="false" />
+							<Input width="100%" value="Input 1" enabled="true" />
+							<Input width="100%" value="Input 2" enabled="true" />
 							<Label text="Label 2" />
-							<Input width="100%" value="Input 3" enabled="false" />
+							<Input width="100%" value="Input 3" enabled="true" />
 						</f:content>
 					</f:SimpleForm>
-
 					<l:VerticalLayout width="50%">
 						<Label text="Vertical Layout 2"></Label>
 						<List width="50%">
@@ -426,7 +419,6 @@
 						<Button text="Button 3" width="100px"></Button>
 						<Button text="Button 4" width="100px"></Button>
 					</l:VerticalLayout>
-
 					<l:VerticalLayout>
 						<ObjectHeader title="Object Header">
 							<attributes>
@@ -436,7 +428,6 @@
 						</ObjectHeader>
 						<Button text=" 5"></Button>
 					</l:VerticalLayout>
-
 					<l:VerticalLayout width="100%">
 						<f:Form>
 							<f:layout>
@@ -495,41 +486,14 @@
 			</Panel>
 			</content>
 			</Panel>
-		</core:View>
+		</mvc:View>
 	</script>
 
-	<script type="text/javascript">
-		var myController = sap.ui.controller("mycontroller", {
-			onInit: function() {
-				jQuery.sap.log.debug("in controller onInit");
-			},
-		});
-
-		jQuery.sap.require("sap.ui.model.json.JSONModel");
-		var oModel = new sap.ui.model.json.JSONModel({
-			stashed3: false,
-			stashed4: false
-		});
-
-
-		jQuery.sap.measure.setActive(true);
-		jQuery.sap.measure.start("view_loading");
-		sap.ui.xmlview("view1", {
-			controller: myController,
-			viewContent: document.getElementById("myview").innerHTML
-		}).setModel(oModel).placeAt("content");
-		jQuery.sap.measure.end("view_loading");
-		new sap.m.Label({
-			text: "loading time: " + jQuery.sap.measure.getMeasurement("view_loading").duration + " ms"
-		}).placeAt("result");
-	</script>
 </head>
-
-<body class="sapUiBody" role="application">
-	<h1>Test Panel for sap.ui.core.XMLView</h1>
+<body class="sapUiBody">
+	<h1>Test Panel for sap.ui.core.StashedControlSupport</h1>
 	<div id="control"></div>
 	<div id="content"></div>
 	<div id="result"></div>
 </body>
-
 </html>

@@ -1,77 +1,54 @@
-sap.ui.define([ "sap/ui/core/mvc/Controller", "sap/ui/model/type/Currency" ],
-function(Controller, Currency) {
+sap.ui.define([
+	"sap/m/library",
+	"sap/m/ObjectAttribute",
+	"sap/ui/core/mvc/Controller",
+	"sap/ui/model/type/Currency"
+], (mobileLibrary, ObjectAttribute, Controller, Currency) => {
 	"use strict";
 
-	return Controller.extend("sap.ui.demo.db.controller.App", {
-		formatMapUrl : function(sStreet, sZip, sCity, sCountry) {
-			return "https://maps.googleapis.com/maps/api/staticmap?zoom=13&size=500x300&markers="
-					+ jQuery.sap.encodeURL(sStreet + ", " + sZip + " " + sCity + ", " + sCountry);
-		},
-		formatStockValue : function(fUnitPrice,
-				iStockLevel, sCurrCode) {
-			var sBrowserLocale = sap.ui.getCore().getConfiguration().getLanguage();
-			var oLocale = new sap.ui.core.Locale(sBrowserLocale);
-			var oLocaleData = new sap.ui.core.LocaleData(oLocale);
-			var oCurrency = new Currency(oLocaleData.mData.currencyFormat);
-			return oCurrency.formatValue([fUnitPrice * iStockLevel, sCurrCode ], "string");
-		},
-		onItemSelected : function(oEvent) {
-			var oSelectedItem = oEvent.getSource();
-			var oContext = oSelectedItem.getBindingContext("products");
-			var sPath = oContext.getPath();
-			var oProductDetailPanel = this.getView().byId("productDetailsPanel");
-			oProductDetailPanel.bindElement({path : sPath, model : "products"});
-		},
-		productListFactory : function(sId,oContext) {
-			var oUIControl = null;
+	return Controller.extend("ui5.databinding.controller.App", {
+		formatMail(sFirstName, sLastName) {
+			const oBundle = this.getView().getModel("i18n").getResourceBundle();
 
-			// Define the item description
-			var sDescription = oContext.getProperty("ProductName") + " (" + oContext.getProperty("QuantityPerUnit") + ")";
+			return mobileLibrary.URLHelper.normalizeEmail(
+				`${sFirstName}.${sLastName}@example.com`,
+				oBundle.getText("mailSubject", [sFirstName]),
+				oBundle.getText("mailBody"));
+		},
 
-			// This item is out of stock and discontinued
-			// *and* discontinued?
+		formatStockValue(fUnitPrice, iStockLevel, sCurrCode) {
+			return new Currency().formatValue([fUnitPrice * iStockLevel, sCurrCode], "string");
+		},
+
+		onItemSelected(oEvent) {
+			const oSelectedItem = oEvent.getSource();
+			const oContext = oSelectedItem.getBindingContext("products");
+			const sPath = oContext.getPath();
+			const oProductDetailPanel = this.byId("productDetailsPanel");
+			oProductDetailPanel.bindElement({ path: sPath, model: "products" });
+		},
+
+		productListFactory(sId, oContext) {
+			let oUIControl;
+			// Decide based on the data which dependent to clone
 			if (oContext.getProperty("UnitsInStock") === 0 && oContext.getProperty("Discontinued")) {
-				// Yup, so use a
-				// StandardListItem
-				oUIControl = new sap.m.StandardListItem(sId, {
-					icon : "sap-icon://warning",
-					title : sDescription,
-					info : { path: "i18n>discontinued" },
-					infoState : "Error"
-				});
+				// The item is discontinued, so use a StandardListItem
+				oUIControl = this.byId("productSimple").clone(sId);
 			} else {
-				// Nope, so we will create an
-				// ObjectListItem
-				
-				oUIControl = new sap.m.ObjectListItem(sId, {
-					title : sDescription,
-					number : {
-						parts : [ "products>UnitPrice", "/currencyCode" ],
-						type : "sap.ui.model.type.Currency",
-						formatOptions : {
-							showMeasure : false
-						}
-					},
-					numberUnit : {
-						path : "/currencyCode"
-					}
-				});
-				
-				// Is this item out of stock?
+				// The item is available, so we will create an ObjectListItem
+				oUIControl = this.byId("productExtended").clone(sId);
+
+				// The item is temporarily out of stock, so we will add a status
 				if (oContext.getProperty("UnitsInStock") < 1) {
-					// Nope, so this item is just temporarily out of stock
-					oUIControl.addAttribute(new sap.m.ObjectAttribute({
-						text : { path: "i18n>outOfStock" }
+					oUIControl.addAttribute(new ObjectAttribute({
+						text : {
+							path: "i18n>outOfStock"
+						}
 					}));
 				}
 			}
 
-			// Set item active (so it is clickable) and attach the press event
-			// handler for showing the details
-			oUIControl.setType(sap.m.ListType.Active);
-			oUIControl.attachPress(this.onItemSelected, this);
 			return oUIControl;
-		},
-
+		}
 	});
 });

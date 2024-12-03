@@ -1,93 +1,57 @@
 <!DOCTYPE html>
-<html>
-	<head>
-		<meta http-equiv='X-UA-Compatible' content='IE=edge'>
-		<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>
+<html style="height:100%;">
 
-		<title>sap.m.Shell Test</title>
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta charset="utf-8">
+	<title>Shell test page</title>
+	<script id="sap-ui-bootstrap"
+		src="../../../resources/sap-ui-core.js"
+		data-sap-ui-libs="sap.ui.core, sap.m"
+		data-sap-ui-theme="sap_horizon"
+		data-sap-ui-async="true"
+		data-sap-ui-compatVersion="edge"
+		data-sap-ui-excludejquerycompat="true"
+		data-sap-xx-waitfortheme="init">
+	</script>
 
-		<script src="../../../resources/sap-ui-core.js"
-			id="sap-ui-bootstrap"
-			data-sap-ui-libs="sap.m"
-			data-sap-ui-theme="sap_bluecrystal"></script>
+	<script>
+		(function() {
+			sap.ui.require([
+				"sap/ui/core/Core",
+				"sap/ui/core/mvc/XMLView",
+				"sap/ui/core/mvc/Controller"
+			], function(Core, XMLView, Controller) {
+				"use strict";
 
-		<script>
-			var oShell= new sap.m.Shell("myShell", {
-				title: "My Application",
-				logo: "images/SAPUI5.png",
-				headerRightText: "Nora Crush",
-				logout: function() {alert("Logout button was pressed");}
+				Controller.extend("myController", {
+					onInit() {
+						this.sTheme = "sap_horizon";
+					},
+					changeTheme: function() {
+						this.sTheme = this.sTheme == "sap_horizon_dark" ? "sap_horizon" : "sap_horizon_dark";
+						return sap.ui.getCore().applyTheme(this.sTheme);
+					}
+				});
+
+				Core.attachInit(function() {
+					XMLView.create({
+						definition: '<mvc:View controllerName="myController" xmlns:mvc="sap.ui.core.mvc" height="100%">' +
+							'<Shell xmlns="sap.m" logo="images/Woman_avatar_01.png" showLogout="false">' +
+								'<App autoFocus="false">' +
+									'<Button id="btnChangeTheme" press="changeTheme" text="Change Theme"></Button>' +
+								'</App>' +
+							'</Shell>' +
+						'</mvc:View>'
+					}).then(function(oView) {
+						oView.placeAt("content");
+					});
+				});
 			});
+		})();
+	</script>
+</head>
 
-			var oApp = new sap.m.SplitApp("myApp", {
-				masterPages: new sap.m.Page("page1", {
-					title: "Some Master"
-				}),
-				detailPages: new sap.m.Page("page2", {
-					title: "Some Detail",
-					content: [
-						new sap.m.HBox({items:[
-							new sap.m.Label({
-								text: "Logo: "
-							}),
-							new sap.m.Button({
-								text: "SAPUI5 Logo",
-								press: function() {
-									oShell.setLogo("images/SAPUI5.png");
-								}
-							}),
-							new sap.m.Button({
-								text: "SAP big",
-								press: function() {
-									oShell.setLogo("images/SAPLogo@2.jpg");
-								}
-							}),
-							new sap.m.Button({
-								text: "SAP small",
-								press: function() {
-									oShell.setLogo("images/SAPLogo.jpg");
-								}
-							}),
-							new sap.m.Button({
-								text: "Wide Logo",
-								press: function() {
-									oShell.setLogo("images/wide-logo.png");
-								}
-							}),
-							new sap.m.Button({
-								text: "Tall Logo",
-								press: function() {
-									oShell.setLogo("images/tall-logo.png");
-								}
-							}),
-							new sap.m.Button({
-								text: "NO Logo",
-								press: function() {
-									oShell.setLogo("");
-								}
-							})
-						]}),
-						new sap.m.HBox({items:[
-							new sap.m.Label({
-								text: "Limit App Width: "
-							}),
-							new sap.m.Switch({
-								state: true,
-								change: function(oEvent) {
-									var bLimit = oEvent.getParameter("state");
-									oShell.setAppWidthLimited(bLimit);
-								}
-							})
-						]})
-					]
-				})
-			});
+<body id="content" class="sapUiBody"></body>
 
-			oShell.setApp(oApp);
-			oShell.placeAt("content");
-		</script>
-
-	</head>
-	<body class='sapUiBody' role="application" id="content">
-	</body>
 </html>

@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.m.HBox.
-sap.ui.define(['jquery.sap.global', './FlexBox', './library'],
-	function(jQuery, FlexBox, library) {
+sap.ui.define(['./FlexBox', './library', './HBoxRenderer'],
+	function(FlexBox, library, HBoxRenderer) {
 	"use strict";
 
 
@@ -16,10 +16,10 @@ sap.ui.define(['jquery.sap.global', './FlexBox', './library'],
 	 * @param {object} [mSettings] initial settings for the new control
 	 *
 	 * @class
-	 * The HBox control builds the container for a horizontal flexible box layout. HBox is a convenience control as it is just a specialized FlexBox control.
+	 * The HBox control builds the container for a horizontal flexible box layout. HBox is a convenience control, as it is just a specialized FlexBox control.<br>
+	 * <br>
+	 * <b>Note:</b> Be sure to check the <code>renderType</code> setting to avoid issues due to browser inconsistencies.
 	 *
-	 * Browser support:
-	 * This control is not supported in Internet Explorer 9!
 	 * @extends sap.m.FlexBox
 	 *
 	 * @author SAP SE
@@ -28,15 +28,19 @@ sap.ui.define(['jquery.sap.global', './FlexBox', './library'],
 	 * @constructor
 	 * @public
 	 * @alias sap.m.HBox
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	var HBox = FlexBox.extend("sap.m.HBox", /** @lends sap.m.HBox.prototype */ { metadata : {
+	var HBox = FlexBox.extend("sap.m.HBox", /** @lends sap.m.HBox.prototype */ {
+		metadata : {
 
-		library : "sap.m"
-	}});
+			library : "sap.m",
+			designtime: "sap/m/designtime/HBox.designtime"
+		},
+
+		renderer: HBoxRenderer
+	});
 
 
 
 	return HBox;
 
-}, /* bExport= */ true);
+});

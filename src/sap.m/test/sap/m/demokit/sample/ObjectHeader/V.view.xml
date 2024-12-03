@@ -1,6 +1,5 @@
 <mvc:View
 	controllerName="sap.m.sample.ObjectHeader.C"
-	xmlns:l="sap.ui.layout"
 	xmlns:mvc="sap.ui.core.mvc"
 	xmlns="sap.m">
 	<ObjectHeader
@@ -11,7 +10,8 @@
 			type: 'sap.ui.model.type.Currency',
 			formatOptions: {showMeasure: false}
 		}"
-		numberUnit="{CurrencyCode}" >
+		numberUnit="{CurrencyCode}"
+		class="sapUiResponsivePadding--header" >
 		<statuses>
 			<ObjectStatus
 				text="Some Damaged"
@@ -20,14 +20,12 @@
 				text="In Stock"
 				state="Success" />
 		</statuses>
-		<attributes>
-			<ObjectAttribute text="{WeightMeasure} {WeightUnit}" />
-			<ObjectAttribute text="{Width} x {Depth} x {Height} {DimUnit}" />
-			<ObjectAttribute text="{Description}" />
-			<ObjectAttribute
-				text="www.sap.com"
-				active="true"
-				press="handleLinkObjectAttributePress" />
-		</attributes>
+		<ObjectAttribute text="{WeightMeasure} {WeightUnit}" />
+		<ObjectAttribute text="{Width} x {Depth} x {Height} {DimUnit}" />
+		<ObjectAttribute text="{Description}" />
+		<ObjectAttribute
+			text="www.sap.com"
+			active="true"
+			press="handleLinkObjectAttributePress" />
 	</ObjectHeader>
 </mvc:View>

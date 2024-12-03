@@ -3,9 +3,21 @@
  */
 
 // Provides control sap.ui.commons.Button.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/core/EnabledPropagator', 'sap/ui/core/IconPool'],
-	function(jQuery, library, Control, EnabledPropagator, IconPool) {
+sap.ui.define([
+    './library',
+    'sap/ui/core/Control',
+    'sap/ui/core/EnabledPropagator',
+    'sap/ui/core/IconPool',
+    './ButtonRenderer',
+    'sap/ui/Device'
+],
+	function(library, Control, EnabledPropagator, IconPool, ButtonRenderer, Device) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.commons.ButtonStyle
+	var ButtonStyle = library.ButtonStyle;
 
 
 
@@ -18,22 +30,24 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * @class
 	 * Enables users to trigger actions such as save or print. For the button UI, you can define some text or an icon, or both.
 	 * @extends sap.ui.core.Control
-	 * @implements sap.ui.commons.ToolbarItem
+	 * @implements sap.ui.commons.ToolbarItem, sap.ui.core.IFormContent
 	 *
 	 * @author SAP SE
 	 * @version ${version}
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated as of version 1.38, replaced by {@link sap.m.Button}
 	 * @alias sap.ui.commons.Button
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var Button = Control.extend("sap.ui.commons.Button", /** @lends sap.ui.commons.Button.prototype */ { metadata : {
 
 		interfaces : [
-			"sap.ui.commons.ToolbarItem"
+			"sap.ui.commons.ToolbarItem",
+			"sap.ui.core.IFormContent"
 		],
 		library : "sap.ui.commons",
+		deprecated: true,
 		properties : {
 
 			/**
@@ -62,19 +76,19 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 			/**
 			 * Icon to be displayed as graphical element within the button.
-			 * This can be an URI to an image or an icon font URI.
+			 * This can be a URI to an image or an icon font URI.
 			 */
 			icon : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : ''},
 
 			/**
 			 * Icon to be displayed as graphical element within the button when it is hovered (only if also a base icon was specified). If not specified the base icon is used.
-			 * If a icon font icon is used, this property is ignored.
+			 * If an icon font icon is used, this property is ignored.
 			 */
 			iconHovered : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : ''},
 
 			/**
 			 * Icon to be displayed as graphical element within the button when it is selected (only if also a base icon was specified). If not specified the base or hovered icon is used.
-			 * If a icon font icon is used, this property is ignored.
+			 * If an icon font icon is used, this property is ignored.
 			 */
 			iconSelected : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : ''},
 
@@ -103,7 +117,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			 * Style of the button.
 			 * (e.g. emphasized)
 			 */
-			style : {type : "sap.ui.commons.ButtonStyle", group : "Appearance", defaultValue : sap.ui.commons.ButtonStyle.Default}
+			style : {type : "sap.ui.commons.ButtonStyle", group : "Appearance", defaultValue : ButtonStyle.Default}
 		},
 		associations : {
 
@@ -135,7 +149,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * @function
 	 * @type void
 	 * @public
-	 * @ui5-metamodel This method also will be described in the UI5 (legacy) designtime metamodel
 	 */
 
 
@@ -144,11 +157,11 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	/**
 	 * Function is called when button is clicked.
 	 *
-	 * @param {jQuery.Event} oEvent
+	 * @param {jQuery.Event} oEvent The event fired
 	 * @private
 	 */
 	Button.prototype.onclick = function(oEvent) {
-		if (this.getEnabled()) {
+		if (this.getEnabled() && this.getVisible()) {
 			this.firePress({/* no parameters */});
 		}
 
@@ -157,9 +170,9 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	};
 
 	/**
-	 * Handles the sapenter event does not bubble
+	 * Handles the sapenter event does not bubble.
 	 *
-	 * @param {jQuery.Event} oEvent
+	 * @param {jQuery.Event} oEvent The event fired
 	 * @private
 	 */
 	Button.prototype.onsapenter = function(oEvent) {
@@ -170,7 +183,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	 * Function is called when mouse key is clicked down. The button style classes
 	 * are replaced then.
 	 *
-	 * @param {jQuery.Event} oEvent
+	 * @param {jQuery.Event} oEvent The event fired
 	 * @private
 	 */
 	Button.prototype.onmousedown = function(oEvent) {
@@ -189,22 +202,22 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 			this.getRenderer().onactive(this);
 		}
 		// webkit && firefox on mac does not focus a Button on click, it even unfocuses it onmousedown!
-		if (bFocus && (!!sap.ui.Device.browser.webkit || (!!sap.ui.Device.browser.firefox && navigator.platform.indexOf("Mac") === 0))) {
-			if (sap.ui.Device.browser.mobile && !!sap.ui.Device.browser.webkit) {
-				//In mobile Webkit Browsers (IPad) the focus must be set immediately to ensure that a focusout happens whereever the
+		if (bFocus && (Device.browser.webkit || (Device.browser.firefox && navigator.platform.indexOf("Mac") === 0))) {
+			if (Device.browser.mobile && Device.browser.webkit) {
+				//In mobile Webkit Browsers (IPad) the focus must be set immediately to ensure that a focusout happens wherever the
 				//focus currently is. The deleayedCall below is still needed due to the reason described above. (CSN 2536817 2012)
 				this.focus();
 			}
-			jQuery.sap.delayedCall(0, this, function(){
+			setTimeout(function(){
 				this.focus();
-			});
+			}.bind(this), 0);
 		}
 	};
 
 	/**
 	 * When mouse key is up again, reset the background images to normal.
 	 *
-	 * @param {jQuery.Event} oEvent
+	 * @param {jQuery.Event} oEvent The event fired
 	 * @private
 	 */
 	Button.prototype.onmouseup = function(oEvent) {
@@ -216,7 +229,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	/**
 	 * When mouse is going out of the control, reset the background images to normal.
 	 *
-	 * @param {jQuery.Event} oEvent
+	 * @param {jQuery.Event} oEvent The event fired
 	 * @private
 	 */
 	Button.prototype.onmouseout = function(oEvent) {
@@ -228,7 +241,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	/**
 	 * When mouse is going over the control a hover effect is done.
 	 *
-	 * @param {jQuery.Event} oEvent
+	 * @param {jQuery.Event} oEvent The event fired
 	 * @private
 	 */
 	Button.prototype.onmouseover = function(oEvent) {
@@ -240,7 +253,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	/**
 	 * When the button looses the focus, this method is called.
 	 *
-	 * @param {jQuery.Event} oEvent
+	 * @param {jQuery.Event} oEvent The event fired
 	 * @private
 	 */
 	Button.prototype.onfocusout = function(oEvent) {
@@ -252,7 +265,7 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 	/**
 	 * When the button gets the focus, this method is called.
 	 *
-	 * @param {jQuery.Event} oEvent
+	 * @param {jQuery.Event} oEvent The event fired
 	 * @private
 	 */
 	Button.prototype.onfocusin = function(oEvent) {
@@ -324,7 +337,30 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Control', 'sap/ui/
 
 	};
 
+	/**
+	 * @see sap.ui.core.Control#getAccessibilityInfo
+	 * @returns {sap.ui.core.AccessibilityInfo} Current accessibility state of the control.
+	 * @protected
+	 */
+	Button.prototype.getAccessibilityInfo = function() {
+		var sDesc = this.getText() || this.getTooltip_AsString();
+		if (!sDesc && this.getIcon()) {
+			var oIconInfo = IconPool.getIconInfo(this.getIcon());
+			if (oIconInfo) {
+				sDesc = oIconInfo.text || oIconInfo.name;
+			}
+		}
+
+		return {
+			role: "button",
+			type: sap.ui.getCore().getLibraryResourceBundle("sap.ui.commons").getText("ACC_CTR_TYPE_BUTTON"),
+			description: sDesc,
+			focusable: this.getEnabled(),
+			enabled: this.getEnabled()
+		};
+	};
+
 
 	return Button;
 
-}, /* bExport= */ true);
+});

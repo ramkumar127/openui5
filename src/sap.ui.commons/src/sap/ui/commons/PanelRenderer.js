@@ -3,9 +3,13 @@
  */
 
 // Provides default renderer for control sap.ui.commons.Panel
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define(['sap/base/security/encodeXML', 'sap/ui/core/library', 'sap/ui/core/Configuration'],
+	function(encodeXML, coreLibrary, Configuration) {
 	"use strict";
+
+
+	// shortcut for sap.ui.core.TitleLevel
+	var TitleLevel = coreLibrary.TitleLevel;
 
 
 	/**
@@ -18,17 +22,17 @@ sap.ui.define(['jquery.sap.global'],
 	/**
 	 * Renders the HTML for the Panel, using the provided {@link sap.ui.core.RenderManager}.
 	 *
-	 * @param {sap.ui.core.RenderManager} oRenderManager The RenderManager that can be used for writing to the render output buffer.
+	 * @param {sap.ui.core.RenderManager} rm The RenderManager that can be used for writing to the render output buffer.
 	 * @param {sap.ui.core.Control} oControl An object representation of the control that should be rendered
 	 */
 	PanelRenderer.render = function(rm, oControl) {
 		var id = oControl.getId();
-		var accessibility = sap.ui.getCore().getConfiguration().getAccessibility();
+		var accessibility = Configuration.getAccessibility();
 
 		//var hasToolbar = false; // TODO: this can be used in the future; rendering should already be quite ok, but minor adjustments are expected
 
-		var heightSet = sap.ui.commons.Panel._isSizeSet(oControl.getHeight());
-		var widthSet = sap.ui.commons.Panel._isSizeSet(oControl.getWidth());
+		var heightSet = isSizeSet(oControl.getHeight());
+		var widthSet = isSizeSet(oControl.getWidth());
 
 		oControl.getScrollTop();  // update the scroll position properties
 		oControl.getScrollLeft();
@@ -92,7 +96,7 @@ sap.ui.define(['jquery.sap.global'],
 		// tooltip of Title, might be set in addition
 		var oTitle = oControl.getTitle();
 		var sTitleTooltip;
-		var sLevel = sap.ui.core.TitleLevel.H5; // to be compatible of size
+		var sLevel = TitleLevel.H5; // to be compatible of size
 		var bEmphasized = true;
 		if (oTitle) {
 			sTitleTooltip = oTitle.getTooltip_AsString();
@@ -100,7 +104,7 @@ sap.ui.define(['jquery.sap.global'],
 				rm.writeAttributeEscaped("title", sTitleTooltip);
 			}
 
-			if (oTitle.getLevel() != sap.ui.core.TitleLevel.Auto) {
+			if (oTitle.getLevel() != TitleLevel.Auto) {
 				// if title level is set use emphasized of title, otherwise use default one to be compatible
 				sLevel = oTitle.getLevel();
 				bEmphasized = oTitle.getEmphasized();
@@ -121,7 +125,7 @@ sap.ui.define(['jquery.sap.global'],
 
 		var sCollapseTooltip = oControl._rb.getText(oControl.getCollapsed() ? "PANEL_EXPAND" : "PANEL_COLLAPSE");
 		if (oControl.getShowCollapseIcon()) { /* TODO: remove this one and rearrange the other in CSS */
-			rm.write("<a id='" + id + "-collArrow' class='sapUiPanelHdrItem sapUiPanelCollArrow' href='javascript:void(0)' tabindex='0' title='" + sCollapseTooltip + "'");
+			rm.write("<a id='" + id + "-collArrow' class='sapUiPanelHdrItem sapUiPanelCollArrow' href='#' tabindex='0' title='" + sCollapseTooltip + "'");
 			if (accessibility) {
 				//rm.writeAttribute("aria-labelledby", id + "-title");
 				rm.writeAttribute("role", "button");
@@ -148,7 +152,7 @@ sap.ui.define(['jquery.sap.global'],
 		}
 
 		// header title text
-		var text = jQuery.sap.encodeHTML(oControl.getText());
+		var text = encodeXML(oControl.getText());
 		if (!text) {
 			text = "&nbsp;";
 		}
@@ -189,7 +193,7 @@ sap.ui.define(['jquery.sap.global'],
 
 	  // collapse icon
 	  if (oControl.getShowCollapseIcon()) {
-			rm.write("<a id='" + id + "-collIco' class='sapUiPanelHdrRightItem sapUiPanelCollIco' href='javascript:void(0)' tabindex='0' title='" + sCollapseTooltip + "'");
+			rm.write("<a id='" + id + "-collIco' class='sapUiPanelHdrRightItem sapUiPanelCollIco' href='#' tabindex='0' title='" + sCollapseTooltip + "'");
 			if (accessibility) {
 				//rm.writeAttribute("aria-labelledby", id + "-title");
 				rm.writeAttribute("role", "button");
@@ -215,10 +219,18 @@ sap.ui.define(['jquery.sap.global'],
 			}
 
 			rm.write("</div>");
+		} else {
+			oControl.getContent().forEach(function(oChild) {
+				rm.cleanupControlWithoutRendering(oChild);
+			});
 		}
 
 		rm.write("</section>");
 	};
+
+	function isSizeSet(sCssSize) {
+		return sCssSize && sCssSize !== "auto" && sCssSize !== "inherit";
+	}
 
 	return PanelRenderer;
 

@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.m.CustomListItem.
-sap.ui.define(['jquery.sap.global', './ListItemBase', './library'],
-	function(jQuery, ListItemBase, library) {
+sap.ui.define(['./ListItemBase', './library', './CustomListItemRenderer'],
+	function(ListItemBase, library, CustomListItemRenderer) {
 	"use strict";
 
 
@@ -27,24 +27,51 @@ sap.ui.define(['jquery.sap.global', './ListItemBase', './library'],
 	 * @constructor
 	 * @public
 	 * @alias sap.m.CustomListItem
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	var CustomListItem = ListItemBase.extend("sap.m.CustomListItem", /** @lends sap.m.CustomListItem.prototype */ { metadata : {
+	var CustomListItem = ListItemBase.extend("sap.m.CustomListItem", /** @lends sap.m.CustomListItem.prototype */ {
+		metadata : {
 
-		library : "sap.m",
-		defaultAggregation : "content",
-		aggregations : {
+			library : "sap.m",
+			defaultAggregation : "content",
+			properties: {
+				/**
+				 * Defines the custom accessibility announcement.
+				 *
+				 * <b>Note:</b> If defined, then only the provided custom accessibility description is announced when there is a focus on the list item.
+				 * @since 1.84
+				 */
+				accDescription: {type: "string", group: "Behavior"}
+			},
+			aggregations : {
 
-			/**
-			 * The content of this list item
-			 */
-			content : {type : "sap.ui.core.Control", multiple : true, singularName : "content", bindable : "bindable"}
+				/**
+				 * The content of this list item
+				 */
+				content : {type : "sap.ui.core.Control", multiple : true, singularName : "content", bindable : "bindable"}
+			},
+			designtime: "sap/m/designtime/CustomListItem.designtime"
+		},
+
+		renderer: CustomListItemRenderer
+	});
+
+	CustomListItem.prototype.setAccDescription = function(sAccDescription) {
+		this.setProperty("accDescription", sAccDescription, true);
+		return this;
+	};
+
+	CustomListItem.prototype.getContentAnnouncement = function() {
+		var sAccDescription = this.getAccDescription();
+
+		if (sAccDescription) {
+			return sAccDescription;
 		}
-	}});
 
-
-
+		return this.getContent().map(function(oContent) {
+			return ListItemBase.getAccessibilityText(oContent);
+		}).join(" ").trim();
+	};
 
 	return CustomListItem;
 
-}, /* bExport= */ true);
+});

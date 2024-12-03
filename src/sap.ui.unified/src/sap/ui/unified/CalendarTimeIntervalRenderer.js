@@ -2,8 +2,8 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define(["sap/ui/core/Lib"],
+	function(Library) {
 	"use strict";
 
 
@@ -12,6 +12,7 @@ sap.ui.define(['jquery.sap.global'],
 	 * @namespace
 	 */
 	var CalendarTimeIntervalRenderer = {
+		apiVersion: 2
 	};
 
 	/**
@@ -22,64 +23,72 @@ sap.ui.define(['jquery.sap.global'],
 	 */
 	CalendarTimeIntervalRenderer.render = function(oRm, oCal){
 
-		oCal._iMode = 0; // it's rendered always as TimesRow
-
 		var sId = oCal.getId();
 		var sTooltip = oCal.getTooltip_AsString();
-		var oTimesRow = oCal.getAggregation("timesRow");
 
-		oRm.write("<div");
-		oRm.writeControlData(oCal);
-		oRm.addClass("sapUiCal");
-		oRm.addClass("sapUiCalInt");
-		oRm.addClass("sapUiCalTimeInt");
+		oRm.openStart("div", oCal);
+		oRm.class("sapUiCal");
+		oRm.class("sapUiCalInt");
+		oRm.class("sapUiCalTimeInt");
 
 		if (oCal._getShowItemHeader()) {
-			oRm.addClass("sapUiCalIntHead");
+			oRm.class("sapUiCalIntHead");
 		}
 
-		// This makes the calendar focusable and therefore
-		// the white empty areas can be clicked without closing the calendar
-		// by accident.
-		oRm.writeAttribute("tabindex", "-1");
+		if (oCal.getPickerPopup()) {
+			oRm.class("sapUiCalIntLarge");
+		}
 
-		var rb = sap.ui.getCore().getLibraryResourceBundle("sap.ui.unified");
+		var rb = Library.getResourceBundleFor("sap.ui.unified");
 		var mAccProps = {labelledby: {value: "", append: false}}; // render on Month
 		if (oCal._bPoupupMode) {
 			mAccProps["role"] = "dialog";
+		} else {
+			mAccProps["role"] = "group";
+			mAccProps["roledescription"] = rb.getText("CALENDAR_DIALOG");
 		}
-		oRm.writeAccessibilityState(oCal, mAccProps);
+
+		oRm.accessibilityState(oCal, mAccProps);
 
 		if (sTooltip) {
-			oRm.writeAttributeEscaped('title', sTooltip);
+			oRm.attr('title', sTooltip);
 		}
 
 		var sWidth = oCal.getWidth();
 		if (sWidth && sWidth != '') {
-			oRm.addStyle("width", sWidth);
-			oRm.writeStyles();
+			oRm.style("width", sWidth);
 		}
 
-		oRm.writeClasses();
-		oRm.write(">"); // div element
+		oRm.openEnd(); // div element
 
 		var oHeader = oCal.getAggregation("header");
 		oRm.renderControl(oHeader);
 
-		oRm.write("<div id=\"" + sId + "-content\" class=\"sapUiCalContent\">");
-		oRm.renderControl(oTimesRow);
+		oRm.openStart("div", sId + "-content");
+		oRm.class("sapUiCalContent");
+		oRm.openEnd();
+		oRm.renderControl(oCal.getAggregation(oCal.getProperty("_currentPicker")));
 
-		oRm.write("<div id=\"" + sId + "-contentOver\" class=\"sapUiCalContentOver\" style=\"display:none;\"></div>");
-		oRm.write("</div>");
+		oRm.close("div");
 
-		oRm.write("<button id=\"" + sId + "-cancel\" class=\"sapUiCalCancel\" tabindex=\"-1\">");
-		oRm.write(rb.getText("CALENDAR_CANCEL"));
-		oRm.write("</button>");
+		oRm.openStart("button", sId + "-cancel");
+		oRm.class("sapUiCalCancel");
+		oRm.attr("tabindex", "-1");
+		oRm.openEnd();
+		oRm.text(rb.getText("CALENDAR_CANCEL"));
+		oRm.close("button");
 
-		// dummy element to catch tabbing in from next element
-		oRm.write("<div id=\"" + sId + "-end\" tabindex=\"0\" style=\"width:0;height:0;position:absolute;right:0;bottom:0;\"></div>");
+		if (oCal.getPickerPopup()) {
+			oRm.openStart("div", sId + "-contentOver");
+			oRm.class("sapUiCalContentOver");
+			if (!oCal._oPopup || !oCal._oPopup.isOpen()) {
+				oRm.style("display", "none");
+			}
+			oRm.openEnd();
+			oRm.close("div");
+		}
 
-		oRm.write("</div>");
+		oRm.close("div");
 
 	};
 

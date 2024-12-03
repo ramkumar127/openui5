@@ -2,23 +2,38 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define([
+	"sap/ui/Device",
+	"sap/ui/core/InvisibleText",
+	"sap/ui/core/library",
+	"sap/ui/core/Lib"
+],
+	function(
+	Device,
+	InvisibleText,
+	coreLibrary,
+	Library
+) {
 	"use strict";
 
+	/**
+	 * @const Shortcut to sap.ui.core.library.aria.HasPopup
+	 */
+	var HasPopup = coreLibrary.aria.HasPopup;
 
 	/**
 	 * SearchField renderer.
 	 * @namespace
 	 */
 	var SearchFieldRenderer = {
+		apiVersion: 2
 	};
 
 	/**
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
 	 * @param {sap.ui.core.RenderManager} rm the RenderManager that can be used for writing to the Render-Output-Buffer
-	 * @param {sap.ui.core.Control} oSF an object representation of the control that should be rendered
+	 * @param {sap.m.SearchField} oSF an object representation of the control that should be rendered
 	 */
 	SearchFieldRenderer.render = function(rm, oSF){
 		// render nothing if control is invisible
@@ -26,132 +41,157 @@ sap.ui.define(['jquery.sap.global'],
 			return;
 		}
 
-		var sPlaceholder = oSF.getPlaceholder(),
+		var sPlaceholder = oSF.getPlaceholder() || Library.getResourceBundleFor("sap.m").getText("FACETFILTER_SEARCH", undefined, true),
 			sValue = oSF.getValue(),
 			sWidth = oSF.getProperty("width"),
 			sId = oSF.getId(),
 			bShowRefreshButton = oSF.getShowRefreshButton(),
 			bShowSearchBtn = oSF.getShowSearchButton(),
-			oAccAttributes = {}; // additional accessibility attributes
+			oAccAttributes = {
+				describedby: {
+					value: SearchFieldRenderer._getDescribedBy(oSF),
+					append: true
+				}
+			};
 
 		// container
-		rm.write("<div");
-		rm.writeControlData(oSF);
-		if (sWidth) { rm.writeAttribute("style", "width:" + sWidth + ";"); }
+		rm.openStart("div", oSF)
+			.class("sapMSF");
 
-		rm.addClass("sapMSF");
+		if (sWidth) {
+			rm.style("width", sWidth);
+		}
 
 		if (sValue) {
-			rm.addClass("sapMSFVal");
-		}
-		if (!oSF.getEnabled()) {
-			rm.addClass("sapMSFDisabled");
+			rm.class("sapMSFVal");
 		}
 
-		rm.writeClasses();
-		var sTooltip = oSF.getTooltip_AsString();
-		if (sTooltip) {
-			rm.writeAttributeEscaped("title", sTooltip);
+		if (!oSF.getEnabled()) {
+			rm.class("sapMSFDisabled");
 		}
-		rm.write(">");
+
+		rm.openEnd();
 
 			// 1. Input type="search".
 			//    Enclose input into a <form> to show a correct keyboard
-			//    method="post" to prevent unneeded "?" at the end of URL
-			rm.write('<form method="post" action="javascript:void(0);"');
-			rm.writeAttribute("id", sId + "-F");
-			rm.addClass('sapMSFF');
+			rm.openStart('form', sId + "-F")
+				.class('sapMSFF');
+
 			if (!bShowSearchBtn) {
-				rm.addClass("sapMSFNS"); //no search button
+				rm.class("sapMSFNS"); // no search button
 			} else if (bShowRefreshButton) {
-				rm.addClass('sapMSFReload');
-			}
-			rm.writeClasses();
-			rm.write('>');
-
-			// self-made placeholder
-			if (!oSF._hasPlacehoder && sPlaceholder) {
-				rm.write("<label ");
-				rm.writeAttribute("id", sId + "-P");
-				rm.writeAttribute("for", sId + "-I");
-
-				rm.addClass("sapMSFPlaceholder");
-				rm.writeClasses();
-				rm.write(">");
-				rm.writeEscaped(sPlaceholder);
-				rm.write("</label>");
+				rm.class('sapMSFReload');
 			}
 
-			rm.write('<input type="search" autocorrect="off" autocomplete="off"');
-			rm.writeAttribute("id", oSF.getId() + "-I");
+			rm.openEnd();
 
-			rm.addClass("sapMSFI");
+			rm.openStart("span", sId + "-staticSearchIcon");
+			rm.attr("aria-hidden", true);
+			rm.openEnd().close("span");
 
-			if (sap.ui.Device.os.android && sap.ui.Device.os.version >= 4 && sap.ui.Device.os.version < 4.1 ) {
-				rm.addClass("sapMSFIA4"); // specific CSS layout for Android 4.0x
+			rm.voidStart('input', sId + "-I")
+				.class("sapMSFI")
+				.attr("type", "search")
+				.attr("aria-label", sPlaceholder)
+				.attr("autocomplete", "off");
+
+			if (oSF.getEnableSuggestions()) {
+				rm.attr("aria-haspopup", HasPopup.ListBox.toLowerCase());
 			}
 
-			rm.writeClasses();
+			if (Device.browser.safari) {
+				rm.attr("autocorrect", "off");
+			}
 
-			if (oSF.getEnableSuggestions() && sap.ui.Device.system.phone) {
+			if (oSF.getEnableSuggestions() && Device.system.phone) {
 				// Always open a dialog on a phone if suggestions are on.
-				// To avoid soft keyboard flickering, set the readonly attribute.
-				rm.writeAttribute("readonly", "readonly");
+				// avoid soft keyboard flickering
+				rm.attr("inputmode", "none");
 			}
-			if (!oSF.getEnabled()) { rm.writeAttribute("disabled","disabled"); }
-			if (sPlaceholder) { rm.writeAttributeEscaped("placeholder", sPlaceholder); }
-			if (oSF.getMaxLength()) { rm.writeAttribute("maxLength", oSF.getMaxLength()); }
-			if (sValue) { rm.writeAttributeEscaped("value", sValue); }
 
-			//ARIA attributes
-			if (oSF.getEnabled() && bShowRefreshButton) {
-				oAccAttributes.describedby = {
-					value: oSF._sAriaF5LabelId,
-					append: true
-				};
+			var sTooltip = oSF.getTooltip_AsString();
+			if (sTooltip) {
+				rm.attr("title", sTooltip);
 			}
-			rm.writeAccessibilityState(oSF, oAccAttributes);
 
-			rm.write(">");
+			if (!oSF.getEnabled()) {
+				rm.attr("disabled", "disabled");
+			}
+
+			if (sPlaceholder) {
+				rm.attr("placeholder", sPlaceholder);
+			}
+
+			if (oSF.getMaxLength()) {
+				rm.attr("maxlength", oSF.getMaxLength());
+			}
+
+			rm.attr("value", sValue);
+
+			oAccAttributes.disabled = null;
+
+			rm.accessibilityState(oSF, oAccAttributes);
+
+			rm.voidEnd();
 
 			if (oSF.getEnabled()) {
 				// 2. Reset button
-				rm.write("<div");
-				rm.writeAttribute("id", oSF.getId() + "-reset");
-				rm.addClass("sapMSFR"); // reset
-				rm.addClass("sapMSFB"); // button
-				if (sap.ui.Device.browser.firefox) {
-					rm.addClass("sapMSFBF"); // firefox, active state by peventDefault
+				rm.openStart("div", sId + "-reset")
+					.class("sapMSFR") // reset
+					.class("sapMSFB") // button
+					.attr("aria-hidden", true);
+
+				if (Device.browser.firefox) {
+					rm.class("sapMSFBF"); // firefox, active state by preventDefault
 				}
+
 				if (!bShowSearchBtn) {
-					rm.addClass("sapMSFNS"); //no search button
+					rm.class("sapMSFNS"); //no search button
 				}
-				rm.writeClasses();
-				rm.write("></div>");
+
+				rm.openEnd()
+					.close("div");
 
 				// 3. Search/Refresh button
 				if (bShowSearchBtn) {
-					rm.write("<div");
-					rm.writeAttribute("id", oSF.getId() + "-search");
-					rm.addClass("sapMSFS"); // search
-					rm.addClass("sapMSFB"); // button
-					if (sap.ui.Device.browser.firefox) {
-						rm.addClass("sapMSFBF"); // firefox, active state by peventDefault
+					rm.openStart("div", sId + "-search")
+						.class("sapMSFS") // search
+						.class("sapMSFB") // button
+						.attr("aria-hidden", true);
+
+					if (Device.browser.firefox) {
+						rm.class("sapMSFBF"); // firefox, active state by preventDefault
 					}
-					rm.writeClasses();
-					if (oSF.getRefreshButtonTooltip()) {
-						rm.writeAttributeEscaped("title", oSF.getRefreshButtonTooltip());
-					}
-					rm.write( "></div>");
+
+					rm.openEnd()
+						.close("div");
 				}
 			}
 
-			rm.write("</form>");
+			rm.close("form");
 
-		rm.write("</div>");
+			if (oSF.getEnableSuggestions()) {
 
+				rm.openStart("span", sId + "-SuggDescr")
+					.class("sapUiPseudoInvisibleText")
+					.attr("role", "status")
+					.attr("aria-live", "polite")
+					.openEnd()
+					.close("span");
+			}
+
+		rm.close("div");
 	};
 
+	SearchFieldRenderer._getDescribedBy = function (oSF) {
+		var sDescribedBy = InvisibleText.getStaticId("sap.m", "SEARCHFIELD_ARIA_DESCRIBEDBY");
+
+		if (oSF.getEnabled() && oSF.getShowRefreshButton()) {
+			sDescribedBy += " " + InvisibleText.getStaticId("sap.m", "SEARCHFIELD_ARIA_F5");
+		}
+
+		return sDescribedBy;
+	};
 
 	return SearchFieldRenderer;
 

@@ -3,8 +3,14 @@
  */
 
 // Provides control sap.ui.unified.ShellHeadItem.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool', './library'],
-	function(jQuery, Element, IconPool, library) {
+sap.ui.define([
+	'sap/ui/core/Element',
+	'sap/ui/core/IconPool',
+	'./library',
+	"sap/base/security/encodeXML",
+	"sap/ui/thirdparty/jquery"
+],
+	function(Element, IconPool, library, encodeXML, jQuery) {
 	"use strict";
 
 
@@ -26,11 +32,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 	 * @public
 	 * @since 1.15.1
 	 * @alias sap.ui.unified.ShellHeadItem
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
+	 * @deprecated As of version 1.44.0, the concept has been discarded.
 	 */
 	var ShellHeadItem = Element.extend("sap.ui.unified.ShellHeadItem", /** @lends sap.ui.unified.ShellHeadItem.prototype */ { metadata : {
 
 		library : "sap.ui.unified",
+		deprecated : true,
 		properties : {
 
 			/**
@@ -67,7 +74,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 			showMarker : {type : "boolean", group : "Appearance", defaultValue : false, deprecated: true},
 
 			/**
-			 * The icon of the item, either defined in the sap.ui.core.IconPool or an URI to a custom image. An icon must be set.
+			 * The icon of the item, either defined in the sap.ui.core.IconPool or a URI to a custom image. An icon must be set.
 			 */
 			icon : {type : "sap.ui.core.URI", group : "Appearance", defaultValue : null},
 
@@ -101,6 +108,7 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 	};
 
 	ShellHeadItem.prototype.onsapspace = ShellHeadItem.prototype.onclick;
+	ShellHeadItem.prototype.onsapenter = ShellHeadItem.prototype.onclick;
 
 
 	ShellHeadItem.prototype.setStartsSection = function(bStartsSection){
@@ -178,18 +186,18 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Element', 'sap/ui/core/IconPool
 		var sIco = this.getIcon();
 		if (IconPool.isIconURI(sIco)) {
 			var oIconInfo = IconPool.getIconInfo(sIco);
-			$Ico.html("").css("style", "");
+			$Ico.html("").attr("style", "");
 			if (oIconInfo) {
 				$Ico.text(oIconInfo.content).attr("role", "presentation").attr("aria-label", oIconInfo.text || oIconInfo.name).css("font-family", "'" + oIconInfo.fontFamily + "'");
 			}
 		} else {
 			var $Image = this.$("img-inner");
 			if ($Image.length == 0 || $Image.attr("src") != sIco) {
-				$Ico.css("style", "").attr("aria-label", null).html("<img role='presentation' id='" + this.getId() + "-img-inner' src='" + jQuery.sap.encodeHTML(sIco) + "'></img>");
+				$Ico.attr("style", "").attr("aria-label", null).html("<img role='presentation' id='" + this.getId() + "-img-inner' src='" + encodeXML(sIco) + "'>");
 			}
 		}
 	};
 
 	return ShellHeadItem;
 
-}, /* bExport= */ true);
+});

@@ -2,8 +2,10 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define([
+	'./FormHelper',
+	'sap/base/Log'
+	], function(FormHelper, Log) {
 	"use strict";
 
 
@@ -12,51 +14,62 @@ sap.ui.define(['jquery.sap.global'],
 	 * @namespace
 	 */
 	var FormRenderer = {
+		apiVersion: 2
 	};
+
+
+	/*
+	 * Form ARIA-Rendering:
+	 * The Form itself should be rendered as role "region" and the fingle FormContainers (that will at the end have the labels and fields)
+	 * should be rendered with role "form".
+	 * Only if there is only one FormContainer without title (or other label) the Form itself renders with role "form" and the FormContainer
+	 * renders without any role.
+	 * For FormLayouts what renders FormContainers without any role (other Layout-controls) used. The Form needs to render role "form".
+	 * At the end role "form" needs to be somewhere araund the labels and fields.
+	 */
 
 	/**
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
-	 * @param {sap.ui.core.RenderManager} oRenderManager the RenderManager that can be used for writing to the Render-Output-Buffer
-	 * @param {sap.ui.core.Control} oForm an object representation of the control that should be rendered
+	 * @param {sap.ui.core.RenderManager} rm the RenderManager that can be used for writing to the Render-Output-Buffer
+	 * @param {sap.ui.layout.form.Form} oForm an object representation of the control that should be rendered
 	 */
-	FormRenderer.render = function(oRenderManager, oForm){
-		// convenience variable
-		var rm = oRenderManager;
-		var oLayout = oForm.getLayout();
+	FormRenderer.render = function(rm, oForm){
+		const oLayout = oForm.getLayout();
+		const mAriaProps = {role: oLayout && oLayout.hasLabelledContainers(oForm) ? "region" : "form"};
 
 		// write only a DIV for the form and let the layout render the rest
-		rm.write("<div");
-		rm.writeControlData(oForm);
-		rm.addClass("sapUiForm");
-		rm.writeAttribute("data-sap-ui-customfastnavgroup", "true");
+		rm.openStart("div", oForm)
+			.class("sapUiForm")
+			.class("sapUiFormLblColon") // to always have the ":" at the Labels
+			.attr("data-sap-ui-customfastnavgroup", "true");
 
-		var sClass = sap.ui.layout.form.FormHelper.addFormClass();
+		var sClass = FormHelper.addFormClass(); // FormHelper must already be initialized by Form
 		if (sClass) {
-			rm.addClass(sClass);
+			rm.class(sClass);
 		}
 
 		if (oForm.getEditable()) {
-			rm.addClass("sapUiFormEdit");
-			rm.addClass("sapUiFormEdit-CTX");
+			rm.class("sapUiFormEdit");
+			rm.class("sapUiFormEdit-CTX");
+		} else {
+			mAriaProps.readonly = ""; // to prevent rendering of aria-readonly
 		}
 
 		if (oForm.getWidth()) {
-			rm.addStyle("width", oForm.getWidth());
+			rm.style("width", oForm.getWidth());
 		}
 		if (oForm.getTooltip_AsString()) {
-			rm.writeAttributeEscaped('title', oForm.getTooltip_AsString());
+			rm.attr('title', oForm.getTooltip_AsString());
 		}
-		rm.writeClasses();
-		rm.writeStyles();
 
-		var mAriaProps = {role: "form"};
 		var oTitle = oForm.getTitle();
 		var oToolbar = oForm.getToolbar();
 		if (oToolbar) {
 			if (!oForm.getAriaLabelledBy() || oForm.getAriaLabelledBy().length == 0) {
-				// no aria-label -> use complete Toolbar as fallback
-				mAriaProps["labelledby"] = oToolbar.getId();
+				// no aria-label -> use Title of Toolbar
+				var sToolbarTitleID = FormHelper.getToolbarTitle(oToolbar); // FormHelper must already be initialized by Form
+				mAriaProps["labelledby"] = sToolbarTitleID;
 			}
 		} else if (oTitle) {
 			var sId = "";
@@ -66,20 +79,22 @@ sap.ui.define(['jquery.sap.global'],
 				sId = oTitle.getId();
 			}
 			mAriaProps["labelledby"] = {value: sId, append: true};
+		} else if (oForm._sSuggestedTitleId) {
+			mAriaProps["labelledby"] = {value: oForm._sSuggestedTitleId, append: true};
 		}
 
-		rm.writeAccessibilityState(oForm, mAriaProps);
+		rm.accessibilityState(oForm, mAriaProps);
 
-		rm.write(">");
+		rm.openEnd();
 
 		if (oLayout) {
 			// render the layout with the content of this form control
 			rm.renderControl(oLayout);
 		} else {
-			jQuery.sap.log.warning("Form \"" + oForm.getId() + "\" - Layout missing!", "Renderer", "Form");
+			Log.warning("Form \"" + oForm.getId() + "\" - Layout missing!", "Renderer", "Form");
 		}
 
-		rm.write("</div>");
+		rm.close("div");
 	};
 
 	return FormRenderer;

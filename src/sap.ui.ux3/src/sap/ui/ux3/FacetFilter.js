@@ -3,9 +3,18 @@
  */
 
 // Provides control sap.ui.ux3.FacetFilter.
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
-	function(jQuery, Control, library) {
-	"use strict";
+sap.ui.define([
+    'sap/ui/core/Control',
+    './library',
+    './FacetFilterRenderer'
+],
+	function(Control, library, FacetFilterRenderer) {
+    "use strict";
+
+
+
+	// shortcut for sap.ui.ux3.VisibleItemCountMode
+	var VisibleItemCountMode = library.VisibleItemCountMode;
 
 
 
@@ -24,17 +33,18 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated as of version 1.38, replaced by {@link sap.m.FacetFilter}
 	 * @alias sap.ui.ux3.FacetFilter
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var FacetFilter = Control.extend("sap.ui.ux3.FacetFilter", /** @lends sap.ui.ux3.FacetFilter.prototype */ { metadata : {
 
+		deprecated: true,
 		library : "sap.ui.ux3",
 		properties : {
 			/**
 			 * If the value is "Auto" - the Facet Filter takes the whole available height. If "Fixed" , then the default number of Facet Filter Items (5) is visible.
 			 */
-			visibleItemCountMode : {type : "sap.ui.ux3.VisibleItemCountMode", group : "Appearance", defaultValue : sap.ui.ux3.VisibleItemCountMode.Fixed}
+			visibleItemCountMode : {type : "sap.ui.ux3.VisibleItemCountMode", group : "Appearance", defaultValue : VisibleItemCountMode.Fixed}
 		},
 		aggregations : {
 
@@ -52,4 +62,4 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Control', './library'],
 
 	return FacetFilter;
 
-}, /* bExport= */ true);
+});

@@ -1,31 +1,36 @@
 {
-	"_version": "1.3.0",
+	"_version": "1.21.0",
 
 	"sap.app": {
-		"_version": "1.3.0",
 		"id": "sap.ui.demo.masterdetail",
 		"type": "application",
-		"i18n": "i18n/i18n.properties",
+		"i18n": {
+			"bundleUrl": "i18n/i18n.properties",
+			"supportedLocales": [
+				""
+			],
+			"fallbackLocale": ""
+		},
 		"title": "{{appTitle}}",
 		"description": "{{appDescription}}",
 
 		"applicationVersion": {
-			"version": "1.0.0"
+		"version": "1.0.0"
 		},
+		"resources": "resources.json",
 		"dataSources": {
 			"mainService": {
 				"uri": "/here/goes/your/serviceUrl/",
 				"type": "OData",
 				"settings": {
 					"odataVersion": "2.0",
-					"localUri" : "localService/metadata.xml"
+					"localUri": "localService/metadata.xml"
 				}
 			}
 		}
 	},
 
 	"sap.ui": {
-		"_version": "1.3.0",
 		"technology": "UI5",
 		"icons": {
 			"icon": "sap-icon://detail-view",
@@ -39,33 +44,23 @@
 			"desktop": true,
 			"tablet": true,
 			"phone": true
-		},
-		"supportedThemes": [
-			"sap_hcb",
-			"sap_bluecrystal"
-		]
+		}
 	},
 
 	"sap.ui5": {
-		"_version": "1.2.0",
 		"rootView": {
 			"viewName": "sap.ui.demo.masterdetail.view.App",
 			"type": "XML",
+			"async": true,
 			"id": "app"
 		},
 
 		"dependencies": {
-			"minUI5Version": "1.36.0",
+			"minUI5Version": "1.98.0",
 			"libs": {
-				"sap.ui.core": {
-					"minVersion": "1.36.0"
-				},
-				"sap.m": {
-					"minVersion": "1.36.0"
-				},
-				"sap.ui.layout" : {
-					"minVersion": "1.36.0"
-				}
+				"sap.f": {},
+				"sap.m": {},
+				"sap.ui.core": {}
 			}
 		},
 
@@ -78,28 +73,29 @@
 			"i18n": {
 				"type": "sap.ui.model.resource.ResourceModel",
 				"settings": {
-					"bundleName": "sap.ui.demo.masterdetail.i18n.i18n"
+					"bundleName": "sap.ui.demo.masterdetail.i18n.i18n",
+					"supportedLocales": [
+						""
+					],
+					"fallbackLocale": ""
 				}
 			},
-			"" : {
+			"": {
 				"dataSource": "mainService",
-				"settings": {
-					"metadataUrlParams": {
-						"sap-documentation": "heading"
-					}
-				}
+				"preload": true
 			}
 		},
 
 		"routing": {
 			"config": {
-				"routerClass": "sap.m.routing.Router",
+				"routerClass": "sap.f.routing.Router",
+				"type": "View",
 				"viewType": "XML",
-				"viewPath": "sap.ui.demo.masterdetail.view",
-				"controlId": "idAppControl",
-				"controlAggregation": "detailPages",
+				"path": "sap.ui.demo.masterdetail.view",
+				"controlId": "layout",
+				"controlAggregation": "beginColumnPages",
 				"bypassed": {
-					"target": ["master", "notFound"]
+					"target": "notFound"
 				},
 				"async": true
 			},
@@ -108,38 +104,38 @@
 				{
 					"pattern": "",
 					"name": "master",
-					"target": ["object", "master"]
+					"target": "master"
 				},
 				{
 					"pattern": "Objects/{objectId}",
 					"name": "object",
-					"target": ["master", "object"]
+					"target": [
+						"master",
+						"object"
+					]
 				}
 			],
 
 			"targets": {
 				"master": {
-					"viewName": "Master",
-					"viewLevel": 1,
-					"viewId": "master",
-					"controlAggregation": "masterPages"
+					"name": "Master",
+					"level": 1,
+					"id": "master"
 				},
 				"object": {
-					"viewName": "Detail",
-					"viewId": "detail",
-					"viewLevel": 2
+					"name": "Detail",
+					"id": "detail",
+					"level": 1,
+					"controlAggregation": "midColumnPages"
 				},
 				"detailObjectNotFound": {
-					"viewName": "DetailObjectNotFound",
-					"viewId": "detailObjectNotFound"
-				},
-				"detailNoObjectsAvailable": {
-					"viewName": "DetailNoObjectsAvailable",
-					"viewId": "detailNoObjectsAvailable"
+					"name": "DetailObjectNotFound",
+					"id": "detailObjectNotFound",
+					"controlAggregation": "midColumnPages"
 				},
 				"notFound": {
-					"viewName": "NotFound",
-					"viewId": "notFound"
+					"name": "NotFound",
+					"id": "notFound"
 				}
 			}
 		}

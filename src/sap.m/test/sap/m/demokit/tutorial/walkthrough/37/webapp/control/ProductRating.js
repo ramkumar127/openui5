@@ -3,30 +3,31 @@ sap.ui.define([
 	"sap/m/RatingIndicator",
 	"sap/m/Label",
 	"sap/m/Button"
-], function (Control, RatingIndicator, Label, Button) {
+], (Control, RatingIndicator, Label, Button) => {
 	"use strict";
 
-	return Control.extend("sap.ui.demo.wt.control.ProductRating", {
-
+	return Control.extend("ui5.walkthrough.control.ProductRating", {
 		metadata: {
 			properties: {
-				value: {type: "float", defaultValue: 0}
+				value: { type: "float", defaultValue: 0 }
 			},
+
 			aggregations: {
-				_rating: {type: "sap.m.RatingIndicator", multiple: false, visibility: "hidden"},
-				_label: {type: "sap.m.Label", multiple: false, visibility: "hidden"},
-				_button: {type: "sap.m.Button", multiple: false, visibility: "hidden"}
+				_rating: { type: "sap.m.RatingIndicator", multiple: false, visibility: "hidden" },
+				_label: { type: "sap.m.Label", multiple: false, visibility: "hidden" },
+				_button: { type: "sap.m.Button", multiple: false, visibility: "hidden" }
 			},
+
 			events: {
 				change: {
 					parameters: {
-						value: {type: "int"}
+						value: { type: "int" }
 					}
 				}
 			}
 		},
 
-		init: function () {
+		init() {
 			this.setAggregation("_rating", new RatingIndicator({
 				value: this.getValue(),
 				iconSize: "2rem",
@@ -35,30 +36,42 @@ sap.ui.define([
 			}));
 			this.setAggregation("_label", new Label({
 				text: "{i18n>productRatingLabelInitial}"
-			}).addStyleClass("sapUiTinyMargin"));
+			}).addStyleClass("sapUiSmallMargin"));
 			this.setAggregation("_button", new Button({
 				text: "{i18n>productRatingButton}",
 				press: this._onSubmit.bind(this)
-			}));
+			}).addStyleClass("sapUiTinyMarginTopBottom"));
 		},
 
-		setValue: function (iValue) {
-			this.setProperty("value", iValue, true);
-			this.getAggregation("_rating").setValue(iValue);
+		setValue(fValue) {
+			this.setProperty("value", fValue, true);
+			this.getAggregation("_rating").setValue(fValue);
+
+			return this;
 		},
 
-		_onRate: function (oEvent) {
-			var oRessourceBundle = this.getModel("i18n").getResourceBundle();
-			var fValue = oEvent.getParameter("value");
+		reset() {
+			const oResourceBundle = this.getModel("i18n").getResourceBundle();
 
-			this.setValue(fValue);
+			this.setValue(0);
+			this.getAggregation("_label").setDesign("Standard");
+			this.getAggregation("_rating").setEnabled(true);
+			this.getAggregation("_label").setText(oResourceBundle.getText("productRatingLabelInitial"));
+			this.getAggregation("_button").setEnabled(true);
+		},
+
+		_onRate(oEvent) {
+			const oRessourceBundle = this.getModel("i18n").getResourceBundle();
+			const fValue = oEvent.getParameter("value");
+
+			this.setProperty("value", fValue, true);
 
 			this.getAggregation("_label").setText(oRessourceBundle.getText("productRatingLabelIndicator", [fValue, oEvent.getSource().getMaxValue()]));
 			this.getAggregation("_label").setDesign("Bold");
 		},
 
-		_onSubmit: function (oEvent) {
-			var oResourceBundle = this.getModel("i18n").getResourceBundle();
+		_onSubmit(oEvent) {
+			const oResourceBundle = this.getModel("i18n").getResourceBundle();
 
 			this.getAggregation("_rating").setEnabled(false);
 			this.getAggregation("_label").setText(oResourceBundle.getText("productRatingLabelFinal"));
@@ -68,17 +81,14 @@ sap.ui.define([
 			});
 		},
 
-		renderer: function (oRM, oControl) {
-			oRM.write("<div");
-			oRM.writeControlData(oControl);
-			oRM.addClass("myAppDemoWTProductRating");
-			oRM.writeClasses();
-			oRM.write(">");
-			oRM.renderControl(oControl.getAggregation("_rating"));
-			oRM.renderControl(oControl.getAggregation("_label"));
-			oRM.renderControl(oControl.getAggregation("_button"));
-			oRM.write("</div>");
+		renderer(oRm, oControl) {
+			oRm.openStart("div", oControl);
+			oRm.class("myAppDemoWTProductRating");
+			oRm.openEnd();
+			oRm.renderControl(oControl.getAggregation("_rating"));
+			oRm.renderControl(oControl.getAggregation("_label"));
+			oRm.renderControl(oControl.getAggregation("_button"));
+			oRm.close("div");
 		}
 	});
-
 });

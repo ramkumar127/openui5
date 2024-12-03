@@ -3,9 +3,12 @@
  */
 
 // Provides default renderer for control sap.ui.layout.DynamicSideContent
-sap.ui.define([],
-	function() {
+sap.ui.define(["sap/base/i18n/Localization", "sap/ui/core/Lib", "sap/ui/layout/library", "sap/ui/Device"],
+	function(Localization, Library, library, Device) {
 		"use strict";
+
+		// shortcut for sap.ui.layout.SideContentPosition
+		var SideContentPosition = library.SideContentPosition;
 
 		var SIDE_CONTENT_LABEL = "SIDE_CONTENT_LABEL";
 
@@ -13,31 +16,30 @@ sap.ui.define([],
 		 * Renderer for sap.ui.layout.DynamicSideContent.
 		 * @namespace
 		 */
-		var DynamicSideContentRenderer = {};
+		var DynamicSideContentRenderer = {
+			apiVersion: 2
+		};
 
 		DynamicSideContentRenderer.render = function (oRm, oSideContent) {
-			oRm.write("<div");
-			oRm.writeControlData(oSideContent);
+			oRm.openStart("div", oSideContent);
 
-			oRm.addClass("sapUiDSC");
-			oRm.writeClasses();
-			oRm.addStyle("height", "100%");
-			oRm.writeStyles();
-			oRm.write(">");
+			oRm.class("sapUiDSC");
+			oRm.style("height", "100%");
+			oRm.openEnd();
 
 			this.renderSubControls(oRm, oSideContent);
 
-			oRm.write("</div>");
+			oRm.close("div");
 
 		};
 
 		DynamicSideContentRenderer.renderSubControls = function (oRm, oSideControl) {
 			var iSideContentId = oSideControl.getId(),
 				bShouldSetHeight = oSideControl._shouldSetHeight(),
-				bPageRTL = sap.ui.getCore().getConfiguration().getRTL(),
+				bPageRTL = Localization.getRTL(),
 				position = oSideControl.getSideContentPosition();
 
-			if ((position === sap.ui.layout.SideContentPosition.Begin && !bPageRTL) || (bPageRTL && position === sap.ui.layout.SideContentPosition.End)) {
+			if ((position === SideContentPosition.Begin && !bPageRTL) || (bPageRTL && position === SideContentPosition.End)) {
 				this._renderSideContent(oRm, oSideControl, iSideContentId, bShouldSetHeight);
 				this._renderMainContent(oRm, oSideControl, iSideContentId, bShouldSetHeight);
 			} else {
@@ -56,47 +58,52 @@ sap.ui.define([],
 		};
 
 		DynamicSideContentRenderer._renderMainContent = function(oRm, oSideControl, iSideContentId, bShouldSetHeight) {
-			oRm.write("<div id='" + iSideContentId + "-MCGridCell'");
+			var iMcSpan = oSideControl.getProperty("mcSpan");
 
-			if (oSideControl._iMcSpan) {
-				oRm.addClass("sapUiDSCSpan" + oSideControl._iMcSpan);
-				oRm.writeClasses();
+			oRm.openStart("div", iSideContentId + "-MCGridCell");
+
+			oRm.class("sapUiDSCM");
+
+			if (iMcSpan && oSideControl.getShowSideContent() && oSideControl._SCVisible) {
+				!oSideControl._getSideContentWidth() && oRm.class("sapUiDSCSpan" + oSideControl.getProperty("mcSpan"));
+			} else if (iMcSpan) {
+				oRm.class("sapUiDSCSpan12");
+				bShouldSetHeight = true;
 			}
-			if (bShouldSetHeight) {
-				oRm.addStyle("height", "100%");
-				oRm.writeStyles();
-			}
-			oRm.write(">");
+			bShouldSetHeight && oRm.style("height", "100%");
+			oRm.openEnd();
 
 			this.renderControls(oRm, oSideControl.getMainContent());
-			oRm.write("</div>");
+			oRm.close("div");
 		};
 
 		DynamicSideContentRenderer._renderSideContent = function(oRm, oSideControl, iSideContentId, bShouldSetHeight) {
 			// on firefox the 'aside' side content is not shown when below the main content; use div instead
-			var sSideContentTag = sap.ui.Device.browser.firefox ? "div" : "aside";
+			var sSideContentTag = Device.browser.firefox ? "div" : "aside",
+				iScSpan = oSideControl.getProperty("scSpan");
 
-			oRm.write("<" + sSideContentTag + " id='" + iSideContentId + "-SCGridCell'");
+			oRm.openStart(sSideContentTag, iSideContentId + "-SCGridCell");
 
-			var oMessageBundle = sap.ui.getCore().getLibraryResourceBundle("sap.ui.layout");
-			oRm.writeAttribute("aria-label", oMessageBundle.getText(SIDE_CONTENT_LABEL));
+			oRm.class("sapUiDSCS");
 
-			oRm.writeAccessibilityState(oSideControl, {
+			var oMessageBundle = Library.getResourceBundleFor("sap.ui.layout");
+			oRm.attr("aria-label", oMessageBundle.getText(SIDE_CONTENT_LABEL));
+
+			oRm.accessibilityState(oSideControl, {
 				role: "complementary"
 			});
 
-			if (oSideControl._iScSpan) {
-				oRm.addClass("sapUiDSCSpan" + oSideControl._iScSpan);
-				oRm.writeClasses();
+			if (iScSpan && oSideControl.getShowMainContent() && oSideControl._MCVisible) {
+				!oSideControl._getSideContentWidth() && oRm.class("sapUiDSCSpan" + oSideControl.getProperty("scSpan"));
+			} else if (iScSpan) {
+				oRm.class("sapUiDSCSpan12");
+				bShouldSetHeight = true;
 			}
-			if (bShouldSetHeight) {
-				oRm.addStyle("height", "100%");
-				oRm.writeStyles();
-			}
-			oRm.write(">");
+			bShouldSetHeight && oRm.style("height", "100%");
+			oRm.openEnd();
 
 			this.renderControls(oRm, oSideControl.getSideContent());
-			oRm.write("</" + sSideContentTag + ">");
+			oRm.close(sSideContentTag);
 		};
 
 		return DynamicSideContentRenderer;

@@ -3,8 +3,8 @@
  */
 
 // Provides control sap.m.ViewSettingsItem.
-sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
-	function(jQuery, library, Item) {
+sap.ui.define(['./library', 'sap/ui/core/Item'],
+	function(library, Item) {
 	"use strict";
 
 
@@ -18,6 +18,8 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
 	 * @class
 	 * ViewSettingsItem is used for modelling filter behaviour in the ViewSettingsDialog.
 	 * It is derived from a core Item, but does not support the base class properties "textDirection" and "enabled", setting these properties will not have any effects.
+	 * Apps should use the core Item's property <code>key/</code> and provide a unique value for it. Not providing a key
+	 * may lead to unexpected behavior of the sap.m.ViewSettingsDialog.
 	 * @extends sap.ui.core.Item
 	 *
 	 * @author SAP SE
@@ -27,7 +29,6 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
 	 * @public
 	 * @since 1.16
 	 * @alias sap.m.ViewSettingsItem
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var ViewSettingsItem = Item.extend("sap.m.ViewSettingsItem", /** @lends sap.m.ViewSettingsItem.prototype */ { metadata : {
 
@@ -37,12 +38,20 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
 			/**
 			 * Selected state of the item. If set to "true", the item will be displayed as selected in the view settings dialog.
 			 */
-			selected : {type : "boolean", group : "Behavior", defaultValue : false}
+			selected : {type : "boolean", group : "Behavior", defaultValue : false},
+
+			/**
+			 * Defines the wrapping behavior of the title text.
+			 *
+			 * @since 1.121.0
+			 */
+			wrapping : {type : "boolean", group : "Behavior", defaultValue : false}
 		},
 		events : {
 			/**
 			 * Let the outside world know that some of its properties has changed.
 			 * @private
+			 * @ui5-restricted sap.m.ViewSettingsItem
 			 */
 			itemPropertyChanged: {
 				parameters: {
@@ -57,31 +66,40 @@ sap.ui.define(['jquery.sap.global', './library', 'sap/ui/core/Item'],
 					/**
 					 * Value of the changed property.
 					 */
-					propertyValue:  {type: "mixed"}
+					propertyValue:  {type: "any"}
 				}
 			}
 		}
 	}});
 
+	ViewSettingsItem.prototype.setSelected = function(bValue) {
+		this.setProperty("selected", bValue, true);
+		return this;
+	};
 
 	/**
 	 * Overriding of the setProperty method in order to fire an event.
 	 *
 	 * @override
 	 * @param {string} sName The name of the property
-	 * @param {string} sValue The value of the property
-	 * @param {boolean} bSupressInvalidation
+	 * @param {string} vValue The value of the property
+	 * @param {boolean} bSupressInvalidation Whether there mus be supress invalidation
+	 * @param {boolean} bFireEvent Whether the event must be fired
 	 */
-	ViewSettingsItem.prototype.setProperty = function (sName, vValue, bSupressInvalidation) {
-		sap.ui.base.ManagedObject.prototype.setProperty.apply(this, arguments);
+	ViewSettingsItem.prototype.setProperty = function (sName, vValue, bSupressInvalidation, bFireEvent) {
+		Item.prototype.setProperty.apply(this, arguments);
 
-		this.fireItemPropertyChanged({
-			changedItem     : this,
-			propertyKey     : sName,
-			propertyValue   : vValue
-		});
+		bFireEvent = bFireEvent === undefined ? true : bFireEvent;
+
+		if (bFireEvent) {
+			this.fireItemPropertyChanged({
+				changedItem: this,
+				propertyKey: sName,
+				propertyValue: vValue
+			});
+		}
 	};
 
 	return ViewSettingsItem;
 
-}, /* bExport= */ true);
+});

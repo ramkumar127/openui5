@@ -3,9 +3,20 @@
  */
 
 // Provides the default renderer for control sap.m.Label
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer'],
-	function(jQuery, Renderer) {
+sap.ui.define(['sap/ui/core/Lib', 'sap/ui/core/Renderer', 'sap/ui/core/AccessKeysEnablement', 'sap/m/library', 'sap/ui/core/library', 'sap/m/HyphenationSupport', "sap/ui/core/LabelEnablement"],
+	function(Library, Renderer, AccessKeysEnablement, library, coreLibrary, HyphenationSupport, LabelEnablement) {
 	"use strict";
+
+	// shortcut for sap.ui.core.TextDirection
+	var TextDirection = coreLibrary.TextDirection;
+
+	const TextAlign = coreLibrary.TextAlign;
+
+	// shortcut for sap.ui.core.VerticalAlign
+	var VerticalAlign = coreLibrary.VerticalAlign;
+
+	// shortcut for sap.m.LabelDesign
+	var LabelDesign = library.LabelDesign;
 
 	/**
 	 * Label renderer.
@@ -13,84 +24,152 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer'],
 	 * @author SAP SE
 	 * @namespace
 	 */
-	var LabelRenderer = {};
+	var LabelRenderer = {
+		apiVersion: 2
+	};
 
 	/**
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
 	 * @param {sap.ui.core.RenderManager} rm The RenderManager that can be used for writing to the renderer output buffer
-	 * @param {sap.ui.core.Control} oLabel An object representation of the control that should be rendered
+	 * @param {sap.m.Label} oLabel An object representation of the control that should be rendered
 	 */
 	LabelRenderer.render = function(rm, oLabel){
 		// convenience variable
-		var r = LabelRenderer;
-
+		var sTextDir = oLabel.getTextDirection(),
+			sTextAlign = oLabel.getTextAlign(),
+			sWidth = oLabel.getWidth(),
+			sLabelText = oLabel.getText(),
+			sTooltip = oLabel.getTooltip_AsString(),
+			sLabelForRendering = oLabel.getLabelForRendering(),
+			sHtmlTagToRender = sLabelForRendering ? "label" : "span",
+			bDisplayOnly = oLabel.isDisplayOnly(),
+			sVerticalAlign = oLabel.getVAlign();
 		// write the HTML into the render manager
-		rm.write("<label");
-		rm.writeControlData(oLabel);
+		// for accessibility reasons when a label doesn't have a "for" attribute, pointing at a HTML element it is rendered as span
+		rm.openStart(sHtmlTagToRender, oLabel);
 
 		// styles
-		rm.addClass("sapMLabel");
-		rm.addClass("sapUiSelectable");
+		rm.class("sapMLabel");
+		rm.class("sapUiSelectable");
+
+		// label wrapping
+		if (oLabel.isWrapping()) {
+			rm.class("sapMLabelWrapped");
+		}
 		// set design to bold
-		if (oLabel.getDesign() == sap.m.LabelDesign.Bold) {
-			rm.addStyle("font-weight", "bold");
+		if (oLabel.getDesign() == LabelDesign.Bold) {
+			rm.style("font-weight", "bold");
 		}
 
-		if (oLabel.getRequired()) {
-			rm.addClass("sapMLabelRequired");
+		if (oLabel.isRequired()) {
+			rm.class("sapMLabelRequired");
 		}
 
-		if (oLabel.getLabelForRendering()) {
-			sap.ui.core.LabelEnablement.writeLabelForAttribute(rm, oLabel);
-		} else if (oLabel.getParent() instanceof sap.m.Toolbar) {
-			rm.addClass("sapMLabelTBHeader");
+		if (oLabel.getShowColon()) {
+			rm.class("sapMLabelShowColon");
+		}
+
+		if (sLabelForRendering) {
+			LabelEnablement.writeLabelForAttribute(rm, oLabel);
 		}
 
 		// text direction
-		var sTextDir = oLabel.getTextDirection();
-		if (sTextDir !== sap.ui.core.TextDirection.Inherit){
-			rm.writeAttribute("dir", sTextDir.toLowerCase());
+		if (sTextDir !== TextDirection.Inherit){
+			rm.attr("dir", sTextDir.toLowerCase());
 		}
 
 		// style for width
-		var sWidth = oLabel.getWidth();
 		if (sWidth) {
-			rm.addStyle("width", sWidth);
+			rm.style("width", sWidth);
 		} else {
-			rm.addClass("sapMLabelMaxWidth");
+			rm.class("sapMLabelMaxWidth");
 		}
 
 		// style for text alignment
-		var sTextAlign = oLabel.getTextAlign();
 		if (sTextAlign) {
-			var sTextAlign = r.getTextAlign(sTextAlign, sTextDir);
-			if (sTextAlign) {
-				rm.addStyle("text-align", sTextAlign);
+			const sActualTextAlign = LabelRenderer.getTextAlign(sTextAlign, sTextDir);
+
+			if (sActualTextAlign) {
+				rm.style("text-align", sActualTextAlign);
 			}
 		}
 
-		var sLabelText = oLabel.getText();
 		if (sLabelText == "") {
-			rm.addClass("sapMLabelNoText");
+			rm.class("sapMLabelNoText");
 		}
 
-		rm.writeStyles();
-		rm.writeClasses();
+		if (bDisplayOnly) {
+			rm.class("sapMLabelDisplayOnly");
+		}
 
-		var sTooltip = oLabel.getTooltip_AsString();
+		if (sVerticalAlign != VerticalAlign.Inherit) {
+			rm.style("vertical-align", sVerticalAlign.toLowerCase());
+		}
+
+		HyphenationSupport.writeHyphenationClass(rm, oLabel);
+
 		if (sTooltip) {
-			rm.writeAttributeEscaped("title", sTooltip);
+			rm.attr("title", sTooltip);
 		}
 
-		rm.write(">");
+		rm.openEnd();
+
+		rm.openStart("div").class("sapMLabelInner");
+
+		// style for text alignment
+		if (sTextAlign) {
+			const sJustifyContent = LabelRenderer.textAlignToJustifyContent(sTextAlign);
+
+			if (sJustifyContent) {
+				rm.style("justify-content", sJustifyContent);
+			}
+		}
+
+		rm.openEnd();
+
+		// wrap the label text
+		rm.openStart("span", oLabel.getId() + "-text");
+		rm.class("sapMLabelTextWrapper");
+
+		if (oLabel.getProperty("highlightAccKeysRef")) {
+			rm.class(AccessKeysEnablement.CSS_CLASS);
+		}
+
+		rm.openEnd();
 
 		// write the label text
+		rm.openStart("bdi", oLabel.getId() + "-bdi");
+
+		// text direction
+		if (sTextDir !== TextDirection.Inherit){
+			rm.attr("dir", sTextDir.toLowerCase());
+		}
+
+		rm.openEnd();
 
 		if (sLabelText) {
-			rm.writeEscaped(sLabelText);
+			sLabelText = HyphenationSupport.getTextForRender(oLabel, "main");
+			rm.text(sLabelText);
 		}
-		rm.write("</label>");
+		rm.close("bdi");
+		rm.close("span");
+
+		// shows the colon and the required asterisk
+		rm.openStart("span");
+		rm.class("sapMLabelColonAndRequired");
+		rm.attr("data-colon", Library.getResourceBundleFor("sap.m").getText("LABEL_COLON"));
+		if (sLabelForRendering || oLabel._isInColumnHeaderContext) {
+			rm.accessibilityState({
+				hidden: "true"
+			});
+		}
+		rm.openEnd();
+		rm.close("span");
+
+		rm.close("div");
+
+		rm.close(sHtmlTagToRender);
 	};
 
 	/**
@@ -99,6 +178,32 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer'],
 	 * @private
 	 */
 	LabelRenderer.getTextAlign = Renderer.getTextAlign;
+
+	LabelRenderer.textAlignToJustifyContent = function (sTextAlign) {
+		let sJustifyContent;
+
+		switch (sTextAlign) {
+			case TextAlign.Begin:
+				sJustifyContent = "flex-start";
+				break;
+			case TextAlign.End:
+				sJustifyContent = "flex-end";
+				break;
+			case TextAlign.Left:
+				sJustifyContent = "left";
+				break;
+			case TextAlign.Right:
+				sJustifyContent = "right";
+				break;
+			case TextAlign.Center:
+				sJustifyContent = "center";
+				break;
+			default:
+				sJustifyContent = "";
+		}
+
+		return sJustifyContent;
+	};
 
 	return LabelRenderer;
 

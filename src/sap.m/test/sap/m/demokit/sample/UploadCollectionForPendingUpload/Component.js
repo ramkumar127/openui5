@@ -5,16 +5,7 @@ sap.ui.define(['sap/ui/core/UIComponent'],
 	var Component = UIComponent.extend("sap.m.sample.UploadCollectionForPendingUpload.Component", {
 
 		metadata : {
-			rootView : "sap.m.sample.UploadCollectionForPendingUpload.Page",
-			dependencies : {
-				libs : ["sap.m", "sap.ui.unified"]
-			},
-			config : {
-				sample : {
-					stretch : true,
-					files : ["Page.view.xml", "Page.controller.js"]
-				}
-			}
+			manifest: "json"
 		}
 	});
 

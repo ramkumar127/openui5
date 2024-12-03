@@ -10,25 +10,24 @@
  */
 
 // Provides class sap.m.semantic.Segment
-sap.ui.define(['jquery.sap.global', 'sap/ui/base/Metadata'], function(jQuery, Metadata) {
+sap.ui.define(['sap/ui/base/Object', "sap/base/Log"], function(BaseObject, Log) {
 	"use strict";
 
 	/**
-	 * Constructor for a sap.m.semantic.Segment.
+	 * Constructor for an sap.m.semantic.Segment.
 	 *
 	 * @class Abstraction for a segment in a SegmentedContainer
 	 * @version ${version}
 	 * @private
 	 * @since 1.30.0
 	 * @alias sap.m.semantic.Segment
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 
-	var Segment = Metadata.createClass("sap.m.semantic.Segment", {
+	var Segment = BaseObject.extend("sap.m.semantic.Segment", {
 
 		constructor : function(aContent, oContainer, sContainerAggregationName, fnSortFunction) {
 			if (!oContainer) {
-				jQuery.sap.log.error("missing argumment: constructor expects a container reference", this);
+				Log.error("missing argumment: constructor expects a container reference", this);
 				return;
 			}
 
@@ -38,6 +37,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Metadata'], function(jQuery, Me
 			this._oContainer = oContainer;
 			this._sContainerAggregationName = sContainerAggregationName;
 			this._fnSortFunction = fnSortFunction;
+		},
+
+		getInterface: function() {
+			return this; // no facade
 		}
 
 	});
@@ -54,12 +57,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Metadata'], function(jQuery, Me
 
 	Segment.prototype.getContent = function () {
 
-		return this._aContent;
+		return this._aContent.slice();
 	};
 
 	Segment.prototype.indexOfContent = function (oControl) {
 
-		return jQuery.inArray( oControl, this._aContent );
+		return this._aContent.indexOf(oControl);
 	};
 
 	Segment.prototype.addContent = function (oControl, bSuppressInvalidate) {
@@ -72,10 +75,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Metadata'], function(jQuery, Me
 			}
 		}
 
-		var iContainerInsertIndex = this.getEndIndex();
-		var iLocalInsertIndex = this._aContent.length;
+		var iContainerInsertIndex = this.getEndIndex(),
+			iLocalInsertIndex = this._aContent.length,
+			sAggregationMethod  = "insert" + fnCapitalize(this._sContainerAggregationName);
 
-		this._oContainer.insertAggregation(this._sContainerAggregationName, oControl, iContainerInsertIndex, bSuppressInvalidate);
+		this._oContainer[sAggregationMethod](oControl, iContainerInsertIndex, bSuppressInvalidate);
 		this._aContent.splice(iLocalInsertIndex, 0, oControl);
 
 		return oControl;
@@ -96,11 +100,13 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Metadata'], function(jQuery, Me
 
 	Segment.prototype.removeContent = function (oControl, bSuppressInvalidate) {
 
-		var iLocalIndex = jQuery.inArray(oControl, this._aContent);
+		var iLocalIndex = this._aContent.indexOf(oControl),
+			sAggregationMethod  = "remove" + fnCapitalize(this._sContainerAggregationName);
+
 		if (iLocalIndex > -1) {
 			this._aContent.splice(iLocalIndex, 1);
 
-			return this._oContainer.removeAggregation(this._sContainerAggregationName, oControl, bSuppressInvalidate);
+			return this._oContainer[sAggregationMethod](oControl, bSuppressInvalidate);
 		}
 	};
 
@@ -109,10 +115,11 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Metadata'], function(jQuery, Me
 		var aRemovedContent = [],
 			aGlobalContent = this._oContainer.getAggregation(this._sContainerAggregationName),
 			iStartIndex = this.getStartIndex(),
-			iEndIndex = this.getEndIndex();
+			iEndIndex = this.getEndIndex(),
+			sAggregationMethod  = "remove" + fnCapitalize(this._sContainerAggregationName);
 
 		for (var i = iStartIndex; i < iEndIndex; i++) {
-			var oItem = this._oContainer.removeAggregation(this._sContainerAggregationName, aGlobalContent[i], bSuppressInvalidate); //TODO: test index consistency upon iteration+removal
+			var oItem = this._oContainer[sAggregationMethod](aGlobalContent[i], bSuppressInvalidate); //TODO: test index consistency upon iteration+removal
 			if (oItem) {
 				aRemovedContent.push(oItem);
 			}
@@ -132,10 +139,12 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Metadata'], function(jQuery, Me
 
 	Segment.prototype._insertContent = function (oControl, iIndex, bSuppressInvalidate) {
 
-		var iInsertIndexInContainer = Math.min(this.getStartIndex() + iIndex, this.getEndIndex());
+		var iInsertIndexInContainer = Math.min(this.getStartIndex() + iIndex, this.getEndIndex()),
+			sAggregationMethod  = "insert" + fnCapitalize(this._sContainerAggregationName);
+
 		iInsertIndexInContainer = Math.max(iInsertIndexInContainer, 0);
 
-		this._oContainer.insertAggregation(this._sContainerAggregationName, oControl, iInsertIndexInContainer, bSuppressInvalidate);
+		this._oContainer[sAggregationMethod](oControl, iInsertIndexInContainer, bSuppressInvalidate);
 		this._aContent.splice(iIndex, 0, oControl);
 
 		return oControl;
@@ -150,6 +159,10 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/base/Metadata'], function(jQuery, Me
 		}
 	};
 
+	function fnCapitalize(sName) {
+		return sName.charAt(0).toUpperCase() + sName.substring(1);
+	}
+
 	return Segment;
 
-}, /* bExport= */ false);
+});

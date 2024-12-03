@@ -2,115 +2,215 @@
  * ${copyright}
  */
 
- sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer'],
-	function(jQuery, Renderer) {
+ sap.ui.define([
+	 "sap/ui/core/Lib",
+	 "sap/ui/core/Renderer",
+	 "sap/ui/core/library",
+	 'sap/ui/core/AccessKeysEnablement',
+	 "sap/ui/util/defaultLinkTypes",
+	 './library'
+	],
+	function(Library, Renderer, coreLibrary, AccessKeysEnablement, defaultLinkTypes, mobileLibrary) {
 	"use strict";
 
+	// shortcut for sap.ui.core.TextDirection
+	var TextDirection = coreLibrary.TextDirection;
+
+	// shortcut for sap.ui.core.aria.HasPopup
+	var AriaHasPopup = coreLibrary.aria.HasPopup;
+
+	// shortcut for sap.m.LinkAccessibleRole
+	var LinkAccessibleRole = mobileLibrary.LinkAccessibleRole;
 
 	/**
 	 * Link renderer
 	 * @namespace
 	 */
 	var LinkRenderer = {
+		apiVersion: 2
 	};
+
+	// shortcut for sap.m.EmptyIndicator
+	var EmptyIndicatorMode = mobileLibrary.EmptyIndicatorMode;
+
+	// shortcut for library resource bundle
+	var oRb = Library.getResourceBundleFor("sap.m");
 
 
 	/**
 	 * Renders the HTML for the given control, using the provided {@link sap.ui.core.RenderManager}.
 	 *
 	 * @param {sap.ui.core.RenderManager} oRm the RenderManager that can be used for writing to the render output buffer
-	 * @param {sap.ui.core.Control} oControl an object representation of the control that should be rendered
+	 * @param {sap.m.List} oControl an object representation of the control that should be rendered
 	 */
-	LinkRenderer.render = function(rm, oControl) {
+	LinkRenderer.render = function(oRm, oControl) {
 		var sTextDir = oControl.getTextDirection(),
 			sTextAlign = Renderer.getTextAlign(oControl.getTextAlign(), sTextDir),
+			bShouldHaveOwnLabelledBy = oControl._determineSelfReferencePresence(),
+			sHasPopupType = oControl.getAriaHasPopup(),
+			sRel = defaultLinkTypes(oControl.getRel(), oControl.getTarget()),
+			sHref = oControl.getHref(),
+			sAccessibleRole = oControl.getAccessibleRole(),
 			oAccAttributes =  {
-				role: 'link',
-				haspopup: !oControl.getHref()
-			};
+				labelledby: bShouldHaveOwnLabelledBy ? {value: oControl.getId(), append: true } : undefined,
+				haspopup: (sHasPopupType === AriaHasPopup.None) ? null : sHasPopupType.toLowerCase()
+			},
+			bEnabled = oControl.getEnabled(),
+			sTypeSemanticInfo = "",
+			sText = oControl.getText(),
+			sAcccessKey = oControl.getProperty("accesskey");
 
 		// Link is rendered as a "<a>" element
-		rm.write("<a");
-		rm.writeControlData(oControl);
+		oRm.openStart("a", oControl);
 
-		rm.addClass("sapMLnk");
+		oRm.class("sapMLnk");
 		if (oControl.getSubtle()) {
-			rm.addClass("sapMLnkSubtle");
-
-			//Add aria-describedby for the SUBTLE announcement
-			if (oAccAttributes.describedby) {
-				oAccAttributes.describedby += " " + oControl._sAriaLinkSubtleId;
-			} else {
-				oAccAttributes.describedby = oControl._sAriaLinkSubtleId;
-			}
+			oRm.class("sapMLnkSubtle");
+			sTypeSemanticInfo += oControl._sAriaLinkSubtleId;
 		}
 
 		if (oControl.getEmphasized()) {
-			rm.addClass("sapMLnkEmphasized");
-
-			//Add aria-describedby for the EMPHASIZED announcement
-			if (oAccAttributes.describedby) {
-				oAccAttributes.describedby += " " + oControl._sAriaLinkEmphasizedId;
-			} else {
-				oAccAttributes.describedby = oControl._sAriaLinkEmphasizedId;
-			}
+			oRm.class("sapMLnkEmphasized");
+			sTypeSemanticInfo += " " + oControl._sAriaLinkEmphasizedId;
 		}
 
-		if (!oControl.getEnabled()) {
-			rm.addClass("sapMLnkDsbl");
-			rm.writeAttribute("disabled", "true");
-			rm.writeAttribute("tabIndex", "-1"); // still focusable by mouse click, but not in the tab chain
-		} else {
-			rm.writeAttribute("tabIndex", "0");
+		if (sAcccessKey) {
+			oRm.attr("data-ui5-accesskey", sAcccessKey);
 		}
+
+		switch (sAccessibleRole) {
+			case LinkAccessibleRole.Button:
+				oAccAttributes.role = LinkAccessibleRole.Button.toLowerCase();
+				break;
+			default:
+				// Set a valid non empty value for the href attribute representing that there is no navigation,
+				// so we don't confuse the screen readers.
+				sHref = sHref && oControl._isHrefValid(sHref) && oControl.getEnabled() ? sHref : "#";
+				oRm.attr("href", sHref);
+		}
+
+		oAccAttributes.describedby = sTypeSemanticInfo ? {value: sTypeSemanticInfo.trim(), append: true} : undefined;
+
+		if (!bEnabled) {
+			oRm.class("sapMLnkDsbl");
+			oRm.attr("aria-disabled", "true");
+		}
+		oRm.attr("tabindex", oControl._getTabindex());
+
 		if (oControl.getWrapping()) {
-			rm.addClass("sapMLnkWrapping");
+			oRm.class("sapMLnkWrapping");
+		}
+
+		if (oControl.getEmptyIndicatorMode() !== EmptyIndicatorMode.Off && !oControl.getText()) {
+			oRm.class("sapMLinkContainsEmptyIdicator");
 		}
 
 		if (oControl.getTooltip_AsString()) {
-			rm.writeAttributeEscaped("title", oControl.getTooltip_AsString());
-		}
-
-		/* set href only if link is enabled - BCP incident 1570020625 */
-		if (oControl.getHref() && oControl.getEnabled()) {
-			rm.writeAttributeEscaped("href", oControl.getHref());
-		} else {
-			/*eslint-disable no-script-url */
-			rm.writeAttribute("href", "javascript:void(0);");
-			/*eslint-enable no-script-url */
+			oRm.attr("title", oControl.getTooltip_AsString());
 		}
 
 		if (oControl.getTarget()) {
-			rm.writeAttributeEscaped("target", oControl.getTarget());
+			oRm.attr("target", oControl.getTarget());
+		}
+
+		if (sRel) {
+			oRm.attr("rel", sRel);
 		}
 
 		if (oControl.getWidth()) {
-			rm.addStyle("width", oControl.getWidth());
+			oRm.style("width", oControl.getWidth());
 		} else {
-			rm.addClass("sapMLnkMaxWidth");
+			oRm.class("sapMLnkMaxWidth");
 		}
 
 		if (sTextAlign) {
-			rm.addStyle("text-align", sTextAlign);
+			oRm.style("text-align", sTextAlign);
 		}
 
 		// check if textDirection property is not set to default "Inherit" and add "dir" attribute
-		if (sTextDir !== sap.ui.core.TextDirection.Inherit) {
-			rm.writeAttribute("dir", sTextDir.toLowerCase());
+		if (sTextDir !== TextDirection.Inherit) {
+			oRm.attr("dir", sTextDir.toLowerCase());
 		}
 
-		rm.writeAccessibilityState(oControl, oAccAttributes);
-		rm.writeClasses();
-		rm.writeStyles();
-		rm.write(">"); // opening <a> tag
+		oControl.getDragDropConfig().forEach(function (oDNDConfig) {
+			if (!oDNDConfig.getEnabled()) {
+				oRm.attr("draggable", false);
+			}
+		});
 
-		if (oControl.getText()) {
-			rm.writeEscaped(oControl.getText());
+		oRm.accessibilityState(oControl, oAccAttributes);
+		// opening <a> tag
+		oRm.openEnd();
+
+		// Render icon only if there is text
+		if (sText && oControl.getIcon()) {
+			oRm.renderControl(oControl._getIcon());
 		}
 
-		rm.write("</a>");
+		// Text is rendered in "<span>" element to apply ellipsis only on the text
+		oRm.openStart("span");
+		oRm.class("sapMLnkText");
+		oRm.openEnd();
+
+		if (this.writeText) {
+			this.writeText(oRm, oControl);
+		} else {
+			this.renderText(oRm, oControl);
+		}
+
+		oRm.close("span");
+
+		// Render end icon only if there is text
+		if (sText && oControl.getEndIcon()) {
+			oRm.renderControl(oControl._getEndIcon());
+		}
+
+		oRm.close("a");
 	};
 
+	/**
+	 * Renders the normalized text property.
+	 *
+	 * @param {sap.ui.core.RenderManager} oRm The RenderManager that can be used for writing to the render output buffer.
+	 * @param {sap.m.Link} oControl An object representation of the control that should be rendered.
+	 */
+	LinkRenderer.renderText = function(oRm, oControl) {
+		var sText = oControl.getText();
+
+		if (oControl.getEmptyIndicatorMode() !== EmptyIndicatorMode.Off && !oControl.getText()) {
+			this.renderEmptyIndicator(oRm, oControl);
+		} else {
+			oRm.text(sText);
+		}
+	};
+
+	/**
+	 * Renders the empty text indicator.
+	 *
+	 * @param {sap.ui.core.RenderManager} oRm The RenderManager that can be used for writing to the render output buffer.
+	 * @param {sap.m.Link} oLink An object representation of the control that should be rendered.
+	 */
+	LinkRenderer.renderEmptyIndicator = function(oRm, oLink) {
+		oRm.openStart("span");
+			oRm.class("sapMEmptyIndicator");
+			oRm.class("sapMLnkDsbl");
+			if (oLink.getEmptyIndicatorMode() === EmptyIndicatorMode.Auto) {
+				oRm.class("sapMEmptyIndicatorAuto");
+			}
+			oRm.openEnd();
+			oRm.openStart("span");
+			oRm.attr("aria-hidden", true);
+			oRm.openEnd();
+				oRm.text(oRb.getText("EMPTY_INDICATOR"));
+			oRm.close("span");
+			//Empty space text to be announced by screen readers
+			oRm.openStart("span");
+			oRm.class("sapUiPseudoInvisibleText");
+			oRm.openEnd();
+				oRm.text(oRb.getText("EMPTY_INDICATOR_TEXT"));
+			oRm.close("span");
+		oRm.close("span");
+	};
 
 	return LinkRenderer;
 

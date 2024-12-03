@@ -1,45 +1,122 @@
-/* ********** */
-/* BASE Theme */
-/* ********** */
-/* ============================================= */
-/* CSS for control sap.m/Input.control           */
-/* ============================================= */
+/* ============================ */
+/* CSS for control sap.m/Input  */
+/* Base theme                   */
+/* ============================ */
 
-.sapMDialog.sapMInputSuggestionPopup .sapMDialogScrollCont {
-	padding: 0;
+:root {
+	--sPopoverMaxWidth: 640;
 }
 
-.sapMInputDescription {
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
+.sapMListFocus .sapMLIBFocused {
+	outline: var(--sapContent_FocusWidth) var(--sapContent_FocusStyle) var(--sapContent_FocusColor);
+	outline-offset: -0.125rem;
 }
 
-.sapMInputDescription > span {
+.sapMInputDescriptionText {
 	padding-left: 0.5rem;
-	font-family: @sapUiFontFamily;
+	font-size: var(--sapFontSize);
+	line-height: normal;
+	color: var(--sapField_TextColor);
+	font-family: var(--sapFontFamily);
 	font-style: normal;
 	font-weight: normal;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
 }
 
-.sapMInputSuggestionTableHidden {
-	visibility: hidden;
+.sapMInputWithDescription {
+	white-space: nowrap;
 }
 
-
-/* valueHelpOnly overwrites text cursor for input */
-.sapMInputVHO,
-.sapMInput.sapMInputVHO > input {
-	cursor: pointer;
+.sapMInputDescriptionWrapper {
+	display: inline-flex;
 }
 
-/* if ValueHalp and Description, place icon left to description */
-.sapMInputDescription.sapMInputVH > span{
-	position: relative;
-	display: inline-Block;
-	height: 100%;
+/* Input with description */
+.sapMInputBaseHasEndIcons,
+.sapMInputBaseHasBeginIcons {
+
+	.sapMInputDescriptionWrapper {
+		max-width: ~"calc(100% - (@{_InputBase_Control_OneIcon_MinWidth}))";
+
+		.sapMInputBaseState:not(.sapMInputBaseContentWrapperSuccess) & {
+			max-width: ~"calc(100% - (@{_InputBase_Control_OneIcon_State_MinWidth}))";
+		}
+	}
 }
 
-.sapMInputValHelpInner.sapUiIcon {
-	vertical-align: top;
+.sapMInputBaseHasEndIcons.sapMInputBaseHasBeginIcons {
+
+	.sapMInputDescriptionWrapper {
+		max-width: ~"calc(100% - (@{_InputBase_Control_TwoIcons_MinWidth}))";
+
+		.sapMInputBaseState:not(.sapMInputBaseContentWrapperSuccess) & {
+			max-width: ~"calc(100% - (@{_InputBase_Control_TwoIcons_State_MinWidth}))";
+		}
+	}
+}
+
+.sapMInputBase:not(.sapMInputBaseHasEndIcons):not(.sapMInputBaseHasBeginIcons) {
+
+	.sapMInputDescriptionWrapper {
+		max-width: ~"calc(100% - (@{_InputBase_Control_MinWidth}))";
+
+		.sapMInputBaseState:not(.sapMInputBaseContentWrapperSuccess) & {
+			max-width: ~"calc(100% - (@{_InputBase_Control_State_MinWidth}*2))";
+		}
+	}
+}
+
+.sapUiSizeCompact {
+
+	.sapMInputBaseHasEndIcons,
+	.sapMInputBaseHasBeginIcons {
+
+		.sapMInputDescriptionWrapper {
+			max-width: ~"calc(100% - (@{_InputBase_Control_OneIcon_MinWidth_Compact}))";
+
+			.sapMInputBaseState:not(.sapMInputBaseContentWrapperSuccess) & {
+				max-width: ~"calc(100% - (@{_InputBase_Control_OneIcon_State_MinWidth_Compact}))";
+			}
+		}
+	}
+
+	.sapMInputBaseHasEndIcons.sapMInputBaseHasBeginIcons {
+
+		.sapMInputDescriptionWrapper {
+			max-width: ~"calc(100% - (@{_InputBase_Control_TwoIcons_MinWidth_Compact}))";
+
+			.sapMInputBaseState:not(.sapMInputBaseContentWrapperSuccess) & {
+				max-width: ~"calc(100% - (@{_InputBase_Control_TwoIcons_State_MinWidth_Compact}))";
+			}
+		}
+	}
+
+	.sapMInputBase:not(.sapMInputBaseHasEndIcons):not(.sapMInputBaseHasBeginIcons) {
+
+		.sapMInputDescriptionWrapper {
+			max-width: ~"calc(100% - (@{_InputBase_Control_MinWidth_Compact}))";
+
+			.sapMInputBaseState:not(.sapMInputBaseContentWrapperSuccess) & {
+				max-width: ~"calc(100% - (@{_InputBase_Control_State_MinWidth_Compact}*2))";
+			}
+		}
+	}
+}
+
+.sapMInputHighlight {
+	font-weight: bold;
+}
+
+/* Overrides due to experimental flex layouting after IE drop */
+
+.sapMInput.sapMInputBaseHasEndIcons .sapMInputBaseInner,
+.sapMInput.sapMInputBaseHasBeginIcons .sapMInputBaseInner {
+	width: auto;
+	flex: 1
+}
+
+.sapMInput .sapMInputBaseContentWrapper {
+	display: inline-flex;
 }

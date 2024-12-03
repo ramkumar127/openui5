@@ -2,44 +2,79 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './InputBaseRenderer'],
-	function(jQuery, Renderer, InputBaseRenderer) {
+sap.ui.define([
+	'sap/ui/core/Renderer',
+	'./InputBaseRenderer',
+	'sap/ui/core/library'
+],
+	function(Renderer, InputBaseRenderer, coreLibrary) {
 	"use strict";
+
+
+	// shortcut for sap.ui.core.Wrapping
+	var Wrapping = coreLibrary.Wrapping;
 
 
 	/**
 	 * TextArea renderer.
-	 * @namespace
-	 */
-	var TextAreaRenderer = {};
-
-
-	/**
-	 * Input renderer.
-	 * @namespace
 	 *
-	 * TextAreaRenderer extends the TextAreaRenderer
+	 * TextAreaRenderer extends the InputBaseRenderer.
+	 *
+	 * @namespace
 	 */
 	var TextAreaRenderer = Renderer.extend(InputBaseRenderer);
+	TextAreaRenderer.apiVersion = 2;
 
 	// Adds control specific class
 	TextAreaRenderer.addOuterClasses = function(oRm, oControl) {
-		oRm.addClass("sapMTextArea");
+		oRm.class("sapMTextArea");
+
+		if (oControl.getShowExceededText()) {
+			oRm.class("sapMTextAreaWithCounter");
+		}
+		if (oControl.getHeight()) {
+			oRm.class("sapMTextAreaWithHeight");
+		}
 	};
 
 	// Add extra styles to Container
 	TextAreaRenderer.addOuterStyles = function(oRm, oControl) {
-		oControl.getHeight() && oRm.addStyle("height", oControl.getHeight());
+		oControl.getHeight() && oRm.style("height", oControl.getHeight());
 	};
 
-	// Write the opening tag name of the TextArea
+	// Write the counter of the TextArea.
+	TextAreaRenderer.writeDecorations = function(oRm, oControl) {
+		var oCounter = oControl.getAggregation("_counter");
+		oRm.renderControl(oCounter);
+	};
+
+	// Write the opening tag of the TextArea
 	TextAreaRenderer.openInputTag = function(oRm, oControl) {
-		oRm.write("<textarea");
+		oRm.openStart("textarea", oControl.getId() + "-" + this.getInnerSuffix());
+	};
+
+	/**
+	 * Ends the opened TextArea tag
+	 *
+	 * @override
+	 * @param {sap.ui.core.RenderManager} oRm The RenderManager that can be used for writing to the render output buffer.
+	 * @param {sap.m.TextArea} oControl An object representation of the control that should be rendered.
+	 */
+	TextAreaRenderer.endInputTag = function(oRm, oControl) {
+		oRm.openEnd();
 	};
 
 	// Write the closing tag name of the TextArea
 	TextAreaRenderer.closeInputTag = function(oRm, oControl) {
-		oRm.write("</textarea>");
+		oRm.close("textarea");
+	};
+
+	TextAreaRenderer.prependInnerContent = function(oRm, oControl) {
+		if (oControl.getGrowing()) {
+			oRm.openStart("div", oControl.getId() + '-hidden');
+			oRm.class("sapMTextAreaMirror");
+			oRm.openEnd().close("div");
+		}
 	};
 
 	// TextArea does not have value property as HTML element, so overwrite base method
@@ -49,41 +84,30 @@ sap.ui.define(['jquery.sap.global', 'sap/ui/core/Renderer', './InputBaseRenderer
 	// Write the value of the TextArea
 	TextAreaRenderer.writeInnerContent = function(oRm, oControl) {
 		var sValue = oControl.getValue();
-		sValue = jQuery.sap.encodeHTML(sValue);
-
-		// Convert the new line HTML entity rather than displaying it as a text.
-		//Normalize the /n and /r to /r/n - Carriage Return and Line Feed
-		if (sap.ui.Device.browser.msie && sap.ui.Device.browser.version < 11) {
-			sValue = sValue.replace(/&#xd;&#xa;|&#xd;|&#xa;/g, "&#13;");
-		} else {
-			sValue = sValue.replace(/&#xd;&#xa;|&#xd;|&#xa;/g, "&#13;&#10;");
-		}
-		oRm.write(sValue);
+		oRm.text(sValue);
 	};
 
 	// Add extra classes for TextArea element
 	TextAreaRenderer.addInnerClasses = function(oRm, oControl) {
-		oRm.addClass("sapMTextAreaInner");
+		oRm.class("sapMTextAreaInner");
 		if (oControl.getGrowing()) {
-			oRm.addClass("sapMTextAreaGrow");
+			oRm.class("sapMTextAreaGrow");
 		}
 	};
 
-	// Returns the accessibility state of the control.
-	TextAreaRenderer.getAccessibilityState = function(oControl) {
-		var mAccessibilityState = InputBaseRenderer.getAccessibilityState.call(this, oControl);
-		mAccessibilityState.multiline = true;
-		return mAccessibilityState;
+	// role=textbox or aria-multiline should not be explicitly defined
+	TextAreaRenderer.getAriaRole = function(oControl) {
+		return "";
 	};
 
 	// Add extra attributes to TextArea
 	TextAreaRenderer.writeInnerAttributes = function(oRm, oControl) {
-		if (oControl.getWrapping() != sap.ui.core.Wrapping.None) {
-			oRm.writeAttribute("wrap", oControl.getWrapping());
+		if (oControl.getWrapping() != Wrapping.None) {
+			oRm.attr("wrap", oControl.getWrapping());
 		}
 
-		oRm.writeAttribute("rows", oControl.getRows());
-		oRm.writeAttribute("cols", oControl.getCols());
+		oRm.attr("rows", oControl.getRows());
+		oRm.attr("cols", oControl.getCols());
 	};
 
 	return TextAreaRenderer;

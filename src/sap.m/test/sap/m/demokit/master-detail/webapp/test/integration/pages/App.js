@@ -1,61 +1,60 @@
 sap.ui.define([
-		"sap/ui/test/Opa5",
-		"sap/ui/demo/masterdetail/test/integration/pages/Common"
-	], function(Opa5, Common) {
-		"use strict";
+	"sap/ui/test/Opa5",
+	"sap/ui/test/matchers/Properties"
+], function (Opa5, Properties) {
+	"use strict";
 
-		var sViewName = "App",
-			sAppControl = "idAppControl";
+	Opa5.createPageObjects({
+		onTheAppPage: {
+			viewName: "App",
 
-		Opa5.createPageObjects({
-			onTheAppPage : {
-				baseClass : Common,
+			actions: {
 
-				actions : {
+				iCloseTheMessageBox: function () {
+					return this.waitFor({
+						searchOpenDialogs: true,
+						id: "serviceErrorMessageBox",
+						success: function (oMessageBox) {
+							oMessageBox.destroy();
+							Opa5.assert.ok(true, "The MessageBox was closed");
+						}
+					});
+				}
+			},
 
-					iWaitUntilTheBusyIndicatorIsGone : function () {
-						return this.waitFor({
-							id : sAppControl,
-							viewName : sViewName,
-							// inline-matcher directly as function
-							matchers : function(oRootView) {
-								// we set the view busy, so we need to query the parent of the app
-								return oRootView.getParent().getBusy() === false;
-							},
-							errorMessage : "The app is still busy."
-						});
-					}
+			assertions: {
 
+				iShouldSeeTheMessageBox: function () {
+					return this.waitFor({
+						searchOpenDialogs: true,
+						controlType: "sap.m.Dialog",
+						matchers: new Properties({
+							type: "Message"
+						}),
+						success: function () {
+							Opa5.assert.ok(true, "The correct MessageBox was shown");
+						}
+					});
 				},
 
-				assertions : {
-
-					iShouldSeeTheBusyIndicator : function () {
-						return this.waitFor({
-							id : sAppControl,
-							viewName : sViewName,
-							success : function (oRootView) {
-								// we set the view busy, so we need to query the parent of the app
-								Opa5.assert.ok(oRootView.getParent().getBusy(), "The app is busy");
-							},
-							errorMessage : "The app is not busy."
-						});
-					},
-
-					iShouldSeeTheMessageBox : function (sMessageBoxId) {
-						return this.waitFor({
-							id : sMessageBoxId,
-							success : function () {
-								Opa5.assert.ok(true, "the correct MessageBox was shown");
-							}
-						});
-					}
-
+				theAppShowsFCLDesign: function (sLayout) {
+					return this.waitFor({
+						id: "layout",
+						matchers: new Properties({
+							layout: sLayout
+						}),
+						success: function () {
+							Opa5.assert.ok(true, "the app shows " + sLayout + " layout");
+						},
+						errorMessage: "The app does not show " + sLayout + " layout"
+					});
 				}
+
 
 			}
 
-		});
+		}
 
-	}
-);
+	});
+
+});

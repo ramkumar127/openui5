@@ -3,9 +3,14 @@
  */
 
 // Provides control sap.ui.commons.Tab.
-sap.ui.define(['jquery.sap.global', './Panel', './library'],
-	function(jQuery, Panel, library) {
+sap.ui.define(['./Panel', './library', 'sap/ui/core/library'],
+	function(Panel, library, coreLibrary) {
 	"use strict";
+
+
+
+	// shortcut for sap.ui.core.Scrolling
+	var Scrolling = coreLibrary.Scrolling;
 
 
 
@@ -24,37 +29,41 @@ sap.ui.define(['jquery.sap.global', './Panel', './library'],
 	 *
 	 * @constructor
 	 * @public
+	 * @deprecated Since version 1.38. Instead, use the <code>sap.m.TabContainer</code> control.
 	 * @alias sap.ui.commons.Tab
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	var Tab = Panel.extend("sap.ui.commons.Tab", /** @lends sap.ui.commons.Tab.prototype */ { metadata : {
+	var Tab = Panel.extend("sap.ui.commons.Tab", /** @lends sap.ui.commons.Tab.prototype */ {
+		metadata : {
 
-		library : "sap.ui.commons",
-		properties : {
+			library : "sap.ui.commons",
+			deprecated: true,
+			properties : {
 
-			/**
-			 * Specifies the vertical scrolling.
-			 */
-			verticalScrolling : {type : "sap.ui.core.Scrolling", group : "Behavior", defaultValue : sap.ui.core.Scrolling.None},
+				/**
+				 * Specifies the vertical scrolling.
+				 */
+				verticalScrolling : {type : "sap.ui.core.Scrolling", group : "Behavior", defaultValue : Scrolling.None},
 
-			/**
-			 * Specifies the horizontal scrolling.
-			 */
-			horizontalScrolling : {type : "sap.ui.core.Scrolling", group : "Behavior", defaultValue : sap.ui.core.Scrolling.None},
+				/**
+				 * Specifies the horizontal scrolling.
+				 */
+				horizontalScrolling : {type : "sap.ui.core.Scrolling", group : "Behavior", defaultValue : Scrolling.None},
 
-			/**
-			 * Specifies whether the tab contains a close button.
-			 */
-			closable : {type : "boolean", group : "Misc", defaultValue : false},
+				/**
+				 * Specifies whether the tab contains a close button.
+				 */
+				closable : {type : "boolean", group : "Misc", defaultValue : false},
 
-			/**
-			 * Defines whether the tab is the active one.
-			 * @deprecated AS of 0.17.0.
-			 * This property is not used. To identify the selected tab in a TabStrip selectedIndex is used.
-			 */
-			selected : {type : "boolean", group : "Behavior", defaultValue : false, deprecated: true}
-		}
-	}});
+				/**
+				 * Defines whether the tab is the active one.
+				 * @deprecated As of 0.17.0.
+				 * This property is not used. To identify the selected tab in a TabStrip selectedIndex is used.
+				 */
+				selected : {type : "boolean", group : "Behavior", defaultValue : false, deprecated: true}
+			}
+		},
+		renderer: null // this control has no own renderer, it is rendered by the TabStripRenderer
+	});
 
 	/*
 	 * Initializes the Tab.
@@ -124,7 +133,7 @@ sap.ui.define(['jquery.sap.global', './Panel', './library'],
 	/*
 	 * Sets the scroll position of the Tab in pixel from the left.
 	 * @param {int} iPosition The position to scroll to
-	 * @return {sap.ui.commons.Tab} <code>this</code> to allow method chaining
+	 * @return {this} <code>this</code> to allow method chaining
 	 * @public
 	 */
 	Tab.prototype.setScrollLeft = function (iPosition) {
@@ -156,7 +165,7 @@ sap.ui.define(['jquery.sap.global', './Panel', './library'],
 	/*
 	 * Sets the scroll position of the Tab in pixel from the top.
 	 * @param {int} iPosition The position to scroll to
-	 * @return {sap.ui.commons.Tab} <code>this</code> to allow method chaining
+	 * @return {this} <code>this</code> to allow method chaining
 	 * @public
 	 */
 	Tab.prototype.setScrollTop = function (iPosition) {
@@ -174,8 +183,8 @@ sap.ui.define(['jquery.sap.global', './Panel', './library'],
 	 * If the selected Tab should be disabled, re-rendering is needed as selected tabs can not be disabled.
 	 * If no Tab is selected (because all tabs have been disabled before) also re-rendering is needed.
 	 *
-	 * @param bEnabled Whether the Tab should be enabled or not
-	 * @return {sap.ui.commons.Tab} <code>this</code> to allow method chaining
+	 * @param {boolean} bEnabled Whether the Tab should be enabled or not
+	 * @return {this} <code>this</code> to allow method chaining
 	 * @public
 	 */
 	Tab.prototype.setEnabled = function(bEnabled) {
@@ -187,7 +196,7 @@ sap.ui.define(['jquery.sap.global', './Panel', './library'],
 		var oDomRef = this.getDomRef();
 		var oParent = this.getParent();
 
-		if (!oDomRef || (!bEnabled && jQuery(this.getDomRef()).hasClass("sapUiTabSel")) ||
+		if (!oDomRef || (!bEnabled && this.$().hasClass("sapUiTabSel")) ||
 			(bEnabled && oParent && oParent.getSelectedIndex && oParent.getSelectedIndex() < 0)) {
 			this.setProperty("enabled", bEnabled, false); // rendering needed
 
@@ -198,7 +207,7 @@ sap.ui.define(['jquery.sap.global', './Panel', './library'],
 		} else {
 			this.setProperty("enabled", bEnabled, true); // no re-rendering!
 			// if already rendered, adapt rendered control without complete re-rendering
-			jQuery(this.getDomRef()).toggleClass("sapUiTab", bEnabled).toggleClass("sapUiTabDsbl", !bEnabled).attr("aria-disabled",!bEnabled);
+			this.$().toggleClass("sapUiTab", bEnabled).toggleClass("sapUiTabDsbl", !bEnabled).attr("aria-disabled",!bEnabled);
 		}
 		return this;
 
@@ -208,7 +217,7 @@ sap.ui.define(['jquery.sap.global', './Panel', './library'],
 	 * Sets the Tab width.
 	 *
 	 * @param {string} sWidth The width of the panel as CSS size
-	 * @return {sap.ui.commons.Tab} <code>this</code> to allow method chaining
+	 * @return {this} <code>this</code> to allow method chaining
 	 * @public
 	 */
 	Tab.prototype.setWidth = function (sWidth) {
@@ -220,8 +229,8 @@ sap.ui.define(['jquery.sap.global', './Panel', './library'],
 	/*
 	 * Sets content padding.
 	 *
-	 * @param bPadding whether the Panel should have padding
-	 * @returns {sap.ui.commons.Tab} <code>this</code> to allow method chaining
+	 * @param {boolean} bPadding Whether the Panel should have padding
+	 * @returns {this} <code>this</code> to allow method chaining
 	 * @public
 	 */
 	Tab.prototype.setApplyContentPadding = function(bPadding) {
@@ -236,4 +245,4 @@ sap.ui.define(['jquery.sap.global', './Panel', './library'],
 
 	return Tab;
 
-}, /* bExport= */ true);
+});

@@ -2,16 +2,23 @@
  * ${copyright}
  */
 
-sap.ui.define(['jquery.sap.global'],
-	function(jQuery) {
+sap.ui.define([
+	"sap/base/i18n/Localization",
+	"sap/ui/core/Lib",
+	"sap/ui/core/Locale",
+	"sap/ui/core/IconPool" // side effect: required when calling RenderManager.icon
+], function(Localization, Library, Locale) {
 	"use strict";
 
+
+	var MAX_HEADER_BUTTONS = 5;
 
 	/**
 	 * Header renderer.
 	 * @namespace
 	 */
 	var HeaderRenderer = {
+		apiVersion: 2
 	};
 
 	/**
@@ -21,42 +28,48 @@ sap.ui.define(['jquery.sap.global'],
 	 * @param {sap.ui.unified.calendar.Header} oHead an object representation of the control that should be rendered
 	 */
 	HeaderRenderer.render = function(oRm, oHead){
-
+		var sLanguage = new Locale(Localization.getLanguageTag()).getLanguage();
 		var sTooltip = oHead.getTooltip_AsString();
 		var sId = oHead.getId();
-		var mAccProps = {};
+		var oRB = Library.getResourceBundleFor("sap.ui.unified");
+		var sLabelNext = oRB.getText("CALENDAR_BTN_NEXT");
+		var sLabelPrev = oRB.getText("CALENDAR_BTN_PREV");
+		var sLabelToday = oRB.getText("CALENDAR_BTN_TODAY");
 
-		oRm.write("<div");
-		oRm.writeControlData(oHead);
-		oRm.addClass("sapUiCalHead");
-		oRm.writeClasses();
+		oRm.openStart("div", oHead);
+		oRm.class("sapUiCalHead");
+		if (oHead.getVisibleCurrentDateButton()) {
+			oRm.class("sapUiCalHeaderWithTodayButton");
+		}
 
 		if (sTooltip) {
-			oRm.writeAttributeEscaped('title', sTooltip);
+			oRm.attr('title', sTooltip);
 		}
 
-		oRm.writeAccessibilityState(oHead);
+		oRm.accessibilityState(oHead);
 
-		oRm.write(">"); // div element
+		oRm.openEnd(); // div element
 
-		oRm.write("<button");
-		oRm.writeAttributeEscaped('id', sId + '-prev');
-		oRm.addClass("sapUiCalHeadPrev");
+		oRm.openStart("button", sId + '-prev');
+		oRm.attr("title", sLabelPrev);
+		oRm.accessibilityState(null, { label: sLabelPrev});
+
+		oRm.class("sapUiCalHeadPrev");
 		if (!oHead.getEnabledPrevious()) {
-			oRm.addClass("sapUiCalDsbl");
-			oRm.writeAttribute('disabled', "disabled");
+			oRm.class("sapUiCalDsbl");
+			oRm.attr('disabled', "disabled");
 		}
-		oRm.writeAttribute('tabindex', "-1");
-		oRm.writeClasses();
-		oRm.write(">"); // button element
-		oRm.writeIcon("sap-icon://slim-arrow-left", null, { title: null });
-		oRm.write("</button>");
+		oRm.attr('tabindex', "-1");
+		oRm.openEnd(); // button element
+		oRm.icon("sap-icon://slim-arrow-left", null, { title: null });
+		oRm.close("button");
 
 		var iFirst = -1;
 		var iLast = -1;
 		var i = 0;
-		for (i = 0; i < 3; i++) {
-			if (oHead["getVisibleButton" + i]()) {
+		var iBtn;
+		for (i = 0; i < MAX_HEADER_BUTTONS; i++) {
+			if (this.getVisibleButton(oHead, i)) {
 				if (iFirst < 0) {
 					iFirst = i;
 				}
@@ -64,66 +77,165 @@ sap.ui.define(['jquery.sap.global'],
 			}
 		}
 
-		for (i = 0; i < 3; i++) {
-			if (oHead["getVisibleButton" + i]()) {
-				oRm.write("<button");
-				oRm.writeAttributeEscaped('id', sId + '-B' + i);
-				oRm.addClass("sapUiCalHeadB");
-				oRm.addClass("sapUiCalHeadB" + i);
-				if (iFirst == i) {
-					oRm.addClass("sapUiCalHeadBFirst");
+		for (i = 0; i < MAX_HEADER_BUTTONS; i++) {
+			// for Chinese and Japanese the date should be displayed in year, month, day order
+			if (sLanguage.toLowerCase() === "ja" || sLanguage.toLowerCase() === "zh") {
+				iBtn = MAX_HEADER_BUTTONS - 1 - i;
+				// when we have two months displayed next to each other, we have 4 buttons
+				// and they should be arranged in order to show year, first month, year, second month
+				// this is why the numbers of the buttons are hard-coded
+				if (this._isTwoMonthsCalendar(oHead)) {
+					switch (i) {
+						case 0:
+							iBtn = 2;
+							break;
+						case 2:
+							iBtn = 4;
+							break;
+						case 1:
+							iBtn = 1;
+							break;
+						case 3:
+							iBtn = 3;
+							break;
+					}
 				}
-				if (iLast == i) {
-					oRm.addClass("sapUiCalHeadBLast");
-				}
-				oRm.writeAttribute('tabindex', "-1");
-				oRm.writeClasses();
-				if (oHead["getAriaLabelButton" + i]()) {
-					mAccProps["label"] = jQuery.sap.encodeHTML(oHead["getAriaLabelButton" + i]());
-				}
-				oRm.writeAccessibilityState(null, mAccProps);
-				mAccProps = {};
-				oRm.write(">"); // button element
-				var sText = oHead["getTextButton" + i]() || "";
-				var sAddText = oHead["getAdditionalTextButton" + i]() || "";
-				if (sAddText) {
-					oRm.write("<span");
-					oRm.writeAttributeEscaped('id', sId + '-B' + i + "-Text");
-					oRm.addClass("sapUiCalHeadBText");
-					oRm.writeClasses();
-					oRm.write(">"); // span element
-					oRm.writeEscaped(sText);
-					oRm.write("</span>");
-
-					oRm.write("<span");
-					oRm.writeAttributeEscaped('id', sId + '-B' + i + "-AddText");
-					oRm.addClass("sapUiCalHeadBAddText");
-					oRm.writeClasses();
-					oRm.write(">"); // span element
-					oRm.writeEscaped(sAddText);
-					oRm.write("</span>");
-				} else {
-					oRm.writeEscaped(sText);
-				}
-				oRm.write("</button>");
+			} else {
+				iBtn = i;
 			}
+			if (this._isTwoMonthsCalendar(oHead)) {
+				iFirst = 2;
+				iLast = 3;
+			}
+			this.renderCalendarButtons(oRm, oHead, sId, iFirst, iLast, iBtn);
+		}
+		if (!oHead.getVisibleButton0() && !oHead.getVisibleButton1() && !oHead.getVisibleButton2() && !oHead._getVisibleButton3() && !oHead._getVisibleButton4()) {
+			oRm.openStart("div", sId + '-B' + "-Placeholder");
+			oRm.class("sapUiCalHeadBPlaceholder");
+			oRm.openEnd(); // span element
+			oRm.close("span");
 		}
 
-		oRm.write("<button");
-		oRm.writeAttributeEscaped('id', sId + '-next');
-		oRm.addClass("sapUiCalHeadNext");
+		oRm.openStart("button", sId + '-next');
+		oRm.attr("title", sLabelNext);
+		oRm.accessibilityState(null, { label: sLabelNext});
+
+		oRm.class("sapUiCalHeadNext");
 		if (!oHead.getEnabledNext()) {
-			oRm.addClass("sapUiCalDsbl");
-			oRm.writeAttribute('disabled', "disabled");
+			oRm.class("sapUiCalDsbl");
+			oRm.attr('disabled', "disabled");
 		}
-		oRm.writeAttribute('tabindex', "-1");
-		oRm.writeClasses();
-		oRm.write(">"); // button element
-		oRm.writeIcon("sap-icon://slim-arrow-right", null, { title: null });
-		oRm.write("</button>");
+		oRm.attr('tabindex', "-1");
+		oRm.openEnd(); // button element
+		oRm.icon("sap-icon://slim-arrow-right", null, { title: null });
+		oRm.close("button");
 
-		oRm.write("</div>");
+		if (oHead.getVisibleCurrentDateButton()) {
+			oRm.openStart("button", sId + '-today');
+			oRm.attr("title", sLabelToday);
+			oRm.accessibilityState(null, { label: sLabelToday});
 
+			oRm.class("sapUiCalHeadB");
+			oRm.class("sapUiCalHeadToday");
+			oRm.openEnd(); // button element
+			oRm.icon("sap-icon://appointment", null, { title: null });
+			oRm.close("button");
+		}
+
+		oRm.close("div");
+
+	};
+
+	HeaderRenderer.renderCalendarButtons = function (oRm, oHead, sId, iFirst, iLast, i) {
+		var mAccProps = {};
+
+		if (this.getVisibleButton(oHead, i)) {
+			oRm.openStart("button", sId + '-B' + i);
+			oRm.class("sapUiCalHeadB");
+			oRm.class("sapUiCalHeadB" + i);
+			if (iFirst === i) {
+				oRm.class("sapUiCalHeadBFirst");
+			}
+			if (iLast === i) {
+				oRm.class("sapUiCalHeadBLast");
+			}
+			if (this.getAriaLabelButton(oHead, i)) {
+				mAccProps["label"] = this.getAriaLabelButton(oHead, i);
+			}
+			oRm.accessibilityState(null, mAccProps);
+			mAccProps = {};
+			oRm.openEnd(); // button element
+			var sText = this.getTextButton(oHead, i) || "";
+			var sAddText = this.getAdditionalTextButton(oHead, i) || "";
+			if (sAddText) {
+				oRm.openStart("span", sId + '-B' + i + "-Text");
+				oRm.class("sapUiCalHeadBText");
+				oRm.openEnd(); // span element
+				oRm.text(sText);
+				oRm.close("span");
+
+				oRm.openStart("span", sId + '-B' + i + "-AddText");
+				oRm.class("sapUiCalHeadBAddText");
+				oRm.openEnd(); // span element
+				oRm.text(sAddText);
+				oRm.close("span");
+			} else {
+				oRm.text(sText);
+			}
+			oRm.close("button");
+		}
+	};
+
+	HeaderRenderer.getVisibleButton = function (oHead, iButton) {
+		var bVisible = false;
+
+		if (oHead["getVisibleButton" + iButton]) {
+			bVisible = oHead["getVisibleButton" + iButton]();
+		} else if (oHead["_getVisibleButton" + iButton]) {
+			bVisible = oHead["_getVisibleButton" + iButton]();
+		}
+
+		return bVisible;
+	};
+
+	HeaderRenderer.getAriaLabelButton = function (oHead, iButton) {
+		var sAriaLabel;
+
+		if (oHead["getAriaLabelButton" + iButton]) {
+			sAriaLabel = oHead["getAriaLabelButton" + iButton]();
+		} else if (oHead["_getAriaLabelButton" + iButton]) {
+			sAriaLabel = oHead["_getAriaLabelButton" + iButton]();
+		}
+
+		return sAriaLabel;
+	};
+
+	HeaderRenderer.getTextButton = function (oHead, iButton) {
+		var sText;
+
+		if (oHead["getTextButton" + iButton]) {
+			sText = oHead["getTextButton" + iButton]();
+		} else if (oHead["_getTextButton" + iButton]) {
+			sText = oHead["_getTextButton" + iButton]();
+		}
+
+		return sText;
+	};
+
+	HeaderRenderer.getAdditionalTextButton = function (oHead, iButton) {
+		var sText;
+
+		if (oHead["getAdditionalTextButton" + iButton]) {
+			sText = oHead["getAdditionalTextButton" + iButton]();
+		} else if (oHead["_getAdditionalTextButton" + iButton]) {
+			sText = oHead["_getAdditionalTextButton" + iButton]();
+		}
+
+		return sText;
+	};
+
+	HeaderRenderer._isTwoMonthsCalendar = function (oHead) {
+		return (oHead.getParent() instanceof sap.ui.unified.Calendar && (oHead.getParent().getMonths() >= 2));
 	};
 
 	return HeaderRenderer;

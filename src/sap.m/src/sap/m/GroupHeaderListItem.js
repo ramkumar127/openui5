@@ -3,10 +3,16 @@
  */
 
 // Provides control sap.m.GroupHeaderListItem.
-sap.ui.define(['jquery.sap.global', './ListItemBase', './library'],
-	function(jQuery, ListItemBase, library) {
+sap.ui.define(["sap/ui/core/library", "./library", "./ListItemBase", "./GroupHeaderListItemRenderer"],
+	function(coreLibrary, library, ListItemBase, GroupHeaderListItemRenderer) {
 	"use strict";
 
+
+	// shortcut for sap.m.ListMode
+	var ListMode = library.ListMode;
+
+	// shortcut for sap.ui.core.TextDirection
+	var TextDirection = coreLibrary.TextDirection;
 
 
 	/**
@@ -21,6 +27,8 @@ sap.ui.define(['jquery.sap.global', './ListItemBase', './library'],
 	 *
 	 * @extends sap.m.ListItemBase
 	 *
+	 * @implements sap.m.ITableItem
+
 	 * @author SAP SE
 	 * @version ${version}
 	 *
@@ -28,41 +36,47 @@ sap.ui.define(['jquery.sap.global', './ListItemBase', './library'],
 	 * @public
 	 * @since 1.12
 	 * @alias sap.m.GroupHeaderListItem
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
-	var GroupHeaderListItem = ListItemBase.extend("sap.m.GroupHeaderListItem", /** @lends sap.m.GroupHeaderListItem.prototype */ { metadata : {
+	var GroupHeaderListItem = ListItemBase.extend("sap.m.GroupHeaderListItem", /** @lends sap.m.GroupHeaderListItem.prototype */ {
+		metadata : {
+			interfaces : [
+				"sap.m.ITableItem"
+			],
+			library : "sap.m",
+			properties : {
 
-		library : "sap.m",
-		properties : {
+				/**
+				 * Defines the title of the group header.
+				 */
+				title : {type : "string", group : "Data", defaultValue : null},
 
-			/**
-			 * Defines the title of the group header.
-			 */
-			title : {type : "string", group : "Data", defaultValue : null},
+				/**
+				 * Defines the count of items in the group, but it could also be an amount which represents the sum of all amounts in the group.
+				 * <b>Note:</b> Will not be displayed if not set.
+				 */
+				count : {type : "string", group : "Data", defaultValue : null},
 
-			/**
-			 * Defines the count of items in the group, but it could also be an amount which represents the sum of all amounts in the group.
-			 * <b>Note:</b> Will not be displayed if not set.
-			 */
-			count : {type : "string", group : "Data", defaultValue : null},
+				/**
+				 * Allows to uppercase the group title.
+				 * @since 1.13.2
+				 * @deprecated As of version 1.40.10, the concept has been discarded.
+				 */
+				upperCase : {type : "boolean", group : "Appearance", defaultValue : false, deprecated: true},
 
-			/**
-			 * By default, the title is capitalized automatically. To disable this automation, set this property to <b>false</b>.
-			 * @since 1.13.2
-			 */
-			upperCase : {type : "boolean", group : "Appearance", defaultValue : true},
+				/**
+				 * Defines the title text directionality with enumerated options. By default, the control inherits text direction from the DOM.
+				 * @since 1.28.0
+				 */
+				titleTextDirection : {type : "sap.ui.core.TextDirection", group : "Appearance", defaultValue : TextDirection.Inherit}
+			}
+		},
 
-			/**
-			 * Defines the title text directionality with enumerated options. By default, the control inherits text direction from the DOM.
-			 * @since 1.28.0
-			 */
-			titleTextDirection : {type : "sap.ui.core.TextDirection", group : "Appearance", defaultValue : sap.ui.core.TextDirection.Inherit}
-		}
-	}});
+		renderer: GroupHeaderListItemRenderer
+	});
 
 	// GroupHeaderListItem does not respect the list mode
 	GroupHeaderListItem.prototype.getMode = function() {
-		return sap.m.ListMode.None;
+		return ListMode.None;
 	};
 
 	GroupHeaderListItem.prototype.shouldClearLastValue = function() {
@@ -72,26 +86,35 @@ sap.ui.define(['jquery.sap.global', './ListItemBase', './library'],
 	// returns responsible table control for the item
 	GroupHeaderListItem.prototype.getTable = function() {
 		var oParent = this.getParent();
-		if (oParent instanceof sap.m.Table) {
-			return oParent;
-		}
-
-		// support old list with columns aggregation
-		if (oParent && oParent.getMetadata().getName() == "sap.m.Table") {
+		if (oParent && oParent.isA("sap.m.Table")) {
 			return oParent;
 		}
 	};
 
 	GroupHeaderListItem.prototype.onBeforeRendering = function() {
-		var oParent = this.getParent();
-		if (oParent && sap.m.Table && oParent instanceof sap.m.Table) {
+		var oTable = this.getTable();
+		if (oTable) {
 			// clear column last value to reset cell merging
-			oParent.getColumns().forEach(function(oColumn) {
+			oTable.getColumns().forEach(function(oColumn) {
 				oColumn.clearLastValue();
 			});
+
+			// defines the tag name
+			this.TagName = "tr";
+			this.aAriaOwns = [];
 		}
 	};
 
+	GroupHeaderListItem.prototype.getAccessibilityType = function(oBundle) {
+	};
+
+	GroupHeaderListItem.prototype.getContentAnnouncement = function() {
+		return this.getTitle();
+	};
+
+	// group header has no group announcement
+	GroupHeaderListItem.prototype.getGroupAnnouncement = function() {};
+
 	return GroupHeaderListItem;
 
-}, /* bExport= */ true);
+});

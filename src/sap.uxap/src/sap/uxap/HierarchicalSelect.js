@@ -3,18 +3,25 @@
  */
 
 // Provides control sap.uxap.HierarchicalSelect.
-sap.ui.define(["jquery.sap.global", "sap/m/Select", "sap/ui/Device", "./library"], function (jQuery, Select, Device, library) {
+sap.ui.define([
+	"sap/m/Select",
+	"sap/ui/Device",
+	"sap/ui/thirdparty/jqueryui/jquery-ui-position",
+	"./HierarchicalSelectRenderer"
+], function(Select, Device, jQuery, HierarchicalSelectRenderer) {
 	"use strict";
 
 	/**
-	 * Constructor for a new HierarchicalSelect.
+	 * Constructor for a new <code>HierarchicalSelect</code>.
 	 *
-	 * @param {string} [sId] id for the new control, generated automatically if no id is given
-	 * @param {object} [mSettings] initial settings for the new control
+	 * @param {string} [sId] ID for the new control, generated automatically if no ID is given
+	 * @param {object} [mSettings] Initial settings for the new control
 	 *
 	 * @class
-	 * A select that display items on 2 level of hierarchy.
-	 * If a provided item has a custom data named "secondLevel", then it will be displayed as a second level, otherwise it would be displayed as a first level.
+	 * A select that displays items on a hierarchy of 2 levels.
+	 *
+	 * If a provided item has a custom data named <code>secondLevel</code>, then it will be displayed as a second level,
+	 * otherwise it would be displayed as a first level.
 	 * @extends sap.m.Select
 	 *
 	 * @author SAP SE
@@ -23,7 +30,6 @@ sap.ui.define(["jquery.sap.global", "sap/m/Select", "sap/ui/Device", "./library"
 	 * @public
 	 * @since 1.26
 	 * @alias sap.uxap.HierarchicalSelect
-	 * @ui5-metamodel This control/element also will be described in the UI5 (legacy) designtime metamodel
 	 */
 	var HierarchicalSelect = Select.extend("sap.uxap.HierarchicalSelect", /** @lends sap.uxap.HierarchicalSelect.prototype */ {
 		metadata: {
@@ -36,15 +42,32 @@ sap.ui.define(["jquery.sap.global", "sap/m/Select", "sap/ui/Device", "./library"
 				 */
 				upperCase: {type: "boolean", group: "Appearance", defaultValue: false}
 			}
-		}
+		},
+
+		renderer: HierarchicalSelectRenderer
 	});
 
 	HierarchicalSelect.POPOVER_MIN_WIDTH_REM = 11;
+
+	HierarchicalSelect.prototype.onAfterRendering = function (){
+		Select.prototype.onAfterRendering.apply(this, arguments);
+	};
 
 	HierarchicalSelect.prototype.onAfterRenderingPicker = function () {
 
 		Select.prototype.onAfterRenderingPicker.call(this);
 
+		this._applyHierarchyLevelClasses();
+	};
+
+	HierarchicalSelect.prototype.onAfterRenderingList = function() {
+
+		Select.prototype.onAfterRenderingList.call(this);
+
+		this._applyHierarchyLevelClasses();
+	};
+
+	HierarchicalSelect.prototype._applyHierarchyLevelClasses = function () {
 		var aItems = this.getItems() || [];
 
 		aItems.forEach(function (oItem) {
@@ -53,7 +76,6 @@ sap.ui.define(["jquery.sap.global", "sap/m/Select", "sap/ui/Device", "./library"
 			oItem.$().addClass(sClass);
 		}, this);
 	};
-
 
 	HierarchicalSelect.prototype.setUpperCase = function (bValue, bSuppressInvalidate) {
 
@@ -73,7 +95,13 @@ sap.ui.define(["jquery.sap.global", "sap/m/Select", "sap/ui/Device", "./library"
 	 * Keyboard handling requirement to have the same behavior on [ENTER] key
 	 * as on [SPACE] key (namely, to toggle the open state the select dropdown)
 	 */
-	HierarchicalSelect.prototype.onsapenter = Select.prototype.onsapspace;
+	 HierarchicalSelect.prototype.onsapenter = function(oEvent) {
+		if (!this.getPicker().isOpen()) {
+			Select.prototype.ontap.call(this, oEvent);
+		} else {
+			Select.prototype.onsapenter.call(this, oEvent);
+		}
+	 };
 
 	/**
 	 * Keyboard handling of [UP], [PAGE-UP], [PAGE-DOWN], [HOME], [END] keys
@@ -87,10 +115,12 @@ sap.ui.define(["jquery.sap.global", "sap/m/Select", "sap/ui/Device", "./library"
 	});
 
 	HierarchicalSelect.prototype._createDialog = function () {
+		var oDialog = Select.prototype._createDialog.call(this),
+			oCustomHeader = oDialog.getCustomHeader();
 
-		var oDialog = Select.prototype._createDialog.call(this);
-
-		oDialog.getCustomHeader().addStyleClass("sapUxAPHierarchicalSelect");
+		if (oCustomHeader){
+			oCustomHeader.addStyleClass("sapUxAPHierarchicalSelect");
+		}
 
 		return oDialog;
 
@@ -102,7 +132,7 @@ sap.ui.define(["jquery.sap.global", "sap/m/Select", "sap/ui/Device", "./library"
 	 * We are overriding function from sap.m.Select
 	 * in order to redefine position of popover
 	 *
-	 * @param {sap.m.Popover}
+	 * @param {sap.m.Popover} oPopover The given <code>sap.m.Popover</code>
 	 * @private
 	 */
 	HierarchicalSelect.prototype._decoratePopover = function (oPopover) {
@@ -140,7 +170,7 @@ sap.ui.define(["jquery.sap.global", "sap/m/Select", "sap/ui/Device", "./library"
 			oPopoverDomRef = oPopover.getDomRef("cont"),
 			sMinWidth = oPopoverDomRef.style.minWidth;
 
-		if (jQuery.sap.endsWith(sMinWidth, "rem")) {
+		if (sMinWidth.endsWith("rem")) {
 			sMinWidth = sMinWidth.substring(0, sMinWidth.length - 3);
 			var iMinWidth = parseFloat(sMinWidth);
 			if (iMinWidth < HierarchicalSelect.POPOVER_MIN_WIDTH_REM && oPopoverDomRef) {
